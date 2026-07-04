@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+
+# Go
+/apps/backend/bin/
+*.exe
+*.test
+*.out
+
+# Android / Kotlin / Gradle（apps/mobile）
+/apps/mobile/.gradle/
+/apps/mobile/build/
+/apps/mobile/**/build/
+/apps/mobile/local.properties
+/apps/mobile/captures/
+.kotlin/
+*.iml
+*.hprof
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# iOS の無視設定は iOS UI 実装が入る時点で足す。
+
+# 環境・秘匿情報（DB 接続情報・API キー・鍵など）
+.env
+.env.*
+!.env.example
+*.local
+
+# IDE / エディタ
+.idea/
+.vscode/
+
+# Claude Code: 個人・マシン依存の設定は追跡しない。
+# プロジェクト固有スキル（.claude/skills/）だけ追跡する。
+.claude/*
+!.claude/skills/

@@ -1,0 +1,10 @@
+# Issue / PR / コミットのタイトルに付ける許可カテゴリ（唯一の出どころ）。詳細は CONTRIBUTING.md。
+# 複合は "/" でつなぐ（Android と iOS 両方なら [Android/iOS]）。各行にインラインコメントを付けない（パーサが名前を壊す）。
+categories:
+  - Android
+  - iOS
+  - Server
+  - Infra
+  - Docs
+  - CI/CD
+  - Chore

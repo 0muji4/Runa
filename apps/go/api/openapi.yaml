@@ -1,0 +1,42 @@
+# Runa backend API contract.
+#
+# This is the GROWING contract between the backend and the shared/UI clients.
+# Today it describes only the health endpoint; every new endpoint MUST be added
+# here so the mobile clients have a single source of truth for the API surface.
+openapi: 3.0.3
+info:
+  title: Runa Backend API
+  version: 0.1.0
+  description: |
+    HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
+    Clients are injected host+port only and append /api/v1/... themselves.
+servers:
+  - url: http://localhost:8080
+    description: Local development (iOS simulator uses this host)
+  - url: http://10.0.2.2:8080
+    description: Local development (Android emulator loopback to host)
+paths:
+  /api/v1/healthz:
+    get:
+      operationId: healthz
+      summary: Liveness probe
+      description: Pure liveness check. Returns ok whenever the process is serving.
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+              example:
+                status: ok
+components:
+  schemas:
+    HealthzResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok

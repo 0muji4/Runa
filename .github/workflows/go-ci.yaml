@@ -1,0 +1,31 @@
+name: Go CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/go/**"
+      - ".github/workflows/backend-ci.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/go
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+          cache-dependency-path: apps/go/go.sum
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test ./...

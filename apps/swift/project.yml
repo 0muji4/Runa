@@ -1,0 +1,57 @@
+# XcodeGen spec for the Runa iOS app.
+# Regenerate the .xcodeproj with:  xcodegen generate   (run from apps/swift/)
+# See README.md for the full build sequence (build the XCFramework first).
+name: Runa
+
+options:
+  bundleIdPrefix: com.runa
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "16.0"
+
+# Local Swift package that wraps the SKIE-enhanced Shared.xcframework.
+packages:
+  SharedKit:
+    path: SharedKit
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    # 1 = iPhone only. Add 2 for iPad if needed later.
+    TARGETED_DEVICE_FAMILY: "1"
+
+targets:
+  Runa:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Runa
+        # Keep docs (Fonts/README.md etc.) out of the app bundle.
+        excludes:
+          - "**/README.md"
+    settings:
+      base:
+        PRODUCT_NAME: Runa
+        PRODUCT_BUNDLE_IDENTIFIER: com.runa
+        # We author Info.plist by hand (it carries BASE_URL + dark-mode lock),
+        # so disable the auto-generated one.
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Runa/Info.plist
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0"
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      # Imports the shared KMP module as `import Shared`.
+      - package: SharedKit
+        product: Shared
+
+# Shared scheme so `xcodebuild -scheme Runa` works and Xcode has a runnable target.
+schemes:
+  Runa:
+    build:
+      targets:
+        Runa: all
+    run:
+      config: Debug

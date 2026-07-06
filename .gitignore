@@ -2,17 +2,17 @@
 .DS_Store
 
 # Go
-/apps/backend/bin/
+/apps/go/bin/
 *.exe
 *.test
 *.out
 
-# Android / Kotlin / Gradle（apps/mobile）
-/apps/mobile/.gradle/
-/apps/mobile/build/
-/apps/mobile/**/build/
-/apps/mobile/local.properties
-/apps/mobile/captures/
+# Android / Kotlin / Gradle（apps/kotlin）
+/apps/kotlin/.gradle/
+/apps/kotlin/build/
+/apps/kotlin/**/build/
+/apps/kotlin/local.properties
+/apps/kotlin/captures/
 .kotlin/
 *.iml
 *.hprof
@@ -20,8 +20,6 @@
 *.aab
 *.keystore
 *.jks
-
-# iOS の無視設定は iOS UI 実装が入る時点で足す。
 
 # 環境・秘匿情報（DB 接続情報・API キー・鍵など）
 .env
@@ -37,3 +35,11 @@
 # プロジェクト固有スキル（.claude/skills/）だけ追跡する。
 .claude/*
 !.claude/skills/
+
+# iOS（apps/swift）— project.yml / Package.swift / ソースは追跡する。
+# .xcodeproj は XcodeGen 生成物なので追跡しない（project.yml が正）。
+apps/swift/**/xcuserdata/
+apps/swift/DerivedData/
+apps/swift/build/
+apps/swift/*.xcodeproj
+apps/swift/**/.DS_Store

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ja</string>
+	<key>CFBundleDisplayName</key>
+	<string>Runa</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<!-- Backend base URL injected into the app; shared appends /api/v1/healthz.
+	     iOS simulator reaches the host machine via localhost. -->
+	<key>BASE_URL</key>
+	<string>http://localhost:8080</string>
+
+	<!-- Allow cleartext HTTP to the local dev backend over loopback/localhost.
+	     Targeted exception — does NOT disable ATS globally. Mirrors Android's
+	     android:usesCleartextTraffic for the dev backend. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- Dark theme only (matches the Runa design system). -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<!--
+	  FONTS: uncomment once the .ttf/.otf files are added under Runa/Fonts/.
+	  Do NOT leave these active without the files present — iOS logs missing-font
+	  errors and the custom families silently fall back. See Runa/Fonts/README.md.
+
+	<key>UIAppFonts</key>
+	<array>
+		<string>ShipporiMincho-Regular.ttf</string>
+		<string>ShipporiMincho-Medium.ttf</string>
+		<string>ShipporiMincho-SemiBold.ttf</string>
+		<string>ZenKakuGothicNew-Regular.ttf</string>
+		<string>ZenKakuGothicNew-Medium.ttf</string>
+		<string>CormorantGaramond-Regular.ttf</string>
+		<string>CormorantGaramond-Medium.ttf</string>
+	</array>
+	-->
+</dict>
+</plist>

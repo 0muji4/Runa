@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Runa</string>
+
+    <!-- Bottom navigation tabs + settings entry. -->
+    <string name="tab_home">ホーム</string>
+    <string name="tab_todays_song">きょうの一曲</string>
+    <string name="tab_diary">ダイアリー</string>
+    <string name="tab_gallery">ギャラリー</string>
+    <string name="tab_settings">設定</string>
+
+    <!-- Health probe surfaced on Home. -->
+    <string name="health_ok">接続OK</string>
+    <string name="health_error">接続エラー</string>
+
+    <!-- Generic placeholder copy for empty shells. -->
+    <string name="placeholder_coming_soon">準備中</string>
+    <string name="action_back">戻る</string>
+</resources>

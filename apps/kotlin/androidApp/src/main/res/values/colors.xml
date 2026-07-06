@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirror of the design tokens for the XML/manifest theme layer.
+         The Compose UI uses RunaColors.kt; these exist only so the launch theme
+         and status bar resolve before Compose takes over. -->
+    <color name="runa_background">#0E0E12</color>
+    <color name="runa_surface">#16161C</color>
+    <color name="runa_accent">#F4A9C0</color>
+    <color name="runa_launcher_background">#16161C</color>
+</resources>

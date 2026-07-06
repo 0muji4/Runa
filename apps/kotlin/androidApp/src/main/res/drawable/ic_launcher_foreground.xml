@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Crescent moon, drawn as a full disc with an offset disc subtracted
+     (evenOdd fill). 108x108 adaptive-icon canvas; the moon sits inside the
+     inner 72dp safe zone. Moonlight-pink accent (#F4A9C0). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F4A9C0"
+        android:fillType="evenOdd"
+        android:pathData="M22,54 a32,32 0 1,0 64,0 a32,32 0 1,0 -64,0 Z M42,42 a28,28 0 1,0 56,0 a28,28 0 1,0 -56,0 Z" />
+</vector>

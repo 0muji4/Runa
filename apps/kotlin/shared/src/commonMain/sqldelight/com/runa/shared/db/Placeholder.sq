@@ -1,0 +1,9 @@
+-- Placeholder schema so SQLDelight generates the `RunaDatabase` type.
+-- The local database is intentionally EMPTY in the walking skeleton; this single
+-- trivial table only exists to give the code generator a valid schema to emit.
+--
+-- TODO: replace with real tables as feature slices (diary, gallery cache, ...)
+-- introduce local persistence.
+CREATE TABLE Placeholder (
+    id INTEGER NOT NULL PRIMARY KEY
+);

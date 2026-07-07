@@ -1,49 +1,81 @@
 // Package repository is the data-access layer. It owns the database pool and
-// exposes typed repositories to the service layer. For the walking skeleton the
-// repositories are stubs — only the health path is wired end to end.
+// exposes typed stores to the service layer. Persistence models and the store
+// interfaces live here; concrete pgx implementations sit alongside (e.g.
+// auth_repository.go).
 package repository
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	"errors"
+	"time"
 )
 
-// Repository is a thin holder around the Postgres connection pool. Concrete
-// repositories are constructed from it so they share a single pool.
-//
-// TODO: as features land, expose repository accessors here (e.g. Users()) or
-// inject the pool into individual repository constructors.
-type Repository struct {
-	pool *pgxpool.Pool
-}
+var (
+	// ErrNotFound is returned when a lookup matches no row.
+	ErrNotFound = errors.New("repository: not found")
+	// ErrEmailTaken is returned when inserting a user whose email already exists.
+	ErrEmailTaken = errors.New("repository: email already registered")
+	// ErrNoDatabase is returned when the pool is nil (DB unreachable at boot).
+	ErrNoDatabase = errors.New("repository: database not available")
+)
 
-// New wraps a pgx pool. The pool may be nil when the DB is unreachable at boot;
-// callers must not assume a live connection (liveness stays DB-independent).
-func New(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool}
-}
-
-// Pool exposes the underlying pool for future repositories. May be nil.
-func (r *Repository) Pool() *pgxpool.Pool {
-	return r.pool
-}
-
-// User is the persistence model matching the users table (migration 0001).
-//
-// TODO: expand columns as the product schema grows.
+// User is the persistence model for the users table (migrations 0001 + 0002).
+// Nullable columns are pointers so an absent value is distinguishable from a
+// zero value.
 type User struct {
-	ID        string // uuid primary key
-	CreatedAt string // timestamptz; string placeholder until a real time type is needed
+	ID               string
+	Email            *string
+	AuthProvider     string // "email" | "apple" | "google"
+	AppleSub         *string
+	GoogleSub        *string
+	DisplayName      string
+	PasswordHash     *string
+	IsPremium        bool
+	PremiumExpiresAt *time.Time
+	CreatedAt        time.Time
 }
 
-// UserRepository is the data-access boundary for the users table. Bodies are
-// intentionally unimplemented — no feature logic exists in the skeleton.
-type UserRepository interface {
-	// Create inserts a new user and returns it.
-	// TODO: implement against the users table.
-	Create(ctx context.Context) (User, error)
-	// GetByID loads a user by its uuid.
-	// TODO: implement against the users table.
-	GetByID(ctx context.Context, id string) (User, error)
+// RefreshToken is the persistence model for the refresh_tokens table.
+type RefreshToken struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+	Revoked   bool
+	CreatedAt time.Time
+}
+
+// CreateUserParams carries the fields needed to insert a user. Email/AppleSub/
+// GoogleSub/PasswordHash are optional depending on the auth provider.
+type CreateUserParams struct {
+	Email        *string
+	AuthProvider string
+	AppleSub     *string
+	GoogleSub    *string
+	DisplayName  string
+	PasswordHash *string
+}
+
+// InsertRefreshTokenParams carries the fields needed to persist a refresh token
+// (only its hash is stored).
+type InsertRefreshTokenParams struct {
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+}
+
+// AuthStore is the data-access boundary for authentication. The service depends
+// on this interface so tests can substitute an in-memory fake.
+type AuthStore interface {
+	CreateUser(ctx context.Context, p CreateUserParams) (User, error)
+	GetUserByID(ctx context.Context, id string) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
+	// GetUserByProviderSub looks a user up by ("apple"|"google", subject).
+	GetUserByProviderSub(ctx context.Context, provider, sub string) (User, error)
+
+	InsertRefreshToken(ctx context.Context, p InsertRefreshTokenParams) error
+	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	// RevokeRefreshToken marks a token revoked. Revoking an unknown token is a
+	// no-op (logout is idempotent).
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 }

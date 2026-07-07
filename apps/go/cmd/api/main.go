@@ -25,11 +25,18 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/config"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/server"
 	"github.com/0muji4/Runa/apps/go/internal/service"
+)
+
+const (
+	// authRateLimitMax / authRateLimitWindow throttle signup/login per client IP.
+	authRateLimitMax    = 10
+	authRateLimitWindow = time.Minute
 )
 
 const (
@@ -60,12 +67,31 @@ func main() {
 		runMigrations(cfg.DatabaseURL, logger)
 	}
 
-	// Repository holds the pool for future feature repositories (unused by the
-	// health path, but wired so the layering is real from day one).
-	_ = repository.New(pool)
-
 	healthHandler := handler.NewHealth(service.NewHealth(), logger)
-	router := server.New(healthHandler, cfg.CORSAllowedOrigins, logger)
+
+	// Auth wiring. The repository tolerates a nil pool (returns ErrNoDatabase),
+	// so the process still boots for liveness when the DB is down; the auth
+	// endpoints themselves require a live DB.
+	authRepo := repository.NewAuthRepository(pool)
+	issuer := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL)
+	authService := service.NewAuthService(service.AuthConfig{
+		Store:          authRepo,
+		Issuer:         issuer,
+		Apple:          auth.NewOIDCVerifier(auth.AppleIssuers, cfg.AppleClientIDs, auth.NewRemoteJWKS(auth.AppleJWKSURL)),
+		Google:         auth.NewOIDCVerifier(auth.GoogleIssuers, cfg.GoogleClientIDs, auth.NewRemoteJWKS(auth.GoogleJWKSURL)),
+		PasswordParams: auth.DefaultArgon2Params(),
+		RefreshTTL:     cfg.RefreshTokenTTL,
+	})
+	authHandler := handler.NewAuth(authService, logger)
+
+	router := server.New(server.Deps{
+		Health:         healthHandler,
+		Auth:           authHandler,
+		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
+		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
+		AllowedOrigins: cfg.CORSAllowedOrigins,
+		Logger:         logger,
+	})
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

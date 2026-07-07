@@ -16,4 +16,37 @@
     <!-- Generic placeholder copy for empty shells. -->
     <string name="placeholder_coming_soon">準備中</string>
     <string name="action_back">戻る</string>
+
+    <!-- Brand / splash. -->
+    <string name="brand_name">Runa</string>
+    <string name="splash_tagline">月あかりの記録</string>
+
+    <!-- Onboarding shells (①②) + notification permission (implemented in the notification slice). -->
+    <string name="onboarding_1_title">しずかに、記す。</string>
+    <string name="onboarding_1_body">一日のおわりに、月へ言葉を預ける場所。</string>
+    <string name="onboarding_2_title">あなたの夜を、そっと。</string>
+    <string name="onboarding_2_body">飾らず、余白を大切に。続けられる日記を。</string>
+    <string name="notif_title">通知の許可</string>
+    <string name="notif_body">やさしい時刻に、そっとお知らせします。設定はあとからでも変えられます。</string>
+    <string name="action_next">次へ</string>
+    <string name="action_skip">スキップ</string>
+
+    <!-- Sign in. -->
+    <string name="signin_title">サインイン</string>
+    <string name="signin_apple">Appleでサインイン</string>
+    <string name="signin_google">Googleでサインイン</string>
+    <string name="signin_or">または</string>
+    <string name="signin_email_label">メールアドレス</string>
+    <string name="signin_password_label">パスワード</string>
+    <string name="signin_name_label">表示名（任意）</string>
+    <string name="action_login">ログイン</string>
+    <string name="action_signup">新規登録</string>
+    <string name="signin_toggle_to_signup">アカウントをお持ちでない方はこちら</string>
+    <string name="signin_toggle_to_login">すでにアカウントをお持ちの方はこちら</string>
+    <string name="signin_error_generic">サインインに失敗しました。</string>
+    <string name="signin_provider_unconfigured">この方法は現在利用できません（設定が必要です）。</string>
+
+    <!-- Authenticated home + sign out. -->
+    <string name="home_greeting">こんばんは、%1$s さん</string>
+    <string name="action_sign_out">サインアウト</string>
 </resources>

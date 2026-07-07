@@ -26,6 +26,12 @@ navigationCompose = "2.8.3"
 # explicitly. Kept in the 2.8.x line to align with navigation-compose 2.8.3.
 lifecycle = "2.8.6"
 
+# --- Auth (Android native sign-in + secure storage) ---
+securityCrypto = "1.1.0-alpha06"
+credentials = "1.3.0"
+googleId = "1.1.1"
+browser = "1.8.0"
+
 [libraries]
 # --- Ktor ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -63,6 +69,18 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+# --- Auth (Android native sign-in + secure storage) ---
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+google-identity-googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
+
+# --- Test ---
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

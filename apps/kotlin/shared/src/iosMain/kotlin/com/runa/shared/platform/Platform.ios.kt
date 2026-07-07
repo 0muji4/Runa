@@ -1,8 +1,13 @@
 package com.runa.shared.platform
 
 import app.cash.sqldelight.db.SqlDriver
+import com.russhwolf.settings.ExperimentalSettingsImplementation
+import com.russhwolf.settings.KeychainSettings
+import com.runa.shared.network.auth.SecureKeyValueStore
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
+import org.koin.core.module.Module
+import org.koin.dsl.module
 
 /** iOS uses the Darwin (NSURLSession) Ktor engine. */
 actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
@@ -14,16 +19,31 @@ actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
 actual fun createSqlDriver(): SqlDriver =
     TODO("iOS SQLDelight driver not wired yet — no feature uses the DB")
 
-/** TODO: back with the iOS Keychain. */
-actual class SecureStorage {
-    actual fun get(key: String): String? =
-        TODO("SecureStorage.get not implemented")
+/** Provides the Keychain-backed secure store. */
+actual fun platformModule(): Module = module {
+    single<SecureKeyValueStore> { KeychainSecureStore() }
+}
 
-    actual fun set(key: String, value: String): Unit =
-        TODO("SecureStorage.set not implemented")
+/**
+ * Keychain-backed [SecureKeyValueStore]. Reuses multiplatform-settings'
+ * [KeychainSettings] (already a shared dependency) so tokens live in the iOS
+ * Keychain without hand-rolled Security-framework interop. The no-arg constructor
+ * uses the default keychain service scope, which is sufficient here.
+ */
+@OptIn(ExperimentalSettingsImplementation::class)
+class KeychainSecureStore(
+    private val settings: KeychainSettings = KeychainSettings(),
+) : SecureKeyValueStore {
 
-    actual fun remove(key: String): Unit =
-        TODO("SecureStorage.remove not implemented")
+    override fun get(key: String): String? = settings.getStringOrNull(key)
+
+    override fun set(key: String, value: String) {
+        settings.putString(key, value)
+    }
+
+    override fun remove(key: String) {
+        settings.remove(key)
+    }
 }
 
 /** TODO: back with APNs device-token retrieval. */

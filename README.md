@@ -58,11 +58,68 @@ curl http://localhost:8080/api/v1/healthz
 | `LOG_LEVEL` | ログレベル | — |
 | `CORS_ALLOWED_ORIGINS` | 許可する CORS オリジン | — |
 | `APP_ENV` | 実行環境（dev / prod など） | — |
+| `JWT_SECRET` | アクセストークン(HS256)の署名鍵。**本番は必ず上書き** | `dev-insecure-...` |
+| `ACCESS_TOKEN_TTL` | アクセストークン有効期限（Go duration） | `15m` |
+| `REFRESH_TOKEN_TTL` | リフレッシュトークン有効期限 | `720h`(30日) |
+| `APPLE_CLIENT_IDS` | Apple IDトークンの許容 audience（Bundle ID / Service ID をカンマ区切り） | 空 |
+| `GOOGLE_CLIENT_IDS` | Google IDトークンの許容 audience（OAuth Client ID をカンマ区切り） | 空 |
 
 ### クライアントへの Base URL 注入
 
-- **Android**: `BuildConfig` の Base URL を `initKoin(baseUrl)` に渡す（dev は `http://10.0.2.2:8080`）。
+- **Android**: `BuildConfig` の Base URL を `initKoin(context, baseUrl)` に渡す（dev は `http://10.0.2.2:8080`）。認証のセキュアストレージ（EncryptedSharedPreferences）が `Context` を必要とするため、Android は Context を伴う 2 引数版を使う。
 - **iOS**: `Info.plist` の Base URL を `initKoin(baseUrl)` に渡す（dev は `http://localhost:8080`）。
+
+## 認証（最初の縦切り機能）
+
+最初のプロダクト機能として「認証」を BE → shared → 各 OS UI に E2E で通してある。以降の機能は「認証済み前提」で `AuthRepository.authState` を購読して乗る。
+
+### API（`/api/v1`、詳細は [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)）
+
+| Method / Path | 内容 |
+| --- | --- |
+| `POST /auth/signup` | メール＋パスワードで登録 |
+| `POST /auth/login` | メール＋パスワードでログイン |
+| `POST /auth/apple` | Apple IDトークン検証→ログイン/作成 |
+| `POST /auth/google` | Google IDトークン検証→ログイン/作成 |
+| `POST /auth/refresh` | リフレッシュトークンをローテーションし新トークン発行 |
+| `POST /auth/logout` | リフレッシュトークンを失効（冪等） |
+| `GET /me` | **要 Bearer**。動作確認用の保護エンドポイント |
+
+- アクセストークンは短命 JWT(HS256)、リフレッシュは長命の不透明トークン（DB には SHA-256 ハッシュのみ保存、`/auth/refresh` でローテーション）。
+- パスワードは **Argon2id**（OWASP 推奨パラメータ）でハッシュ。Apple/Google の IDトークンは各 JWKS で**署名検証**（`iss`/`aud`/`exp`）。
+- エラー形式は全機能共通の `{"error":{"code","message","details?}}`。`login`/`signup` は IP 単位のレート制限あり。
+
+### クライアント（shared）
+
+- `AuthRepository`: `signupEmail / loginEmail / loginApple(idToken) / loginGoogle(idToken) / refresh / logout / getMe / restoreSession`。
+- 状態 `AuthState`: `Restoring`（起動時復元中）/ `Unauthenticated` / `Authenticating` / `Authenticated(user)` / `Error(message)`。`AuthViewModel.state` として公開し、Android は直接、iOS は SKIE 経由で購読する。
+- トークンはセキュアストレージに永続化（Android: EncryptedSharedPreferences、iOS: Keychain）。保護リクエストが 401 を返すと HTTP 層が**自動でリフレッシュ→元リクエストを再送**し、失敗時は未認証へ遷移する。
+- 起動フロー: 保存トークンから復元し `GET /me` で確認。未認証は導入→サインイン、認証済はタブ本体を出し分け、サインアウトで戻る。認証済みホームは `/me` の `display_name` を表示する。
+
+### 各 OS のネイティブ設定（実クレデンシャル）
+
+ネイティブは IDトークンを取得して shared の `loginApple/loginGoogle` に渡すだけ。検証は BE が行う。**メール＋パスワードは設定なしで E2E 動作**する。
+
+- **backend**: `APPLE_CLIENT_IDS` / `GOOGLE_CLIENT_IDS` に許容 audience を設定（[apps/go/README.md](apps/go/README.md)）。
+- **Android**: Google は Credential Manager（Gradle property `RUNA_GOOGLE_SERVER_CLIENT_ID` に Google の**Web**クライアント ID）。Apple は Web フロー（`RUNA_APPLE_SERVICE_ID` / `RUNA_APPLE_REDIRECT_URI`）。詳細は [apps/kotlin/README.md](apps/kotlin/README.md)。
+- **iOS**: Apple はネイティブ（`Runa/Runa.entitlements` の Sign in with Apple、App ID にケイパビリティ付与）。Google は `Info.plist` の `GIDClientID`（iOS クライアント ID）。詳細は [apps/swift/README.md](apps/swift/README.md)。
+
+### 動作確認
+
+```sh
+# backend（DB 込みで起動）
+cd apps/go && docker compose up --build
+# 単体・結合テスト（DB 不要で green）
+cd apps/go && go test ./...
+# 手動疎通
+curl -XPOST localhost:8080/api/v1/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"a@b.com","password":"password123","display_name":"Runa"}'
+# 返却 access で保護エンドポイントを叩く
+curl localhost:8080/api/v1/me -H "Authorization: Bearer <access_token>"
+```
+
+shared のユニットテスト（401 自動リフレッシュ・再送、トークン復元、各サインイン経路）は `cd apps/kotlin && ./gradlew :shared:testDebugUnitTest`。
 
 ## バージョン整合
 

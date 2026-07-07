@@ -17,13 +17,26 @@ import (
 // gives up. Health checks are instant; this mainly protects future handlers.
 const requestTimeout = 30 * time.Second
 
+// Deps carries the handlers and middleware the router mounts. Passing a struct
+// keeps New's signature stable as feature slices add their own routes.
+type Deps struct {
+	Health *handler.Health
+	Auth   *handler.Auth
+	// RequireAuth guards Bearer-protected routes (verifies the access token).
+	RequireAuth func(http.Handler) http.Handler
+	// AuthRateLimit throttles the credential endpoints (signup/login).
+	AuthRateLimit  func(http.Handler) http.Handler
+	AllowedOrigins []string
+	Logger         *slog.Logger
+}
+
 // New builds the chi router with the standard middleware stack and mounts the
 // versioned API routes.
 //
 // Why /api/v1 mount point: the client contract injects host+port only and
 // appends /api/v1/... itself, so versioning lives entirely server-side and can
 // evolve (v2) without changing the injected base URL.
-func New(health *handler.Health, allowedOrigins []string, logger *slog.Logger) *chi.Mux {
+func New(deps Deps) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Order matters (chi wraps outermost-first): RequestID first so every later
@@ -33,10 +46,10 @@ func New(health *handler.Health, allowedOrigins []string, logger *slog.Logger) *
 	// 500 that the logger then records.
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(requestLogger(logger))
+	r.Use(requestLogger(deps.Logger))
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   allowedOrigins,
+		AllowedOrigins:   deps.AllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-Id"},
 		ExposedHeaders:   []string{"X-Request-Id"},
@@ -47,8 +60,26 @@ func New(health *handler.Health, allowedOrigins []string, logger *slog.Logger) *
 
 	// Versioned API surface. New routes mount under this same subrouter.
 	r.Route("/api/v1", func(api chi.Router) {
-		api.Get("/healthz", health.Healthz)
-		// TODO: mount feature routes here as they are implemented.
+		api.Get("/healthz", deps.Health.Healthz)
+
+		api.Route("/auth", func(ar chi.Router) {
+			// Credential endpoints are rate limited to blunt brute force.
+			ar.Group(func(rl chi.Router) {
+				rl.Use(deps.AuthRateLimit)
+				rl.Post("/signup", deps.Auth.Signup)
+				rl.Post("/login", deps.Auth.Login)
+			})
+			ar.Post("/apple", deps.Auth.Apple)
+			ar.Post("/google", deps.Auth.Google)
+			ar.Post("/refresh", deps.Auth.Refresh)
+			ar.Post("/logout", deps.Auth.Logout)
+		})
+
+		// Bearer-protected routes.
+		api.Group(func(pr chi.Router) {
+			pr.Use(deps.RequireAuth)
+			pr.Get("/me", deps.Auth.Me)
+		})
 	})
 
 	return r

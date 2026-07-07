@@ -30,6 +30,17 @@ services:
       LOG_LEVEL: info
       CORS_ALLOWED_ORIGINS: "*"
       APP_ENV: development
+      # Auth (development defaults; override for real Apple/Google sign-in).
+      JWT_SECRET: dev-insecure-secret-change-me
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 720h
+      # iOS app Bundle ID — the audience of native Sign in with Apple ID tokens.
+      # Add the Apple Service ID here too if the Android web flow is enabled.
+      APPLE_CLIENT_IDS: "com.runa"
+      # Google Web client ID (also Android Credential Manager's serverClientId, so
+      # Android-issued ID tokens carry this as their audience). Add the iOS client
+      # ID here too once it exists.
+      GOOGLE_CLIENT_IDS: "890729556064-1965dtr47tk7qev9ie73fblkv14vanv7.apps.googleusercontent.com,890729556064-v8tfjso2kh0tuvuhaas2ub2o3olvft8k.apps.googleusercontent.com"
     ports:
       - "8080:8080"
 

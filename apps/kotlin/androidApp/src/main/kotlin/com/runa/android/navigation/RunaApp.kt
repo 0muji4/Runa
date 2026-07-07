@@ -7,6 +7,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -20,7 +21,12 @@ import com.runa.android.ui.screens.DiaryScreen
 import com.runa.android.ui.screens.GalleryScreen
 import com.runa.android.ui.screens.HomeScreen
 import com.runa.android.ui.screens.SettingsScreen
+import com.runa.android.ui.screens.SplashScreen
 import com.runa.android.ui.screens.TodaysSongScreen
+import com.runa.android.ui.screens.auth.AuthFlow
+import com.runa.shared.feature.auth.AuthState
+import com.runa.shared.feature.auth.AuthViewModel
+import org.koin.compose.koinInject
 
 /** App routes. Tab routes appear in the bottom bar; settings is a pushed screen. */
 object Routes {
@@ -32,23 +38,38 @@ object Routes {
 }
 
 /**
- * The four bottom-navigation tabs. A minimal text glyph stands in for an icon so
- * the skeleton avoids a hard dependency on the material-icons artifact; swap in
- * real vector icons later.
+ * Root auth gate. Subscribes to the shared [AuthViewModel] and switches the whole
+ * app between the startup splash, the unauthenticated flow, and the tab body:
+ *  - [AuthState.Restoring]      → splash (checking the stored session)
+ *  - [AuthState.Authenticated]  → the tabbed app, greeting the /me display name
+ *  - anything else              → onboarding → sign-in
+ *
+ * Signing out from Settings flips the state back to unauthenticated, so this gate
+ * returns to the sign-in flow automatically.
  */
-private enum class RunaTab(
-    val route: String,
-    @StringRes val labelRes: Int,
-    val glyph: String,
-) {
-    HOME(Routes.HOME, R.string.tab_home, "◐"),
-    TODAYS_SONG(Routes.TODAYS_SONG, R.string.tab_todays_song, "♪"),
-    DIARY(Routes.DIARY, R.string.tab_diary, "❏"),
-    GALLERY(Routes.GALLERY, R.string.tab_gallery, "❖"),
+@Composable
+fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
+    val state by authViewModel.state.collectAsState()
+
+    when (val current = state) {
+        is AuthState.Restoring -> SplashScreen()
+        is AuthState.Authenticated -> RunaTabs(
+            displayName = current.user.displayName,
+            onSignOut = { authViewModel.logout() },
+        )
+        else -> AuthFlow(state = current, authViewModel = authViewModel)
+    }
 }
 
+/**
+ * The authenticated tab shell (the former app root). Four bottom tabs plus a
+ * pushed Settings screen, which now also hosts sign-out.
+ */
 @Composable
-fun RunaApp() {
+fun RunaTabs(
+    displayName: String,
+    onSignOut: () -> Unit,
+) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -62,8 +83,6 @@ fun RunaApp() {
                         selected = selected,
                         onClick = {
                             navController.navigate(tab.route) {
-                                // Standard bottom-nav behaviour: single instance per tab,
-                                // preserve each tab's own back stack.
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -84,14 +103,35 @@ fun RunaApp() {
             modifier = androidx.compose.ui.Modifier.padding(innerPadding),
         ) {
             composable(Routes.HOME) {
-                HomeScreen(onSettingsClick = { navController.navigate(Routes.SETTINGS) })
+                HomeScreen(
+                    displayName = displayName,
+                    onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                )
             }
             composable(Routes.TODAYS_SONG) { TodaysSongScreen() }
             composable(Routes.DIARY) { DiaryScreen() }
             composable(Routes.GALLERY) { GalleryScreen() }
             composable(Routes.SETTINGS) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onSignOut = onSignOut,
+                )
             }
         }
     }
+}
+
+/**
+ * The four bottom-navigation tabs. A minimal text glyph stands in for an icon so
+ * the skeleton avoids a hard dependency on the material-icons artifact.
+ */
+private enum class RunaTab(
+    val route: String,
+    @StringRes val labelRes: Int,
+    val glyph: String,
+) {
+    HOME(Routes.HOME, R.string.tab_home, "◐"),
+    TODAYS_SONG(Routes.TODAYS_SONG, R.string.tab_todays_song, "♪"),
+    DIARY(Routes.DIARY, R.string.tab_diary, "❏"),
+    GALLERY(Routes.GALLERY, R.string.tab_gallery, "❖"),
 }

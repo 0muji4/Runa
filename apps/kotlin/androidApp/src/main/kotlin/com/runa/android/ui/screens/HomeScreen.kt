@@ -24,16 +24,17 @@ import androidx.compose.runtime.collectAsState
 import org.koin.compose.koinInject
 
 /**
- * Home tab. The only screen wired to a shared feature: it subscribes to
- * [HealthzViewModel] (resolved from Koin) and reflects the backend health probe.
- * Settings is reachable from the top-bar action.
+ * Home tab. Greets the authenticated user by their /me [displayName] (the auth
+ * slice's proof that the protected endpoint works end to end) and keeps the
+ * backend health probe below as a connectivity indicator.
  *
- * TODO: real Home content (walking summary, moon phase, ...) goes below the
- * status line as the Home vertical slice is built out.
+ * TODO: real Home content (walking summary, moon phase, ...) goes below as the
+ * Home vertical slice is built out.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    displayName: String,
     onSettingsClick: () -> Unit,
     viewModel: HealthzViewModel = koinInject(),
 ) {
@@ -59,16 +60,22 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Text(
+                text = stringResource(R.string.home_greeting, displayName),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+
             when (val current = state) {
                 is HealthzUiState.Loading -> CircularProgressIndicator()
                 is HealthzUiState.Ok -> Text(
                     text = stringResource(R.string.health_ok),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 is HealthzUiState.Error -> {
                     Text(
                         text = stringResource(R.string.health_error),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(

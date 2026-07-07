@@ -26,6 +26,15 @@
 	<key>BASE_URL</key>
 	<string>http://localhost:8080</string>
 
+	<!-- Google iOS OAuth client ID for Sign in with Google (empty = disabled).
+	     Fill with the iOS client ID from Google Cloud, e.g.
+	     123456789-abcdef.apps.googleusercontent.com. The backend must list this
+	     client ID in GOOGLE_CLIENT_IDS. The web sign-in uses ASWebAuthenticationSession,
+	     which intercepts the reversed-client-id callback without a URL scheme entry.
+	     Sign in with Apple is native and needs no plist config (see Runa.entitlements). -->
+	<key>GIDClientID</key>
+	<string>890729556064-v8tfjso2kh0tuvuhaas2ub2o3olvft8k.apps.googleusercontent.com</string>
+
 	<!-- Allow cleartext HTTP to the local dev backend over loopback/localhost.
 	     Targeted exception — does NOT disable ATS globally. Mirrors Android's
 	     android:usesCleartextTraffic for the dev backend. -->

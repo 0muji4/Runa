@@ -39,6 +39,8 @@ targets:
         # so disable the auto-generated one.
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Runa/Info.plist
+        # Sign in with Apple entitlement (see Runa/Runa.entitlements).
+        CODE_SIGN_ENTITLEMENTS: Runa/Runa.entitlements
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "1.0"
         ENABLE_PREVIEWS: YES

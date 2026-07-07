@@ -93,9 +93,47 @@ Each tab is an empty shell today. A feature slice adds, per feature:
   `ui/screens/*Screen.kt` with the real UI; add routes/args in
   `navigation/RunaApp.kt` if the slice needs sub-screens.
 
-The platform `expect` frames (`SecureStorage`, `PushTokenProvider`,
-`BillingClient`, `BiometricAuthenticator`, `createSqlDriver`) are declared but
-their actuals are `TODO` stubs — fill them in when a slice first needs them.
+The platform `expect` frames (`PushTokenProvider`, `BillingClient`,
+`BiometricAuthenticator`, `createSqlDriver`) are declared but their actuals are
+`TODO` stubs — fill them in when a slice first needs them. (Secure storage is now
+implemented by the auth slice — see below.)
+
+## Auth slice
+
+The first product feature (authentication) is wired end to end. Shared pieces:
+
+- `feature/auth/`: `AuthRepository` (`signupEmail` / `loginEmail` /
+  `loginApple` / `loginGoogle` / `refresh` / `logout` / `getMe` /
+  `restoreSession`), `AuthViewModel`, and `AuthState`
+  (`Restoring` / `Unauthenticated` / `Authenticating` / `Authenticated(user)` /
+  `Error`). Subscribe to `AuthViewModel.state` (or `AuthRepository.authState`).
+- `network/auth/`: `TokenStore` + `SecureKeyValueStore` (secure token
+  persistence) and the Ktor `HttpSend` interceptor that auto-refreshes on 401 and
+  replays the request. Android backs the store with **EncryptedSharedPreferences**,
+  iOS with the **Keychain** (via multiplatform-settings).
+- **DI**: Android calls the `initKoin(context, baseUrl)` overload
+  (`di/Koin.android.kt`) because the secure store needs a `Context`; iOS keeps
+  `initKoin(baseUrl)`.
+- **Tests**: `./gradlew :shared:testDebugUnitTest` runs `commonTest` on the JVM
+  (401 auto-refresh + replay, refresh failure, token restore, each sign-in path)
+  with a Ktor `MockEngine`.
+
+### Native sign-in config (Android)
+
+The app gets an ID token natively and passes it to the shared repository; the
+backend verifies it. **Email + password works with no extra config.** Set these
+Gradle properties (e.g. in `~/.gradle/gradle.properties` or `-P` flags) to enable
+the social buttons:
+
+| Property | Purpose |
+| --- | --- |
+| `RUNA_GOOGLE_SERVER_CLIENT_ID` | Google **Web** OAuth client ID — Credential Manager's `serverClientId` (also a backend `GOOGLE_CLIENT_IDS` audience). |
+| `RUNA_APPLE_SERVICE_ID` | Apple **Service ID** for the Sign in with Apple web flow. |
+| `RUNA_APPLE_REDIRECT_URI` | The Apple web-flow https redirect you control. |
+
+Google uses Credential Manager (`androidx.credentials` + `googleid`). Apple on
+Android uses a Custom Tabs web flow; completing its redirect round trip requires
+the backend redirect endpoint and is finished once real credentials exist.
 
 ## Fonts
 

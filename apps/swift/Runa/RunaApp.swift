@@ -18,10 +18,11 @@ struct RunaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                // Dark theme only — belt-and-suspenders with Info.plist's
-                // UIUserInterfaceStyle=Dark.
-                .preferredColorScheme(.dark)
+            // RootView is the auth gate: splash while restoring, the sign-in flow
+            // when unauthenticated, the tab body when authenticated. It applies
+            // the dark color scheme itself (belt-and-suspenders with Info.plist's
+            // UIUserInterfaceStyle=Dark).
+            RootView()
         }
     }
 }

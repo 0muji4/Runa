@@ -99,6 +99,38 @@ Reconciled against a real XCFramework build (`import Shared`):
 If you regenerate the framework with a different SKIE/Kotlin version and a symbol
 moves, open the generated `Shared` Swift interface and re-reconcile.
 
+## Auth slice
+
+The first product feature (authentication) is wired end to end. `RootView` is the
+gate: `SplashView` while the shared `AuthState` is `Restoring`, the sign-in flow
+(`AuthFlowView` → onboarding → `SignInView`) when unauthenticated, and the tab
+body once `Authenticated` (Home greets the `/me` display name; Settings hosts
+sign-out). `AuthObservable` bridges the shared `AuthViewModel` `StateFlow` the
+same way `HealthzObservable` does.
+
+**Email + password works with no extra setup.** Native sign-in gets an ID token
+on-device and passes it to the shared repository (the backend verifies it):
+
+- **Sign in with Apple** (native, `ASAuthorization`): enabled by
+  `Runa/Runa.entitlements` (`com.apple.developer.applesignin`), referenced from
+  `project.yml` via `CODE_SIGN_ENTITLEMENTS`. Add the *Sign in with Apple*
+  capability to the App ID in the Apple Developer portal to run on device, and add
+  the app Bundle ID to the backend `APPLE_CLIENT_IDS`.
+- **Sign in with Google** (system `ASWebAuthenticationSession`, no third-party
+  SDK): set `GIDClientID` in `Info.plist` to the **iOS** OAuth client ID and add
+  that client ID to the backend `GOOGLE_CLIENT_IDS`. The reversed-client-id
+  callback is intercepted by `ASWebAuthenticationSession` (no `CFBundleURLTypes`
+  entry needed).
+
+### Auth SKIE symbols
+
+- `resolveAuthViewModel()` → global Swift func (like `resolveHealthzViewModel()`).
+- `AuthViewModel.state` (`StateFlow<AuthState>`) → `SkieSwiftStateFlow<AuthState>`.
+- The sealed `AuthState` is matched via `onEnum(of:)` →
+  `.restoring` / `.unauthenticated` / `.authenticating` /
+  `.authenticated(AuthStateAuthenticated)` (`.user`) / `.error(AuthStateError)`
+  (`.message`). Used in `RootView.swift` / `AuthFlowView.swift`.
+
 ## Fonts
 
 Custom fonts are not committed. See [`Runa/Fonts/README.md`](Runa/Fonts/README.md).

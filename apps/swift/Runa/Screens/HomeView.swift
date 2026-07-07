@@ -46,12 +46,17 @@ final class HealthzObservable: ObservableObject {
 }
 
 struct HomeView: View {
+    /// The authenticated user's /me display name (auth slice's proof the
+    /// protected endpoint works end to end).
+    let displayName: String
+    let onSignOut: () -> Void
+
     @StateObject private var healthz = HealthzObservable()
 
     var body: some View {
         NavigationStack {
             ScreenScaffold(
-                title: "ホーム",
+                title: "こんばんは、\(displayName) さん",
                 placeholder: "月あかりのはじまり。ここにホームの内容が入ります。"
             ) {
                 connectionStatus
@@ -60,7 +65,7 @@ struct HomeView: View {
             .toolbar {
                 // Settings is reached from the Home top bar (not a bottom tab).
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
+                    NavigationLink(destination: SettingsView(onSignOut: onSignOut)) {
                         Image(systemName: "gearshape")
                             .foregroundStyle(RunaColors.subAccent)
                     }
@@ -111,6 +116,6 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(displayName: "Runa", onSignOut: {})
         .preferredColorScheme(.dark)
 }

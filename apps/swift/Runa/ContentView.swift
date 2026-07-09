@@ -20,7 +20,7 @@ struct ContentView: View {
                     Label("きょうの一曲", systemImage: "music.note")
                 }
 
-            DiaryView()
+            DiaryListView()
                 .tabItem {
                     Label("ダイアリー", systemImage: "book.closed")
                 }

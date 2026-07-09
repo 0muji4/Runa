@@ -1,0 +1,208 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// diaryColumns is the SELECT list shared by every diary query, kept in one place
+// so the scan order in scanDiaryEntry stays in sync.
+const diaryColumns = `id, user_id, body_text, mood, client_id,
+	created_at, updated_at, deleted_at`
+
+// DiaryRepository is the pgx-backed implementation of DiaryStore.
+type DiaryRepository struct {
+	pool *pgxpool.Pool
+}
+
+// NewDiaryRepository wraps a pgx pool. As with AuthRepository the pool may be nil
+// when the DB is unreachable at boot; every method then returns ErrNoDatabase
+// instead of panicking, so the process still serves liveness traffic.
+func NewDiaryRepository(pool *pgxpool.Pool) *DiaryRepository {
+	return &DiaryRepository{pool: pool}
+}
+
+var _ DiaryStore = (*DiaryRepository)(nil)
+
+func scanDiaryEntry(r row) (DiaryEntry, error) {
+	var e DiaryEntry
+	if err := r.Scan(
+		&e.ID, &e.UserID, &e.BodyText, &e.Mood, &e.ClientID,
+		&e.CreatedAt, &e.UpdatedAt, &e.DeletedAt,
+	); err != nil {
+		return DiaryEntry{}, err
+	}
+	return e, nil
+}
+
+func (r *DiaryRepository) UpsertEntry(ctx context.Context, p UpsertDiaryParams) (DiaryEntry, bool, error) {
+	if r.pool == nil {
+		return DiaryEntry{}, false, ErrNoDatabase
+	}
+
+	// ON CONFLICT upserts onto the (user_id, client_id) unique index, so a retried
+	// offline create never duplicates. A conflicting row keeps its id/created_at
+	// and takes the latest body/mood (a create still queued locally may carry
+	// edits). (xmax = 0) is Postgres's idiom for "this row was inserted, not
+	// updated", which distinguishes 201 from 200.
+	const q = `
+		INSERT INTO diary_entries (user_id, client_id, body_text, mood, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, client_id) DO UPDATE
+			SET body_text = EXCLUDED.body_text,
+			    mood       = EXCLUDED.mood,
+			    updated_at = now()
+		RETURNING ` + diaryColumns + `, (xmax = 0) AS inserted`
+
+	var e DiaryEntry
+	var inserted bool
+	err := r.pool.QueryRow(ctx, q, p.UserID, p.ClientID, p.BodyText, p.Mood, p.CreatedAt).Scan(
+		&e.ID, &e.UserID, &e.BodyText, &e.Mood, &e.ClientID,
+		&e.CreatedAt, &e.UpdatedAt, &e.DeletedAt, &inserted,
+	)
+	if err != nil {
+		return DiaryEntry{}, false, fmt.Errorf("upsert diary entry: %w", err)
+	}
+	return e, inserted, nil
+}
+
+func (r *DiaryRepository) ListEntries(ctx context.Context, p ListDiaryParams) ([]DiaryEntry, error) {
+	if r.pool == nil {
+		return nil, ErrNoDatabase
+	}
+
+	// Two query shapes: the first page has no cursor; later pages ride the keyset
+	// (created_at, id) < (cursor) predicate. Keyset (not OFFSET) so inserts between
+	// page fetches never shift rows and cause skips/dupes.
+	var (
+		rows pgx.Rows
+		err  error
+	)
+	if p.Cursor == nil {
+		const q = `
+			SELECT ` + diaryColumns + `
+			FROM diary_entries
+			WHERE user_id = $1 AND deleted_at IS NULL
+			ORDER BY created_at DESC, id DESC
+			LIMIT $2`
+		rows, err = r.pool.Query(ctx, q, p.UserID, p.Limit)
+	} else {
+		const q = `
+			SELECT ` + diaryColumns + `
+			FROM diary_entries
+			WHERE user_id = $1 AND deleted_at IS NULL
+			  AND (created_at, id) < ($2, $3)
+			ORDER BY created_at DESC, id DESC
+			LIMIT $4`
+		rows, err = r.pool.Query(ctx, q, p.UserID, p.Cursor.CreatedAt, p.Cursor.ID, p.Limit)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list diary entries: %w", err)
+	}
+	return collectDiaryEntries(rows)
+}
+
+func (r *DiaryRepository) GetEntry(ctx context.Context, userID, id string) (DiaryEntry, error) {
+	if r.pool == nil {
+		return DiaryEntry{}, ErrNoDatabase
+	}
+	const q = `
+		SELECT ` + diaryColumns + `
+		FROM diary_entries
+		WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL`
+
+	e, err := scanDiaryEntry(r.pool.QueryRow(ctx, q, userID, id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DiaryEntry{}, ErrNotFound
+		}
+		return DiaryEntry{}, fmt.Errorf("get diary entry: %w", err)
+	}
+	return e, nil
+}
+
+func (r *DiaryRepository) UpdateEntry(ctx context.Context, userID, id string, p UpdateDiaryParams) (DiaryEntry, error) {
+	if r.pool == nil {
+		return DiaryEntry{}, ErrNoDatabase
+	}
+	const q = `
+		UPDATE diary_entries
+		SET body_text = $3, mood = $4, updated_at = now()
+		WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL
+		RETURNING ` + diaryColumns
+
+	e, err := scanDiaryEntry(r.pool.QueryRow(ctx, q, userID, id, p.BodyText, p.Mood))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return DiaryEntry{}, ErrNotFound
+		}
+		return DiaryEntry{}, fmt.Errorf("update diary entry: %w", err)
+	}
+	return e, nil
+}
+
+func (r *DiaryRepository) SoftDeleteEntry(ctx context.Context, userID, id string) error {
+	if r.pool == nil {
+		return ErrNoDatabase
+	}
+	// COALESCE keeps delete idempotent: an already-deleted row is matched (so no
+	// ErrNotFound) but its deleted_at/updated_at are left untouched. RowsAffected
+	// is 0 only when no such id belongs to the user → ErrNotFound (a 404 that does
+	// not reveal whether the id exists for someone else).
+	const q = `
+		UPDATE diary_entries
+		SET deleted_at = COALESCE(deleted_at, now()),
+		    updated_at = CASE WHEN deleted_at IS NULL THEN now() ELSE updated_at END
+		WHERE user_id = $1 AND id = $2`
+
+	tag, err := r.pool.Exec(ctx, q, userID, id)
+	if err != nil {
+		return fmt.Errorf("soft delete diary entry: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *DiaryRepository) ListChangedSince(ctx context.Context, userID string, since time.Time) ([]DiaryEntry, error) {
+	if r.pool == nil {
+		return nil, ErrNoDatabase
+	}
+	// Includes tombstones (deleted_at set) so other devices learn of deletions.
+	// Oldest change first keeps the client's merge order stable.
+	const q = `
+		SELECT ` + diaryColumns + `
+		FROM diary_entries
+		WHERE user_id = $1 AND updated_at > $2
+		ORDER BY updated_at ASC`
+
+	rows, err := r.pool.Query(ctx, q, userID, since)
+	if err != nil {
+		return nil, fmt.Errorf("list diary changes: %w", err)
+	}
+	return collectDiaryEntries(rows)
+}
+
+// collectDiaryEntries scans and closes a diary result set. It returns a non-nil
+// empty slice for zero rows so JSON encodes "[]" rather than "null".
+func collectDiaryEntries(rows pgx.Rows) ([]DiaryEntry, error) {
+	defer rows.Close()
+	entries := make([]DiaryEntry, 0)
+	for rows.Next() {
+		e, err := scanDiaryEntry(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan diary entry: %w", err)
+		}
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate diary entries: %w", err)
+	}
+	return entries, nil
+}

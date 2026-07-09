@@ -6,15 +6,20 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
 
-    Authentication: endpoints under /api/v1 are public except GET /me, which
-    requires a Bearer access token. Access tokens are short-lived HS256 JWTs;
-    refresh tokens are long-lived opaque strings, stored server-side only as a
-    hash and rotated on every /auth/refresh.
+    Authentication: the /api/v1/auth/* and /healthz routes are public; GET /me and
+    all /api/v1/diary* routes require a Bearer access token. Access tokens are
+    short-lived HS256 JWTs; refresh tokens are long-lived opaque strings, stored
+    server-side only as a hash and rotated on every /auth/refresh.
+
+    Diary sync: entries are offline-first. The client generates client_id (a UUID)
+    so an offline create can be POSTed idempotently on reconnect without
+    duplicating. GET /diary/sync?since= returns changes (including deletion
+    tombstones) after a watermark; conflicts resolve last-write-wins by updated_at.
 servers:
   - url: http://localhost:8080
     description: Local development (iOS simulator uses this host)
@@ -209,6 +214,171 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /api/v1/diary:
+    get:
+      operationId: listDiary
+      summary: List the caller's diary entries (protected)
+      description: |
+        Newest first, keyset pagination. Pass the previous page's `next_cursor`
+        as `cursor` to fetch the next page; a null `next_cursor` means the last
+        page. Soft-deleted entries are excluded.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque page cursor from a previous response's next_cursor.
+      responses:
+        "200":
+          description: One page of entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createDiary
+      summary: Create a diary entry (protected, idempotent by client_id)
+      description: |
+        The client generates client_id (a UUID). Re-POSTing the same client_id
+        upserts the same row instead of creating a duplicate — this is how an
+        entry authored offline is safely retried once connectivity returns. The
+        response is 201 on first insert and 200 on a subsequent idempotent upsert.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDiaryRequest"
+      responses:
+        "201":
+          description: Entry created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryEntry"
+        "200":
+          description: An entry with this client_id already existed; upserted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/diary/sync:
+    get:
+      operationId: syncDiary
+      summary: Fetch diary changes since a watermark (protected)
+      description: |
+        Returns every entry whose updated_at is after `since`, INCLUDING
+        tombstones (a deleted entry with deleted_at set), so other devices learn
+        of deletions. The response carries `server_time`; the client stores it and
+        sends it as the next `since` (last_synced_at). Conflicts are resolved
+        last-write-wins by updated_at. Omit `since` to fetch the full history.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: RFC3339 timestamp; entries changed strictly after it are returned.
+      responses:
+        "200":
+          description: The change delta plus the new server watermark.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiarySyncResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/diary/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDiary
+      summary: Get one diary entry (protected)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The entry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateDiary
+      summary: Update a diary entry's body and mood (protected)
+      description: Replaces body_text and mood. mood may be null to clear it.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDiaryRequest"
+      responses:
+        "200":
+          description: The updated entry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteDiary
+      summary: Soft-delete a diary entry (protected, idempotent)
+      description: |
+        Sets deleted_at; the tombstone still rides /diary/sync so other devices
+        remove it. Deleting an already-deleted own entry still returns 204.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Entry deleted (or already absent for the caller).
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -251,6 +421,28 @@ components:
             error:
               code: rate_limited
               message: too many requests, please try again later
+    Unauthorized:
+      description: Missing, invalid or expired access token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: unauthorized
+              message: authentication required
+    NotFound:
+      description: |
+        No such entry for the caller. Returned both for a genuinely missing entry
+        and for one owned by another user, so existence is never leaked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: not_found
+              message: diary entry not found
 
   schemas:
     HealthzResponse:
@@ -404,6 +596,7 @@ components:
                 - token_invalid
                 - provider_verification_failed
                 - rate_limited
+                - not_found
                 - internal_error
             message:
               type: string
@@ -416,3 +609,102 @@ components:
                     type: string
                   message:
                     type: string
+
+    DiaryEntry:
+      type: object
+      required:
+        - id
+        - client_id
+        - body_text
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-assigned entry id.
+        client_id:
+          type: string
+          format: uuid
+          description: Client-generated id; the idempotency key for create.
+        body_text:
+          type: string
+        mood:
+          type: string
+          nullable: true
+          description: Optional; saved but only consumed by a later insights slice.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set on soft-deleted entries; only appears in /diary/sync.
+
+    CreateDiaryRequest:
+      type: object
+      required:
+        - body_text
+        - client_id
+      properties:
+        body_text:
+          type: string
+          minLength: 1
+        mood:
+          type: string
+          nullable: true
+        client_id:
+          type: string
+          format: uuid
+          description: Client-generated UUID; idempotency key.
+        created_at:
+          type: string
+          format: date-time
+          description: Client authoring time; server clock is used when omitted.
+
+    UpdateDiaryRequest:
+      type: object
+      required:
+        - body_text
+      properties:
+        body_text:
+          type: string
+          minLength: 1
+        mood:
+          type: string
+          nullable: true
+          description: Replaces the stored mood; null clears it.
+
+    DiaryListResponse:
+      type: object
+      required:
+        - entries
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiaryEntry"
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page; null on the last page.
+
+    DiarySyncResponse:
+      type: object
+      required:
+        - entries
+        - server_time
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiaryEntry"
+          description: Changes since `since`, including tombstones (deleted_at set).
+        server_time:
+          type: string
+          format: date-time
+          description: Send this back as the next `since` (last_synced_at).

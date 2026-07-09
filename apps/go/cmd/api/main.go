@@ -84,9 +84,16 @@ func main() {
 	})
 	authHandler := handler.NewAuth(authService, logger)
 
+	// Diary wiring. Same nil-pool tolerance as auth: the repository returns
+	// ErrNoDatabase when the DB is down, so liveness still boots.
+	diaryRepo := repository.NewDiaryRepository(pool)
+	diaryService := service.NewDiaryService(diaryRepo, nil)
+	diaryHandler := handler.NewDiary(diaryService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
+		Diary:          diaryHandler,
 		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
 		AllowedOrigins: cfg.CORSAllowedOrigins,

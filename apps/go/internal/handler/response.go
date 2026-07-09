@@ -20,6 +20,7 @@ const (
 	CodeTokenInvalid         ErrorCode = "token_invalid"
 	CodeProviderVerification ErrorCode = "provider_verification_failed"
 	CodeRateLimited          ErrorCode = "rate_limited"
+	CodeNotFound             ErrorCode = "not_found"
 	CodeInternal             ErrorCode = "internal_error"
 )
 

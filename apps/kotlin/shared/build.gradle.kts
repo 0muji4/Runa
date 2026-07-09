@@ -43,6 +43,9 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.multiplatform.settings)
             implementation(libs.sqldelight.runtime)
+            // Turns a SQLDelight Query into a Flow so the diary list re-emits on
+            // every local write (local-first: the UI observes the DB, not the net).
+            implementation(libs.sqldelight.coroutines.extensions)
         }
 
         androidMain.dependencies {
@@ -62,6 +65,16 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.mock)
             implementation(libs.kotlinx.coroutines.test)
+        }
+
+        // The diary sync engine is tested against the REAL SQLDelight schema on a
+        // JVM in-memory driver. These tests live in androidUnitTest (JVM) rather
+        // than commonTest so no per-target test driver actual is needed; the
+        // repository code they exercise is plain commonMain Kotlin.
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.sqldelight.sqlite.driver)
+            }
         }
     }
 }

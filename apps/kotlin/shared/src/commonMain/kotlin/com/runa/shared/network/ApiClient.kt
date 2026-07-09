@@ -3,16 +3,23 @@ package com.runa.shared.network
 import com.runa.shared.network.dto.ApiError
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
+import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.DiaryEntryDto
+import com.runa.shared.network.dto.DiaryListResponse
+import com.runa.shared.network.dto.DiarySyncResponse
 import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
+import com.runa.shared.network.dto.UpdateDiaryRequest
 import com.runa.shared.network.dto.UserDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -39,6 +46,14 @@ interface ApiClient {
     suspend fun refresh(req: RefreshRequest): AuthTokens
     suspend fun logout(req: LogoutRequest)
     suspend fun getMe(): UserDto
+
+    // Diary (all Bearer-protected; the HTTP layer injects the token).
+    suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse
+    suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto
+    suspend fun getDiary(id: String): DiaryEntryDto
+    suspend fun updateDiary(id: String, req: UpdateDiaryRequest): DiaryEntryDto
+    suspend fun deleteDiary(id: String)
+    suspend fun syncDiary(since: String?): DiarySyncResponse
 }
 
 /**
@@ -80,6 +95,45 @@ class KtorApiClient(
     override suspend fun getMe(): UserDto =
         httpClient.get(baseUrl) {
             url { appendPathSegments("api", "v1", "me") }
+        }.decodeOrThrow()
+
+    override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "diary")
+                if (limit != null) parameters.append("limit", limit.toString())
+                if (cursor != null) parameters.append("cursor", cursor)
+            }
+        }.decodeOrThrow()
+
+    override suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto =
+        postJson(listOf("api", "v1", "diary"), req).decodeOrThrow()
+
+    override suspend fun getDiary(id: String): DiaryEntryDto =
+        httpClient.get(baseUrl) {
+            url { appendPathSegments("api", "v1", "diary", id) }
+        }.decodeOrThrow()
+
+    override suspend fun updateDiary(id: String, req: UpdateDiaryRequest): DiaryEntryDto =
+        httpClient.patch(baseUrl) {
+            url { appendPathSegments("api", "v1", "diary", id) }
+            contentType(ContentType.Application.Json)
+            setBody(req)
+        }.decodeOrThrow()
+
+    override suspend fun deleteDiary(id: String) {
+        val response = httpClient.delete(baseUrl) {
+            url { appendPathSegments("api", "v1", "diary", id) }
+        }
+        if (!response.status.isSuccess()) response.throwApiError()
+    }
+
+    override suspend fun syncDiary(since: String?): DiarySyncResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "diary", "sync")
+                if (since != null) parameters.append("since", since)
+            }
         }.decodeOrThrow()
 
     private suspend inline fun <reified B> postJson(segments: List<String>, body: B): HttpResponse =

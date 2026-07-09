@@ -1,27 +1,58 @@
 package com.runa.shared.platform
 
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.driver.native.NativeSqliteDriver
 import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
+import com.runa.shared.db.RunaDatabase
+import com.runa.shared.network.NetworkMonitor
 import com.runa.shared.network.auth.SecureKeyValueStore
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import platform.Network.nw_path_get_status
+import platform.Network.nw_path_monitor_create
+import platform.Network.nw_path_monitor_set_queue
+import platform.Network.nw_path_monitor_set_update_handler
+import platform.Network.nw_path_monitor_start
+import platform.Network.nw_path_status_satisfied
+import platform.darwin.dispatch_queue_create
 
 /** iOS uses the Darwin (NSURLSession) Ktor engine. */
 actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
 
 /**
- * TODO: return a `NativeSqliteDriver(RunaDatabase.Schema, "runa.db")` once local
- * persistence is needed. No feature uses the DB yet, so this stays a stub.
+ * iOS Koin bindings: the Keychain-backed secure store, the SQLDelight native
+ * driver (persisted to `runa.db`) and the connectivity monitor.
  */
-actual fun createSqlDriver(): SqlDriver =
-    TODO("iOS SQLDelight driver not wired yet — no feature uses the DB")
-
-/** Provides the Keychain-backed secure store. */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { KeychainSecureStore() }
+    single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
+    single<NetworkMonitor> { IosNetworkMonitor() }
+}
+
+/**
+ * [NetworkMonitor] over `NWPathMonitor`. The update handler fires on a private
+ * dispatch queue whenever the path changes; we publish "satisfied" as online.
+ */
+@OptIn(ExperimentalForeignApi::class)
+class IosNetworkMonitor : NetworkMonitor {
+    private val _isOnline = MutableStateFlow(true)
+    override val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+
+    init {
+        val monitor = nw_path_monitor_create()
+        nw_path_monitor_set_update_handler(monitor) { path ->
+            _isOnline.value = nw_path_get_status(path) == nw_path_status_satisfied
+        }
+        nw_path_monitor_set_queue(monitor, dispatch_queue_create("com.runa.network.monitor", null))
+        nw_path_monitor_start(monitor)
+    }
 }
 
 /**

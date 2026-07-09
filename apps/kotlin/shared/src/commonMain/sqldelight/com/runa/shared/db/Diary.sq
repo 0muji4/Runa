@@ -1,0 +1,97 @@
+-- Local diary store for the offline-first sync engine.
+--
+-- client_id is the stable LOCAL primary key (generated on the device the moment
+-- an entry is authored), so a row exists and renders before it ever reaches the
+-- server. server_id is null until the create is synced. sync_state tracks what
+-- still needs pushing:
+--   synced | pending_create | pending_update | pending_delete
+-- Timestamps are ISO-8601 strings (kotlinx.datetime Instant.toString()).
+
+CREATE TABLE diary_entries (
+    client_id  TEXT NOT NULL PRIMARY KEY,
+    server_id  TEXT,
+    body_text  TEXT NOT NULL,
+    mood       TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    sync_state TEXT NOT NULL
+);
+
+CREATE INDEX diary_entries_created_idx ON diary_entries(created_at);
+
+-- Single-row key/value table for sync bookkeeping (last_synced_at watermark).
+CREATE TABLE diary_sync_meta (
+    key   TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- ---- reads ----
+
+-- Visible list, newest first. Anything soft-deleted (locally or from the server,
+-- incl. pending_delete which sets deleted_at) drops out.
+selectVisible:
+SELECT *
+FROM diary_entries
+WHERE deleted_at IS NULL
+ORDER BY created_at DESC;
+
+selectByClientId:
+SELECT *
+FROM diary_entries
+WHERE client_id = ?;
+
+-- Everything with unsynced local work, oldest-authored first so pushes replay in
+-- authoring order.
+selectPending:
+SELECT *
+FROM diary_entries
+WHERE sync_state != 'synced'
+ORDER BY created_at ASC;
+
+selectAll:
+SELECT *
+FROM diary_entries;
+
+-- ---- local mutations ----
+
+insertEntry:
+INSERT INTO diary_entries(client_id, server_id, body_text, mood, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+updateContent:
+UPDATE diary_entries
+SET body_text = ?, mood = ?, updated_at = ?, sync_state = ?
+WHERE client_id = ?;
+
+markPendingDelete:
+UPDATE diary_entries
+SET deleted_at = ?, updated_at = ?, sync_state = 'pending_delete'
+WHERE client_id = ?;
+
+deleteByClientId:
+DELETE FROM diary_entries
+WHERE client_id = ?;
+
+-- ---- sync application ----
+
+-- After a successful push, pin the entry to the server's authoritative id and
+-- updated_at so the next delta comparison lines up.
+markSynced:
+UPDATE diary_entries
+SET server_id = ?, updated_at = ?, sync_state = 'synced'
+WHERE client_id = ?;
+
+-- Apply a server row wholesale during pull (server wins). Overwrites the local
+-- row for that client_id, incl. a tombstone (deleted_at set).
+applyServerRow:
+INSERT OR REPLACE INTO diary_entries(client_id, server_id, body_text, mood, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, 'synced');
+
+-- ---- meta ----
+
+getMeta:
+SELECT value FROM diary_sync_meta WHERE key = ?;
+
+setMeta:
+INSERT OR REPLACE INTO diary_sync_meta(key, value) VALUES (?, ?);

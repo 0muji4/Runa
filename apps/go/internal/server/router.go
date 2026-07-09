@@ -22,6 +22,7 @@ const requestTimeout = 30 * time.Second
 type Deps struct {
 	Health *handler.Health
 	Auth   *handler.Auth
+	Diary  *handler.Diary
 	// RequireAuth guards Bearer-protected routes (verifies the access token).
 	RequireAuth func(http.Handler) http.Handler
 	// AuthRateLimit throttles the credential endpoints (signup/login).
@@ -79,6 +80,17 @@ func New(deps Deps) *chi.Mux {
 		api.Group(func(pr chi.Router) {
 			pr.Use(deps.RequireAuth)
 			pr.Get("/me", deps.Auth.Me)
+
+			// Diary: all endpoints are Bearer-protected and scoped to the caller.
+			// Registered flat (not via Route("/diary")) so the collection matches
+			// "/diary" with no trailing slash, which is what the clients send. chi
+			// prefers the static "/diary/sync" over the "/diary/{id}" wildcard.
+			pr.Get("/diary", deps.Diary.List)
+			pr.Post("/diary", deps.Diary.Create)
+			pr.Get("/diary/sync", deps.Diary.Sync)
+			pr.Get("/diary/{id}", deps.Diary.Get)
+			pr.Patch("/diary/{id}", deps.Diary.Update)
+			pr.Delete("/diary/{id}", deps.Diary.Delete)
 		})
 	})
 

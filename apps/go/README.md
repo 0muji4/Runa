@@ -37,9 +37,16 @@ append `/api/v1/...` themselves.
 | POST   | `/api/v1/auth/refresh`  | `200 AuthTokens` — rotates the refresh token |
 | POST   | `/api/v1/auth/logout`   | `204` — revoke a refresh token (idempotent) |
 | GET    | `/api/v1/me`            | `200 User` — **requires `Authorization: Bearer`** |
+| GET    | `/api/v1/diary`         | `200 DiaryListResponse` — newest first, keyset paging (`limit`, `cursor`) |
+| POST   | `/api/v1/diary`         | `201`/`200 DiaryEntry` — idempotent by `client_id`   |
+| GET    | `/api/v1/diary/{id}`    | `200 DiaryEntry` (`404` if not the caller's)         |
+| PATCH  | `/api/v1/diary/{id}`    | `200 DiaryEntry` — replaces `body_text` + `mood`     |
+| DELETE | `/api/v1/diary/{id}`    | `204` — soft delete (idempotent)                     |
+| GET    | `/api/v1/diary/sync`    | `200 DiarySyncResponse` — changes since `?since=` (incl. tombstones) |
 
-The full contract lives in [`api/openapi.yaml`](api/openapi.yaml) and grows with
-each new endpoint.
+All `/api/v1/diary*` routes **require `Authorization: Bearer`** and only ever
+touch the caller's own entries. The full contract lives in
+[`api/openapi.yaml`](api/openapi.yaml) and grows with each new endpoint.
 
 ### Auth design
 
@@ -55,6 +62,26 @@ each new endpoint.
 - Crypto/token primitives live in `internal/auth/`; the flow is
   `internal/repository/auth_repository.go` → `internal/service/auth.go` →
   `internal/handler/auth.go`, mounted in `internal/server/router.go`.
+
+### Diary design (offline-first sync)
+
+The diary is built for clients that must write while offline and reconcile on
+reconnect. Two contract choices make that safe:
+
+- **`client_id` idempotency.** The client generates `client_id` (a UUID) when an
+  entry is authored, and it is unique per `(user_id, client_id)`. `POST /diary`
+  upserts on that key, so retrying a create that was queued offline never makes a
+  duplicate — the first insert returns `201`, a repeat returns `200` with the same
+  row. `created_at` is client-supplied so an offline entry keeps its authored time.
+- **Delta sync with tombstones + last-write-wins.** `GET /diary/sync?since=`
+  returns every row whose `updated_at` is after the watermark, **including
+  soft-deleted rows** (`deleted_at` set) so other devices learn of deletions. The
+  response's `server_time` becomes the client's next `since` (`last_synced_at`).
+  Conflicts are resolved last-write-wins by `updated_at`; there is no server-side
+  merge. Ownership is enforced in the data layer — a query for another user's row
+  returns not-found, and the handler answers `404` so existence never leaks.
+- The flow mirrors auth: `internal/repository/diary_repository.go` →
+  `internal/service/diary.go` → `internal/handler/diary.go`.
 
 ## Configuration
 
@@ -121,7 +148,9 @@ copied into the Docker image so the containerized server self-migrates.
 enables the `pgcrypto` extension for `gen_random_uuid()`. `0002_auth` extends
 `users` with the identity/credential columns (email, auth_provider, apple_sub,
 google_sub, display_name, password_hash, is_premium, premium_expires_at) and adds
-the `refresh_tokens` table.
+the `refresh_tokens` table. `0003_diary` adds `diary_entries` (body/mood/client_id
++ timestamps + soft-delete `deleted_at`), with a unique `(user_id, client_id)`
+index for idempotent upsert and indexes for keyset paging and delta sync.
 
 ## Tests
 
@@ -131,9 +160,14 @@ go test ./...   # unit + auth-flow integration; no database required (in-memory 
 
 Auth tests cover the argon2id/JWT/refresh/OIDC primitives (`internal/auth`), the
 service and handler, and a full `signup → /me → refresh → logout` flow through the
-real router (`internal/server/auth_flow_test.go`). CI has no Postgres, so the
-tests use the in-memory `internal/repository/memauth` store; the pgx-backed
-`auth_repository.go` is exercised by running the server against `docker compose`.
+real router (`internal/server/auth_flow_test.go`). Diary tests cover the service
+(idempotent upsert, ownership, keyset paging, soft-delete/sync delta), the handler
+(validation, 201-vs-200, 404), and a full `create → list → get → patch → sync →
+delete` flow with a real Bearer token (`internal/server/diary_flow_test.go`),
+including cross-user `404`. CI has no Postgres, so the tests use the in-memory
+`internal/repository/memauth` and `internal/repository/memdiary` stores; the
+pgx-backed repositories are exercised by running the server against
+`docker compose`.
 
 ## Versions
 

@@ -1,8 +1,13 @@
 package com.runa.shared.di
 
+import com.runa.shared.db.RunaDatabase
 import com.runa.shared.feature.auth.AuthRepository
 import com.runa.shared.feature.auth.AuthViewModel
 import com.runa.shared.feature.auth.DefaultAuthRepository
+import com.runa.shared.feature.diary.DefaultDiaryRepository
+import com.runa.shared.feature.diary.DiaryEditorViewModel
+import com.runa.shared.feature.diary.DiaryListViewModel
+import com.runa.shared.feature.diary.DiaryRepository
 import com.runa.shared.feature.health.HealthzViewModel
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.HttpClientFactory
@@ -13,6 +18,7 @@ import com.runa.shared.platform.httpClientEngine
 import com.runa.shared.platform.platformModule
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
+import org.koin.core.parameter.parametersOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
@@ -60,10 +66,22 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     single<AuthRepository> { DefaultAuthRepository(apiClient = get(), tokenStore = get()) }
 
+    // Diary. The SqlDriver + NetworkMonitor come from platformModule(); the
+    // database and repository are shared singletons.
+    single { RunaDatabase(driver = get()) }
+    single<DiaryRepository> {
+        DefaultDiaryRepository(database = get(), apiClient = get(), networkMonitor = get())
+    }
+
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
     single { AuthViewModel(repository = get()) }
     single { HealthzViewModel(apiClient = get()) }
+    single { DiaryListViewModel(repository = get()) }
+
+    // The editor is per-entry: `factory` so each open gets a fresh scope/state.
+    // The optional clientId (null = new entry) is passed as a resolution param.
+    factory { params -> DiaryEditorViewModel(repository = get(), clientId = params.getOrNull<String>()) }
 }
 
 /**
@@ -77,3 +95,15 @@ fun resolveHealthzViewModel(): HealthzViewModel = KoinPlatform.getKoin().get()
  * by SKIE as `KoinKt.resolveAuthViewModel()`).
  */
 fun resolveAuthViewModel(): AuthViewModel = KoinPlatform.getKoin().get()
+
+/**
+ * Resolve [DiaryListViewModel] (iOS entry point, `KoinKt.resolveDiaryListViewModel()`).
+ */
+fun resolveDiaryListViewModel(): DiaryListViewModel = KoinPlatform.getKoin().get()
+
+/**
+ * Resolve a [DiaryEditorViewModel] for an entry (iOS entry point). Pass null to
+ * start a new entry, or an existing entry's clientId to edit it.
+ */
+fun resolveDiaryEditorViewModel(clientId: String?): DiaryEditorViewModel =
+    KoinPlatform.getKoin().get { parametersOf(clientId) }

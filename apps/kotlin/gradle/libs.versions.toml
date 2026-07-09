@@ -55,8 +55,12 @@ multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", vers
 
 # --- SQLDelight ---
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+# JVM in-memory driver, used only by the Android unit tests to exercise the
+# real SQLDelight schema for the diary sync engine.
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 # --- Jetpack Compose (versions come from the BOM below) ---
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }

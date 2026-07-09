@@ -12,14 +12,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.runa.android.R
-import com.runa.android.ui.screens.DiaryScreen
 import com.runa.android.ui.screens.GalleryScreen
 import com.runa.android.ui.screens.HomeScreen
+import com.runa.android.ui.screens.diary.DiaryDetailScreen
+import com.runa.android.ui.screens.diary.DiaryEditorScreen
+import com.runa.android.ui.screens.diary.DiaryListScreen
 import com.runa.android.ui.screens.SettingsScreen
 import com.runa.android.ui.screens.SplashScreen
 import com.runa.android.ui.screens.TodaysSongScreen
@@ -33,9 +37,16 @@ object Routes {
     const val HOME = "home"
     const val TODAYS_SONG = "todays_song"
     const val DIARY = "diary"
+    const val DIARY_EDITOR_NEW = "diary/editor"
+    const val DIARY_EDITOR_EDIT = "diary/editor/{clientId}"
+    const val DIARY_DETAIL = "diary/detail/{clientId}"
     const val GALLERY = "gallery"
     const val SETTINGS = "settings"
 }
+
+/** Route builders for the diary sub-screens (clientId is a UUID, path-safe). */
+fun diaryEditorRoute(clientId: String): String = "diary/editor/$clientId"
+fun diaryDetailRoute(clientId: String): String = "diary/detail/$clientId"
 
 /**
  * Root auth gate. Subscribes to the shared [AuthViewModel] and switches the whole
@@ -109,7 +120,35 @@ fun RunaTabs(
                 )
             }
             composable(Routes.TODAYS_SONG) { TodaysSongScreen() }
-            composable(Routes.DIARY) { DiaryScreen() }
+            composable(Routes.DIARY) {
+                DiaryListScreen(
+                    onOpenEntry = { clientId -> navController.navigate(diaryDetailRoute(clientId)) },
+                    onNewEntry = { navController.navigate(Routes.DIARY_EDITOR_NEW) },
+                )
+            }
+            composable(Routes.DIARY_EDITOR_NEW) {
+                DiaryEditorScreen(clientId = null, onDone = { navController.popBackStack() })
+            }
+            composable(
+                Routes.DIARY_EDITOR_EDIT,
+                arguments = listOf(navArgument("clientId") { type = NavType.StringType }),
+            ) { entry ->
+                DiaryEditorScreen(
+                    clientId = entry.arguments?.getString("clientId"),
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(
+                Routes.DIARY_DETAIL,
+                arguments = listOf(navArgument("clientId") { type = NavType.StringType }),
+            ) { entry ->
+                DiaryDetailScreen(
+                    clientId = entry.arguments?.getString("clientId").orEmpty(),
+                    onEdit = { clientId -> navController.navigate(diaryEditorRoute(clientId)) },
+                    onDeleted = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
+                )
+            }
             composable(Routes.GALLERY) { GalleryScreen() }
             composable(Routes.SETTINGS) {
                 SettingsScreen(

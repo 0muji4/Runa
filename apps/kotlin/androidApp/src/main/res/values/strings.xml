@@ -49,4 +49,33 @@
     <!-- Authenticated home + sign out. -->
     <string name="home_greeting">こんばんは、%1$s さん</string>
     <string name="action_sign_out">サインアウト</string>
+
+    <!-- Diary (screens 09/10/11). -->
+    <string name="diary_new">綴る</string>
+    <string name="diary_empty_title">まだ、何も綴られていない</string>
+    <string name="diary_empty_body">月のしずけさの中で、はじめの一行を。</string>
+    <string name="diary_banner_syncing">同期しています…</string>
+    <string name="diary_banner_offline">オフライン ― 変更は端末に保存され、復帰後に同期されます</string>
+    <string name="diary_banner_error">同期に失敗しました</string>
+
+    <string name="diary_editor_placeholder">今日のことを、そっと。</string>
+    <string name="diary_editor_editing">下書き</string>
+    <string name="diary_editor_saving">保存中…</string>
+    <string name="diary_editor_saved">保存済み</string>
+    <string name="diary_editor_error">保存に失敗</string>
+    <string name="diary_mood_label">きょうの心もち（任意）</string>
+
+    <string name="diary_action_edit">編集</string>
+    <string name="diary_action_delete">削除</string>
+    <string name="diary_delete_confirm_title">この記録を削除しますか</string>
+    <string name="diary_delete_confirm_body">削除した記録は元に戻せません。</string>
+    <string name="action_delete">削除する</string>
+    <string name="action_cancel">やめる</string>
+
+    <!-- Quiet mood options (values map to the API's mood strings). -->
+    <string name="diary_mood_calm">しずか</string>
+    <string name="diary_mood_gentle">おだやか</string>
+    <string name="diary_mood_tired">つかれ</string>
+    <string name="diary_mood_hopeful">のぞみ</string>
+    <string name="diary_mood_heavy">おもい</string>
 </resources>

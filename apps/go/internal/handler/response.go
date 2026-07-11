@@ -21,6 +21,7 @@ const (
 	CodeProviderVerification ErrorCode = "provider_verification_failed"
 	CodeRateLimited          ErrorCode = "rate_limited"
 	CodeNotFound             ErrorCode = "not_found"
+	CodeForbidden            ErrorCode = "forbidden"
 	CodeInternal             ErrorCode = "internal_error"
 )
 

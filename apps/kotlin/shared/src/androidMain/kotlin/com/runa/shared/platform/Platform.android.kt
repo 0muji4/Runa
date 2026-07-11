@@ -10,6 +10,8 @@ import androidx.security.crypto.MasterKey
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.feature.today.player.AudioPlayer
+import com.runa.shared.feature.today.player.ExoAudioPlayer
 import com.runa.shared.network.NetworkMonitor
 import com.runa.shared.network.auth.SecureKeyValueStore
 import io.ktor.client.engine.HttpClientEngine
@@ -26,13 +28,14 @@ actual fun httpClientEngine(): HttpClientEngine = OkHttp.create()
 
 /**
  * Android Koin bindings: the encrypted secure store, the SQLDelight driver
- * (persisted to `runa.db`) and the connectivity monitor. All pull the Context
- * from Koin's androidContext.
+ * (persisted to `runa.db`), the connectivity monitor, and the ExoPlayer-backed
+ * audio player. All pull the Context from Koin's androidContext.
  */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { EncryptedPrefsStore(androidContext()) }
     single<SqlDriver> { AndroidSqliteDriver(RunaDatabase.Schema, androidContext(), "runa.db") }
     single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
+    single<AudioPlayer> { ExoAudioPlayer(androidContext()) }
 }
 
 /**

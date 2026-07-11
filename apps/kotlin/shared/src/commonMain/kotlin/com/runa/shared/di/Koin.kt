@@ -9,6 +9,13 @@ import com.runa.shared.feature.diary.DiaryEditorViewModel
 import com.runa.shared.feature.diary.DiaryListViewModel
 import com.runa.shared.feature.diary.DiaryRepository
 import com.runa.shared.feature.health.HealthzViewModel
+import com.runa.shared.feature.today.DefaultSongRepository
+import com.runa.shared.feature.today.DefaultTodayRepository
+import com.runa.shared.feature.today.HomeViewModel
+import com.runa.shared.feature.today.SongArchiveViewModel
+import com.runa.shared.feature.today.SongRepository
+import com.runa.shared.feature.today.TodayRepository
+import com.runa.shared.feature.today.player.SongPlayerViewModel
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.HttpClientFactory
 import com.runa.shared.network.KtorApiClient
@@ -66,12 +73,14 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     single<AuthRepository> { DefaultAuthRepository(apiClient = get(), tokenStore = get()) }
 
-    // Diary. The SqlDriver + NetworkMonitor come from platformModule(); the
-    // database and repository are shared singletons.
+    // Local persistence. The SqlDriver + NetworkMonitor come from platformModule();
+    // the database and repositories are shared singletons.
     single { RunaDatabase(driver = get()) }
     single<DiaryRepository> {
         DefaultDiaryRepository(database = get(), apiClient = get(), networkMonitor = get())
     }
+    single<TodayRepository> { DefaultTodayRepository(apiClient = get(), database = get()) }
+    single<SongRepository> { DefaultSongRepository(apiClient = get(), database = get()) }
 
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
@@ -82,6 +91,10 @@ internal fun sharedModule(baseUrl: String): Module = module {
     // The editor is per-entry: `factory` so each open gets a fresh scope/state.
     // The optional clientId (null = new entry) is passed as a resolution param.
     factory { params -> DiaryEditorViewModel(repository = get(), clientId = params.getOrNull<String>()) }
+
+    single { HomeViewModel(repository = get()) }
+    single { SongPlayerViewModel(audioPlayer = get(), songRepository = get()) }
+    single { SongArchiveViewModel(repository = get()) }
 }
 
 /**
@@ -107,3 +120,12 @@ fun resolveDiaryListViewModel(): DiaryListViewModel = KoinPlatform.getKoin().get
  */
 fun resolveDiaryEditorViewModel(clientId: String?): DiaryEditorViewModel =
     KoinPlatform.getKoin().get { parametersOf(clientId) }
+
+/** Resolve [HomeViewModel] from the started Koin graph (iOS entry point). */
+fun resolveHomeViewModel(): HomeViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve [SongPlayerViewModel] from the started Koin graph (iOS entry point). */
+fun resolveSongPlayerViewModel(): SongPlayerViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve [SongArchiveViewModel] from the started Koin graph (iOS entry point). */
+fun resolveSongArchiveViewModel(): SongArchiveViewModel = KoinPlatform.getKoin().get()

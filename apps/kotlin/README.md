@@ -87,16 +87,17 @@ Each tab is an empty shell today. A feature slice adds, per feature:
 
 - **shared**: `feature/<name>/` (UI state + view model), DTOs under
   `network/dto/`, new methods on `ApiClient`, Koin registrations in `di/Koin.kt`,
-  real tables in `commonMain/sqldelight/.../db/` + a real `createSqlDriver()`
-  actual if it needs persistence.
+  and real tables in `commonMain/sqldelight/.../db/` if it needs persistence (the
+  `SqlDriver` is already bound per-platform in `platformModule()` — see below).
 - **androidApp**: replace the `PlaceholderScreen(...)` call in the matching
   `ui/screens/*Screen.kt` with the real UI; add routes/args in
   `navigation/RunaApp.kt` if the slice needs sub-screens.
 
 The platform `expect` frames (`PushTokenProvider`, `BillingClient`,
-`BiometricAuthenticator`, `createSqlDriver`) are declared but their actuals are
-`TODO` stubs — fill them in when a slice first needs them. (Secure storage is now
-implemented by the auth slice — see below.)
+`BiometricAuthenticator`) are declared but their actuals are `TODO` stubs — fill
+them in when a slice first needs them. Secure storage is implemented by the auth
+slice, and the SQLDelight driver + audio player are bound in `platformModule()` by
+the today slice (see below).
 
 ## Auth slice
 
@@ -134,6 +135,36 @@ the social buttons:
 Google uses Credential Manager (`androidx.credentials` + `googleid`). Apple on
 Android uses a Custom Tabs web flow; completing its redirect round trip requires
 the backend redirect endpoint and is finished once real credentials exist.
+
+## Today slice
+
+The third feature ("today") powers the home screen. Its core is the **moon-phase
+calculator** — the reason this slice matters.
+
+- **`feature/today/moon/MoonPhaseCalculator.kt`** — a pure `commonMain`,
+  `kotlin.math`-only calculator (Meeus-simplified moon-age method; synodic month
+  `29.530588853` d, epoch `JD 2451550.1`). Because it uses no platform APIs, Android
+  and iOS run identical IEEE-754 math and return identical results. This is proven
+  by `commonTest/.../MoonPhaseCalculatorTest.kt` against real new/full/quarter
+  moons — a green run on any target is the cross-platform guarantee. The moon works
+  fully **offline** (nothing is fetched). Glyph + Japanese name live in shared
+  `feature/today/moon/MoonPhasePresentation.kt` so both apps render the same.
+- **Repositories** (`feature/today/`): `TodayRepository.getToday()` fetches the
+  day's quote/song, caches them in SQLDelight, and composes them with the computed
+  moon — falling back to the cache (plus the still-computed moon) when offline.
+  `SongRepository` reads the archive, records/observes play history.
+- **SQLDelight is now wired** (first real use): tables in
+  `commonMain/sqldelight/.../db/Today.sq`, and the `SqlDriver` is bound in each
+  `platformModule()` (Android `AndroidSqliteDriver`, iOS `NativeSqliteDriver`) with
+  `RunaDatabase` in `sharedModule`.
+- **Audio playback is a platform actual** behind the common `AudioPlayer` interface
+  (`feature/today/player/`): `ExoAudioPlayer` (Media3) on Android, `AvAudioPlayer`
+  (AVFoundation) on iOS, both bound in `platformModule()`. The shared
+  `SongPlayerViewModel` owns the play/pause/seek intent + current-song state; the
+  UI only drives it. `HomeViewModel` / `SongArchiveViewModel` complete the trio.
+- **Tests**: `commonTest` (moon reference dates) plus `androidUnitTest`
+  (`TodayRepositoryTest`, `SongRepositoryTest`, `SongPlayerViewModelTest`) which use
+  a JVM in-memory SQLite driver + Ktor `MockEngine`.
 
 ## Fonts
 

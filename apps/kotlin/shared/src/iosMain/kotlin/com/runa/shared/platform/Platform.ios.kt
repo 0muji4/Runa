@@ -5,6 +5,8 @@ import app.cash.sqldelight.driver.native.NativeSqliteDriver
 import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.feature.today.player.AudioPlayer
+import com.runa.shared.feature.today.player.AvAudioPlayer
 import com.runa.shared.network.NetworkMonitor
 import com.runa.shared.network.auth.SecureKeyValueStore
 import io.ktor.client.engine.HttpClientEngine
@@ -28,12 +30,14 @@ actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
 
 /**
  * iOS Koin bindings: the Keychain-backed secure store, the SQLDelight native
- * driver (persisted to `runa.db`) and the connectivity monitor.
+ * driver (persisted to `runa.db`), the connectivity monitor, and the
+ * AVPlayer-backed audio player.
  */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { KeychainSecureStore() }
     single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
     single<NetworkMonitor> { IosNetworkMonitor() }
+    single<AudioPlayer> { AvAudioPlayer() }
 }
 
 /**

@@ -17,6 +17,8 @@ import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
+import com.runa.shared.network.dto.SongsArchiveResponse
+import com.runa.shared.network.dto.TodayResponse
 import com.runa.shared.network.dto.UpdateDiaryRequest
 import com.runa.shared.network.dto.UserDto
 import kotlinx.coroutines.CoroutineScope
@@ -181,6 +183,9 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun getMe(): UserDto = unused()
     override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse = unused()
     override suspend fun getDiary(id: String): DiaryEntryDto = unused()
+    override suspend fun getToday(date: String?): TodayResponse = unused()
+    override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse = unused()
+    override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()
 
     private fun unused(): Nothing = error("endpoint not used by the diary sync engine")
 }

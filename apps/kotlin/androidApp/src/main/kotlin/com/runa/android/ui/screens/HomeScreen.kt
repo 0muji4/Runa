@@ -2,7 +2,9 @@ package com.runa.android.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,41 +14,44 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.runa.android.R
-import com.runa.shared.feature.health.HealthzUiState
-import com.runa.shared.feature.health.HealthzViewModel
-import androidx.compose.runtime.collectAsState
+import com.runa.android.ui.moon.MoonPresentation
+import com.runa.android.ui.theme.RunaColors
+import com.runa.shared.feature.today.HomeUiState
+import com.runa.shared.feature.today.HomeViewModel
+import com.runa.shared.feature.today.Today
+import kotlin.math.roundToInt
 import org.koin.compose.koinInject
 
 /**
- * Home tab. Greets the authenticated user by their /me [displayName] (the auth
- * slice's proof that the protected endpoint works end to end) and keeps the
- * backend health probe below as a connectivity indicator.
- *
- * TODO: real Home content (walking summary, moon phase, ...) goes below as the
- * Home vertical slice is built out.
+ * 06 Home. The quiet face of the app: a large 明朝 daily quote centered in
+ * generous whitespace, with the day's moon phase + date above it. The quote and
+ * moon still render when offline (the moon is always computed on-device).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     displayName: String,
     onSettingsClick: () -> Unit,
-    viewModel: HealthzViewModel = koinInject(),
+    viewModel: HomeViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
 
     Scaffold(
+        containerColor = RunaColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.tab_home)) },
+                title = { Text("") },
                 actions = {
                     TextButton(onClick = onSettingsClick) {
-                        Text(stringResource(R.string.tab_settings))
+                        Text(stringResource(R.string.tab_settings), color = RunaColors.Subtle)
                     }
                 },
             )
@@ -56,35 +61,60 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 32.dp, vertical = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Text(
-                text = stringResource(R.string.home_greeting, displayName),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-
             when (val current = state) {
-                is HealthzUiState.Loading -> CircularProgressIndicator()
-                is HealthzUiState.Ok -> Text(
-                    text = stringResource(R.string.health_ok),
+                is HomeUiState.Loading -> CircularProgressIndicator(color = RunaColors.Accent)
+                is HomeUiState.Content -> HomeContent(current.today, offline = false)
+                is HomeUiState.Offline -> HomeContent(current.today, offline = true)
+                is HomeUiState.Error -> Text(
+                    text = stringResource(R.string.home_error),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = RunaColors.Subtle,
+                    textAlign = TextAlign.Center,
                 )
-                is HealthzUiState.Error -> {
-                    Text(
-                        text = stringResource(R.string.health_error),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = current.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun HomeContent(today: Today, offline: Boolean) {
+    val moon = today.moon
+
+    // Moon glyph + date + phase name above the quote.
+    Text(text = MoonPresentation.glyph(moon.phaseKey), style = MaterialTheme.typography.displayLarge)
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = "${today.dateLabel} · ${MoonPresentation.name(moon.phaseKey)}",
+        style = MaterialTheme.typography.titleLarge,
+        color = RunaColors.Heading,
+    )
+    Text(
+        text = stringResource(R.string.moon_illumination, (moon.illumination * 100).roundToInt()),
+        style = MaterialTheme.typography.bodyMedium,
+        color = RunaColors.Subtle,
+    )
+
+    Spacer(Modifier.height(48.dp))
+
+    // The daily quote — the emotional center of the screen.
+    Text(
+        text = today.quote?.bodyText ?: stringResource(R.string.home_no_quote),
+        style = MaterialTheme.typography.headlineMedium,
+        color = RunaColors.Heading,
+        textAlign = TextAlign.Center,
+    )
+
+    if (offline) {
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = stringResource(R.string.home_offline_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RunaColors.Subtle,
+            textAlign = TextAlign.Center,
+        )
     }
 }

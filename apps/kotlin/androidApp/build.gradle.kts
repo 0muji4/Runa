@@ -70,6 +70,9 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    // Song artwork loading in Compose.
+    implementation(libs.coil.compose)
+
     // Native sign-in: Google via Credential Manager, Apple via a Custom Tabs web flow.
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)

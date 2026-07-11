@@ -48,9 +48,12 @@ targets:
       # Imports the shared KMP module as `import Shared`.
       - package: SharedKit
         product: Shared
-      # Shared.xcframework is a STATIC framework, so its transitive C dependencies
-      # are not pulled in automatically: SQLDelight's NativeSqliteDriver links
-      # against sqlite3, which the app target must name explicitly.
+      # Shared.xcframework is a STATIC framework, so system frameworks/libraries
+      # referenced only by Kotlin/Native code must be linked by the app target:
+      #  - AVFoundation (AVPlayer) + CoreMedia (CMTime) for the today AvAudioPlayer
+      #  - libsqlite3 for SQLDelight's NativeSqliteDriver (diary + today DB use)
+      - sdk: AVFoundation.framework
+      - sdk: CoreMedia.framework
       - sdk: libsqlite3.tbd
 
 # Shared scheme so `xcodebuild -scheme Runa` works and Xcode has a runnable target.

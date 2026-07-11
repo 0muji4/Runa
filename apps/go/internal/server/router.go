@@ -23,10 +23,13 @@ type Deps struct {
 	Health *handler.Health
 	Auth   *handler.Auth
 	Diary  *handler.Diary
+	Today  *handler.Today
 	// RequireAuth guards Bearer-protected routes (verifies the access token).
 	RequireAuth func(http.Handler) http.Handler
 	// AuthRateLimit throttles the credential endpoints (signup/login).
-	AuthRateLimit  func(http.Handler) http.Handler
+	AuthRateLimit func(http.Handler) http.Handler
+	// RequireAdmin gates the curated seed endpoints behind the admin token.
+	RequireAdmin   func(http.Handler) http.Handler
 	AllowedOrigins []string
 	Logger         *slog.Logger
 }
@@ -91,7 +94,27 @@ func New(deps Deps) *chi.Mux {
 			pr.Get("/diary/{id}", deps.Diary.Get)
 			pr.Patch("/diary/{id}", deps.Diary.Update)
 			pr.Delete("/diary/{id}", deps.Diary.Delete)
+
+			// Today: the home payload (daily quote + song), the song archive and
+			// the play log. The moon phase is computed client-side, so it has no
+			// route here. "/songs" is static and "/songs/{id}/played" is a fixed
+			// suffix, so registration order does not collide.
+			pr.Get("/today", deps.Today.Today)
+			pr.Get("/songs", deps.Today.Songs)
+			pr.Post("/songs/{id}/played", deps.Today.Played)
 		})
+
+		// Admin seed endpoints: curated content injection, gated by the shared
+		// admin token (X-Admin-Token) rather than a user session. Mounted only
+		// when the gate is wired (always in production; omitted by test routers
+		// that don't exercise admin), since chi panics on a nil middleware.
+		if deps.RequireAdmin != nil {
+			api.Group(func(ad chi.Router) {
+				ad.Use(deps.RequireAdmin)
+				ad.Post("/admin/quotes", deps.Today.CreateQuote)
+				ad.Post("/admin/songs", deps.Today.CreateSong)
+			})
+		}
 	})
 
 	return r

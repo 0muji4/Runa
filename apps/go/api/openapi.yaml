@@ -6,20 +6,28 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
 
     Authentication: the /api/v1/auth/* and /healthz routes are public; GET /me and
-    all /api/v1/diary* routes require a Bearer access token. Access tokens are
-    short-lived HS256 JWTs; refresh tokens are long-lived opaque strings, stored
-    server-side only as a hash and rotated on every /auth/refresh.
+    all /api/v1/diary*, /api/v1/today, /api/v1/songs* routes require a Bearer
+    access token. Access tokens are short-lived HS256 JWTs; refresh tokens are
+    long-lived opaque strings, stored server-side only as a hash and rotated on
+    every /auth/refresh. The /api/v1/admin/* seed endpoints use a separate shared
+    admin token (X-Admin-Token), not a user session.
 
     Diary sync: entries are offline-first. The client generates client_id (a UUID)
     so an offline create can be POSTed idempotently on reconnect without
     duplicating. GET /diary/sync?since= returns changes (including deletion
     tombstones) after a watermark; conflicts resolve last-write-wins by updated_at.
+
+    Today: GET /today returns the day's curated quote and song (exact date match;
+    either may be null). The moon phase — the home's third element — is NOT served
+    here; it is computed on the client in shared code (Meeus-simplified) so the
+    home works fully offline. GET /songs is the newest-first song archive and
+    POST /songs/{id}/played records play history.
 servers:
   - url: http://localhost:8080
     description: Local development (iOS simulator uses this host)
@@ -379,6 +387,164 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/today:
+    get:
+      operationId: getToday
+      summary: The home payload for a day — daily quote + song (protected)
+      description: |
+        Returns the curated quote and song for the exact `date`. Either may be
+        null when that day has no curated entry; the client still renders (any
+        cached copy plus the moon). The MOON PHASE is NOT returned here — it is
+        computed on the client in shared code (Meeus-simplified), so the home
+        works fully offline. Absent `date` uses the server's current UTC day; the
+        client normally sends its own local date (YYYY-MM-DD).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: YYYY-MM-DD. Defaults to the server's current UTC day.
+      responses:
+        "200":
+          description: The day's quote and song (either may be null).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/songs:
+    get:
+      operationId: listSongs
+      summary: The song archive — past daily songs (protected)
+      description: |
+        Newest first (by date), keyset pagination. Pass the previous page's
+        `next_cursor` as `cursor` to fetch the next page; a null `next_cursor`
+        means the last page.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque page cursor from a previous response's next_cursor.
+      responses:
+        "200":
+          description: One page of archived songs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongsListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/songs/{id}/played:
+    post:
+      operationId: recordSongPlayed
+      summary: Record a play of a song (protected)
+      description: |
+        Appends a play-history row for the caller. The body is optional; a bare
+        POST records the play at the server clock. An unknown song id answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayedRequest"
+      responses:
+        "204":
+          description: Play recorded.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/admin/quotes:
+    post:
+      operationId: adminCreateQuote
+      summary: Upsert a day's curated quote (admin)
+      description: |
+        Curated-content injection, gated by the shared admin token in the
+        `X-Admin-Token` header (NOT a user session). Upserts by date: re-posting a
+        date replaces its quote. The admin surface is DISABLED unless the server
+        has ADMIN_API_TOKEN set — otherwise every request answers 403.
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuoteRequest"
+      responses:
+        "201":
+          description: The upserted quote.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/admin/songs:
+    post:
+      operationId: adminCreateSong
+      summary: Upsert a day's curated song (admin)
+      description: |
+        As POST /admin/quotes, for the daily song. Gated by `X-Admin-Token`;
+        upserts by date.
+      security:
+        - adminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSongRequest"
+      responses:
+        "201":
+          description: The upserted song.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Song"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -386,6 +552,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: HS256 access token returned by any auth endpoint.
+    adminAuth:
+      type: apiKey
+      in: header
+      name: X-Admin-Token
+      description: |
+        Shared admin token for the curated seed endpoints. Set server-side via
+        ADMIN_API_TOKEN; when unset the admin endpoints are disabled (403).
 
   responses:
     ValidationError:
@@ -443,6 +616,18 @@ components:
             error:
               code: not_found
               message: diary entry not found
+    Forbidden:
+      description: |
+        The admin token was missing or wrong, or the admin surface is disabled
+        (no ADMIN_API_TOKEN configured server-side).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: forbidden
+              message: admin access forbidden
 
   schemas:
     HealthzResponse:
@@ -707,4 +892,124 @@ components:
         server_time:
           type: string
           format: date-time
+
+    Quote:
+      type: object
+      required:
+        - id
+        - date
+        - body_text
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        body_text:
+          type: string
+
+    Song:
+      type: object
+      required:
+        - id
+        - date
+        - title
+        - artist
+        - artwork_url
+        - audio_url
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+        artist:
+          type: string
+        artwork_url:
+          type: string
+        audio_url:
+          type: string
+
+    TodayResponse:
+      type: object
+      required:
+        - date
+      properties:
+        date:
+          type: string
+          format: date
+        quote:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Quote"
+          description: The day's quote, or null when none is curated for it.
+        song:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Song"
+          description: The day's song, or null when none is curated for it.
+
+    SongsListResponse:
+      type: object
+      required:
+        - songs
+      properties:
+        songs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Song"
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page; null on the last page.
+
+    PlayedRequest:
+      type: object
+      properties:
+        played_at:
+          type: string
+          format: date-time
+          description: When the play happened; the server clock is used when omitted.
+
+    CreateQuoteRequest:
+      type: object
+      required:
+        - date
+        - body_text
+      properties:
+        date:
+          type: string
+          format: date
+        body_text:
+          type: string
+          minLength: 1
+
+    CreateSongRequest:
+      type: object
+      required:
+        - date
+        - title
+        - artist
+        - artwork_url
+        - audio_url
+      properties:
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+          minLength: 1
+        artist:
+          type: string
+          minLength: 1
+        artwork_url:
+          type: string
+          minLength: 1
+        audio_url:
+          type: string
+          minLength: 1
           description: Send this back as the next `since` (last_synced_at).

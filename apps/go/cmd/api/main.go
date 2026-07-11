@@ -90,12 +90,20 @@ func main() {
 	diaryService := service.NewDiaryService(diaryRepo, nil)
 	diaryHandler := handler.NewDiary(diaryService, logger)
 
+	// Today wiring (daily quote + song, archive, play log). Same nil-pool
+	// tolerance as the other features.
+	todayRepo := repository.NewTodayRepository(pool)
+	todayService := service.NewTodayService(todayRepo, nil)
+	todayHandler := handler.NewToday(todayService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
 		Diary:          diaryHandler,
+		Today:          todayHandler,
 		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
+		RequireAdmin:   auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),
 		AllowedOrigins: cfg.CORSAllowedOrigins,
 		Logger:         logger,
 	})

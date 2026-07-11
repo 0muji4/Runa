@@ -38,6 +38,10 @@ type Config struct {
 	// GoogleClientIDs is the accepted `aud` set for Google ID tokens (the OAuth
 	// client IDs). Empty disables Google sign-in verification.
 	GoogleClientIDs []string
+	// AdminAPIToken gates the curated seed endpoints (POST /admin/quotes,
+	// /admin/songs) via the X-Admin-Token header. Empty (the default) DISABLES
+	// the admin surface entirely — it must be set to seed content.
+	AdminAPIToken string
 }
 
 // Load reads configuration from the environment, applying sensible local
@@ -54,6 +58,7 @@ func Load() Config {
 		RefreshTokenTTL:    getduration("REFRESH_TOKEN_TTL", 720*time.Hour), // 30 days
 		AppleClientIDs:     splitList(getenv("APPLE_CLIENT_IDS", "")),
 		GoogleClientIDs:    splitList(getenv("GOOGLE_CLIENT_IDS", "")),
+		AdminAPIToken:      getenv("ADMIN_API_TOKEN", ""),
 	}
 }
 

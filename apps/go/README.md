@@ -43,9 +43,16 @@ append `/api/v1/...` themselves.
 | PATCH  | `/api/v1/diary/{id}`    | `200 DiaryEntry` — replaces `body_text` + `mood`     |
 | DELETE | `/api/v1/diary/{id}`    | `204` — soft delete (idempotent)                     |
 | GET    | `/api/v1/diary/sync`    | `200 DiarySyncResponse` — changes since `?since=` (incl. tombstones) |
+| GET    | `/api/v1/today`         | `200 TodayResponse` — the day's `quote` + `song` (either may be null) for `?date=YYYY-MM-DD` |
+| GET    | `/api/v1/songs`         | `200 SongsListResponse` — song archive, newest first, keyset paging (`limit`, `cursor`) |
+| POST   | `/api/v1/songs/{id}/played` | `204` — record a play (`404` if the song is unknown) |
+| POST   | `/api/v1/admin/quotes`  | `201 Quote` — upsert a day's quote (**admin**, `X-Admin-Token`) |
+| POST   | `/api/v1/admin/songs`   | `201 Song` — upsert a day's song (**admin**, `X-Admin-Token`) |
 
-All `/api/v1/diary*` routes **require `Authorization: Bearer`** and only ever
-touch the caller's own entries. The full contract lives in
+All `/api/v1/diary*`, `/api/v1/today` and `/api/v1/songs*` routes **require
+`Authorization: Bearer`** and only ever touch the caller's own data. The
+`/api/v1/admin/*` seed routes use a separate shared **admin token**, not a user
+session. The full contract lives in
 [`api/openapi.yaml`](api/openapi.yaml) and grows with each new endpoint.
 
 ### Auth design
@@ -83,6 +90,52 @@ reconnect. Two contract choices make that safe:
 - The flow mirrors auth: `internal/repository/diary_repository.go` →
   `internal/service/diary.go` → `internal/handler/diary.go`.
 
+### Today design (home payload + song archive)
+
+The home screen shows three daily elements: a poetic quote, the moon phase, and a
+song. Only the quote and song are curated content served here — one row per day in
+`daily_quotes` / `daily_songs` (`date` is `UNIQUE`).
+
+- **`GET /today?date=` is an exact-date match.** It returns the day's `quote` and
+  `song`; a day with no curated entry returns `null` for that field (not an error),
+  so the client still renders. An absent `date` uses the server's current UTC day;
+  clients normally send their own local date.
+- **The moon phase is NOT computed here.** It is derived on the client in shared
+  KMP code from a Meeus-simplified algorithm (source below), so the home's moon
+  works fully offline and is identical on both platforms. The backend deliberately
+  stores no moon data.
+- **`GET /songs`** is the newest-first archive (keyset paging on `(date, id)`), and
+  **`POST /songs/{id}/played`** appends to `song_history` (an unknown id → `404`).
+- **Curation is seeded via admin endpoints** gated by the `X-Admin-Token` header
+  (see [`hack/seed-today.sh`](../../hack/seed-today.sh)). The admin surface is
+  **disabled unless `ADMIN_API_TOKEN` is set** — an unset token rejects every admin
+  request with `403`, so a misconfigured deployment can't be seeded anonymously.
+- The flow mirrors auth/diary: `internal/repository/today_repository.go` →
+  `internal/service/today.go` → `internal/handler/today.go`.
+
+**Moon algorithm source.** Jean Meeus, *Astronomical Algorithms* (2nd ed.), ch. 49
+(phases of the Moon) and the mean synodic month `29.530588853` days; reference new
+moon epoch `JD 2451550.1` (2000-01-06). Implemented in
+`apps/kotlin/shared/.../feature/today/moon/MoonPhaseCalculator.kt` and proven by
+the reference-date suite in `commonTest`.
+
+**Seeding curated content (local/dev).** Start the API with an admin token and run
+the seed script (it posts a quote + song for today and the next few days, so
+`/today` is never empty on the day you demo):
+
+```bash
+ADMIN_API_TOKEN=dev-seed-token go run ./cmd/api    # or docker compose, same token
+ADMIN_API_TOKEN=dev-seed-token ./hack/seed-today.sh http://localhost:8080
+```
+
+Or post directly:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/admin/songs \
+  -H 'Content-Type: application/json' -H 'X-Admin-Token: dev-seed-token' \
+  -d '{"date":"2026-07-11","title":"夜想曲","artist":"月詠","artwork_url":"https://…","audio_url":"https://…"}'
+```
+
 ## Configuration
 
 All configuration is read from environment variables (see `.env.example`).
@@ -99,6 +152,7 @@ All configuration is read from environment variables (see `.env.example`).
 | `REFRESH_TOKEN_TTL`    | `720h`                                                        | Refresh-token lifetime (30 days).                      |
 | `APPLE_CLIENT_IDS`     | (empty)                                                       | Accepted `aud` for Apple ID tokens (Bundle ID / Service ID, comma-separated). |
 | `GOOGLE_CLIENT_IDS`    | (empty)                                                       | Accepted `aud` for Google ID tokens (OAuth client IDs, comma-separated). |
+| `ADMIN_API_TOKEN`      | (empty)                                                       | Shared token for the `/admin/*` seed endpoints (`X-Admin-Token`). **Empty disables admin (403).** |
 
 Getting the provider audiences:
 
@@ -151,6 +205,8 @@ google_sub, display_name, password_hash, is_premium, premium_expires_at) and add
 the `refresh_tokens` table. `0003_diary` adds `diary_entries` (body/mood/client_id
 + timestamps + soft-delete `deleted_at`), with a unique `(user_id, client_id)`
 index for idempotent upsert and indexes for keyset paging and delta sync.
+`0004_today` adds `daily_quotes` and `daily_songs` (one curated row per `date`,
+`UNIQUE`) plus an append-only `song_history` play log.
 
 ## Tests
 
@@ -164,8 +220,11 @@ real router (`internal/server/auth_flow_test.go`). Diary tests cover the service
 (idempotent upsert, ownership, keyset paging, soft-delete/sync delta), the handler
 (validation, 201-vs-200, 404), and a full `create → list → get → patch → sync →
 delete` flow with a real Bearer token (`internal/server/diary_flow_test.go`),
-including cross-user `404`. CI has no Postgres, so the tests use the in-memory
-`internal/repository/memauth` and `internal/repository/memdiary` stores; the
+including cross-user `404`. Today tests cover the service (exact-date lookup,
+archive paging, unknown-song `404`) and a full `admin seed → /today → archive
+paging → played` flow, plus the admin `403` gate
+(`internal/server/today_flow_test.go`). CI has no Postgres, so the tests use the
+in-memory `internal/repository/memauth`, `memdiary` and `memtoday` stores; the
 pgx-backed repositories are exercised by running the server against
 `docker compose`.
 

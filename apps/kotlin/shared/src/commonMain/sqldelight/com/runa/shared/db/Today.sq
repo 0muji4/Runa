@@ -1,0 +1,61 @@
+-- Local persistence for the "today" feature. This replaces the walking-skeleton
+-- Placeholder schema and is the first real use of SQLDelight in the app.
+--
+-- today_quote / today_song cache the last-fetched daily content, keyed by date,
+-- so the home screen shows the right day's copy while offline (the moon phase is
+-- always computed, never cached). song_history is the local append-only play log.
+
+CREATE TABLE today_quote (
+    date      TEXT NOT NULL PRIMARY KEY,
+    id        TEXT NOT NULL,
+    body_text TEXT NOT NULL
+);
+
+CREATE TABLE today_song (
+    date        TEXT NOT NULL PRIMARY KEY,
+    id          TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    artist      TEXT NOT NULL,
+    artwork_url TEXT NOT NULL,
+    audio_url   TEXT NOT NULL
+);
+
+CREATE TABLE song_history (
+    id          TEXT    NOT NULL PRIMARY KEY,
+    song_id     TEXT    NOT NULL,
+    title       TEXT    NOT NULL,
+    artist      TEXT    NOT NULL,
+    artwork_url TEXT    NOT NULL,
+    played_at   INTEGER NOT NULL
+);
+
+-- ---- today_quote ----
+upsertQuote:
+INSERT OR REPLACE INTO today_quote(date, id, body_text)
+VALUES (?, ?, ?);
+
+selectQuote:
+SELECT date, id, body_text
+FROM today_quote
+WHERE date = ?;
+
+-- ---- today_song ----
+upsertSong:
+INSERT OR REPLACE INTO today_song(date, id, title, artist, artwork_url, audio_url)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectSong:
+SELECT date, id, title, artist, artwork_url, audio_url
+FROM today_song
+WHERE date = ?;
+
+-- ---- song_history ----
+insertPlay:
+INSERT INTO song_history(id, song_id, title, artist, artwork_url, played_at)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectHistory:
+SELECT id, song_id, title, artist, artwork_url, played_at
+FROM song_history
+ORDER BY played_at DESC
+LIMIT ?;

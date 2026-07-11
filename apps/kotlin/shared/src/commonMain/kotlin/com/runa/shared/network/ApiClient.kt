@@ -11,8 +11,11 @@ import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
+import com.runa.shared.network.dto.PlayedRequest
 import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
+import com.runa.shared.network.dto.SongsArchiveResponse
+import com.runa.shared.network.dto.TodayResponse
 import com.runa.shared.network.dto.UpdateDiaryRequest
 import com.runa.shared.network.dto.UserDto
 import io.ktor.client.HttpClient
@@ -54,6 +57,15 @@ interface ApiClient {
     suspend fun updateDiary(id: String, req: UpdateDiaryRequest): DiaryEntryDto
     suspend fun deleteDiary(id: String)
     suspend fun syncDiary(since: String?): DiarySyncResponse
+
+    /** GET /today?date= — the day's curated quote and song (either may be null). */
+    suspend fun getToday(date: String?): TodayResponse
+
+    /** GET /songs?limit=&cursor= — the song archive, newest first. */
+    suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse
+
+    /** POST /songs/{id}/played — record a play (server clock when playedAt is null). */
+    suspend fun markSongPlayed(songId: String, playedAt: String?)
 }
 
 /**
@@ -106,6 +118,23 @@ class KtorApiClient(
             }
         }.decodeOrThrow()
 
+    override suspend fun getToday(date: String?): TodayResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "today")
+                if (date != null) parameters.append("date", date)
+            }
+        }.decodeOrThrow()
+
+    override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "songs")
+                if (limit != null) parameters.append("limit", limit.toString())
+                if (cursor != null) parameters.append("cursor", cursor)
+            }
+        }.decodeOrThrow()
+
     override suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto =
         postJson(listOf("api", "v1", "diary"), req).decodeOrThrow()
 
@@ -124,6 +153,15 @@ class KtorApiClient(
     override suspend fun deleteDiary(id: String) {
         val response = httpClient.delete(baseUrl) {
             url { appendPathSegments("api", "v1", "diary", id) }
+        }
+        if (!response.status.isSuccess()) response.throwApiError()
+    }
+
+    override suspend fun markSongPlayed(songId: String, playedAt: String?) {
+        val response = httpClient.post(baseUrl) {
+            url { appendPathSegments("api", "v1", "songs", songId, "played") }
+            contentType(ContentType.Application.Json)
+            setBody(PlayedRequest(playedAt))
         }
         if (!response.status.isSuccess()) response.throwApiError()
     }

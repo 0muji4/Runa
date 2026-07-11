@@ -6,10 +6,11 @@ import org.koin.core.module.Module
 /**
  * Platform seams (expect/actual).
  *
- * These declare the platform-specific frames the shared code needs. Some bodies
- * are still TODO stubs; the auth slice fills in secure storage and the HTTP
- * engine, and the diary slice adds the SQLDelight [app.cash.sqldelight.db.SqlDriver]
- * and [com.runa.shared.network.NetworkMonitor] (both bound in [platformModule]).
+ * These declare the platform-specific frames the shared code needs. The auth
+ * slice fills in secure storage and the HTTP engine; the diary slice adds the
+ * SQLDelight [app.cash.sqldelight.db.SqlDriver] and
+ * [com.runa.shared.network.NetworkMonitor]; the today slice adds the
+ * [com.runa.shared.feature.today.player.AudioPlayer]. All are bound in [platformModule].
  */
 
 /** Ktor engine per platform: OkHttp on Android, Darwin on iOS. */
@@ -18,9 +19,10 @@ expect fun httpClientEngine(): HttpClientEngine
 /**
  * Platform-specific Koin bindings, merged into the graph by `initKoin`. Provides
  * the secure key-value store (Android: EncryptedSharedPreferences — needs a
- * Context; iOS: Keychain), the SQLDelight `SqlDriver`, and the `NetworkMonitor`.
- * Keeping this per-platform is how an Android Context is threaded in without
- * widening the common `initKoin(baseUrl)`.
+ * Context; iOS: Keychain), the SQLDelight [app.cash.sqldelight.db.SqlDriver], the
+ * [com.runa.shared.network.NetworkMonitor], and the
+ * [com.runa.shared.feature.today.player.AudioPlayer]. Keeping this per-platform is
+ * how an Android Context is threaded in without widening the common `initKoin(baseUrl)`.
  */
 expect fun platformModule(): Module
 

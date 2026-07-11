@@ -25,6 +25,7 @@ import com.runa.android.ui.screens.diary.DiaryDetailScreen
 import com.runa.android.ui.screens.diary.DiaryEditorScreen
 import com.runa.android.ui.screens.diary.DiaryListScreen
 import com.runa.android.ui.screens.SettingsScreen
+import com.runa.android.ui.screens.SongArchiveScreen
 import com.runa.android.ui.screens.SplashScreen
 import com.runa.android.ui.screens.TodaysSongScreen
 import com.runa.android.ui.screens.auth.AuthFlow
@@ -36,6 +37,7 @@ import org.koin.compose.koinInject
 object Routes {
     const val HOME = "home"
     const val TODAYS_SONG = "todays_song"
+    const val SONG_ARCHIVE = "song_archive"
     const val DIARY = "diary"
     const val DIARY_EDITOR_NEW = "diary/editor"
     const val DIARY_EDITOR_EDIT = "diary/editor/{clientId}"
@@ -119,7 +121,17 @@ fun RunaTabs(
                     onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 )
             }
-            composable(Routes.TODAYS_SONG) { TodaysSongScreen() }
+            composable(Routes.TODAYS_SONG) {
+                TodaysSongScreen(
+                    onOpenArchive = { navController.navigate(Routes.SONG_ARCHIVE) },
+                )
+            }
+            composable(Routes.SONG_ARCHIVE) {
+                SongArchiveScreen(
+                    onPlayAndReturn = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
+                )
+            }
             composable(Routes.DIARY) {
                 DiaryListScreen(
                     onOpenEntry = { clientId -> navController.navigate(diaryDetailRoute(clientId)) },

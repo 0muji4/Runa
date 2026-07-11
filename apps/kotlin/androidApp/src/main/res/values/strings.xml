@@ -78,4 +78,20 @@
     <string name="diary_mood_tired">つかれ</string>
     <string name="diary_mood_hopeful">のぞみ</string>
     <string name="diary_mood_heavy">おもい</string>
+
+    <!-- Today (home / player / archive). -->
+    <string name="home_offline_hint">オフライン表示中（月あかりは端末で算出しています）</string>
+    <string name="home_error">今日をよみこめませんでした。</string>
+    <string name="home_no_quote">今日の言葉は、まだ紡がれていません。</string>
+    <string name="today_song_none">今日の一曲は、まだ選ばれていません。</string>
+    <string name="today_song_open_archive">これまでの一曲</string>
+    <string name="song_archive_title">これまでの一曲</string>
+    <string name="song_archive_history">再生の記録</string>
+    <string name="song_archive_empty">アーカイブはまだありません。</string>
+    <string name="song_archive_load_more">もっと見る</string>
+    <string name="player_play">再生</string>
+    <string name="player_pause">一時停止</string>
+
+    <!-- Moon (phase glyph + name come from shared; these are the numeric labels). -->
+    <string name="moon_illumination">照度 %1$d%%</string>
 </resources>

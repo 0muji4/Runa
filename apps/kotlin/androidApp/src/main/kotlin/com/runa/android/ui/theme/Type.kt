@@ -2,46 +2,34 @@ package com.runa.android.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.runa.android.R
 
 /**
- * Runa typography.
+ * Runa typography. The design system calls for three families:
+ *   - headings: "Shippori Mincho"       (明朝 — long-form and titles)
+ *   - body:     "Zen Kaku Gothic New"   (本文)
+ *   - logo:     "Cormorant Garamond"    (ロゴ「LUNA」)
  *
- * The design system calls for three families:
- *   - headings: "Shippori Mincho"
- *   - body:     "Zen Kaku Gothic New"
- *   - logo:     "Cormorant Garamond"
- *
- * The .ttf/.otf binaries can NOT be committed here, so we currently fall back to
- * [FontFamily.Default] for every family. This keeps the build green while making
- * the intended structure explicit.
- *
- * TO ENABLE THE REAL FONTS:
- *   1. Drop the font files into androidApp/src/main/res/font/ using the exact
- *      lowercase filenames listed in androidApp/FONTS.md (Android resource names
- *      must be lowercase, no spaces).
- *   2. Uncomment the FontFamily blocks below and swap the `= FontFamily.Default`
- *      assignments for them.
- *
- * // import androidx.compose.ui.text.font.Font
- * // import com.runa.android.R
- * // val ShipporiMincho = FontFamily(
- * //     Font(R.font.shippori_mincho_regular, FontWeight.Normal),
- * //     Font(R.font.shippori_mincho_bold, FontWeight.Bold),
- * // )
- * // val ZenKakuGothicNew = FontFamily(
- * //     Font(R.font.zen_kaku_gothic_new_regular, FontWeight.Normal),
- * //     Font(R.font.zen_kaku_gothic_new_medium, FontWeight.Medium),
- * // )
- * // val CormorantGaramond = FontFamily(
- * //     Font(R.font.cormorant_garamond_regular, FontWeight.Normal),
- * // )
+ * The OFL binaries live in androidApp/src/main/res/font/ (see androidApp/FONTS.md).
+ * Only Regular + Medium are bundled per family; emphasis is carried by size and
+ * colour, not heavy weights — in keeping with the quiet, spare design tone.
  */
-val ShipporiMincho: FontFamily = FontFamily.Default
-val ZenKakuGothicNew: FontFamily = FontFamily.Default
-val CormorantGaramond: FontFamily = FontFamily.Default
+val ShipporiMincho: FontFamily = FontFamily(
+    Font(R.font.shippori_mincho_regular, FontWeight.Normal),
+    Font(R.font.shippori_mincho_medium, FontWeight.Medium),
+)
+val ZenKakuGothicNew: FontFamily = FontFamily(
+    Font(R.font.zen_kaku_gothic_new_regular, FontWeight.Normal),
+    Font(R.font.zen_kaku_gothic_new_medium, FontWeight.Medium),
+)
+val CormorantGaramond: FontFamily = FontFamily(
+    Font(R.font.cormorant_garamond_regular, FontWeight.Normal),
+    Font(R.font.cormorant_garamond_medium, FontWeight.Medium),
+)
 
 /**
  * Maps the families onto Material3 type roles:

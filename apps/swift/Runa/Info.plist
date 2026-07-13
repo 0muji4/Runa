@@ -55,21 +55,18 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 
-	<!--
-	  FONTS: uncomment once the .ttf/.otf files are added under Runa/Fonts/.
-	  Do NOT leave these active without the files present — iOS logs missing-font
-	  errors and the custom families silently fall back. See Runa/Fonts/README.md.
-
+	<!-- FONTS: the OFL binaries live under Runa/Fonts/ and are bundled by XcodeGen
+	     (project.yml sources include the Runa folder). Family names registered here
+	     must match the strings passed to Font.custom(...) in Theme/RunaFonts.swift.
+	     See Runa/Fonts/README.md. -->
 	<key>UIAppFonts</key>
 	<array>
 		<string>ShipporiMincho-Regular.ttf</string>
 		<string>ShipporiMincho-Medium.ttf</string>
-		<string>ShipporiMincho-SemiBold.ttf</string>
 		<string>ZenKakuGothicNew-Regular.ttf</string>
 		<string>ZenKakuGothicNew-Medium.ttf</string>
 		<string>CormorantGaramond-Regular.ttf</string>
 		<string>CormorantGaramond-Medium.ttf</string>
 	</array>
-	-->
 </dict>
 </plist>

@@ -7,11 +7,12 @@ import SwiftUI
 ///   - body:     "Zen Kaku Gothic New"
 ///   - logo:     "Cormorant Garamond"
 ///
-/// `Font.custom(_:size:)` falls back to the system font automatically when the
-/// named family is not bundled, so the app still builds and runs WITHOUT the
-/// font binaries. To ship the real typefaces, drop the .ttf/.otf files into
-/// Runa/Fonts/ and uncomment the UIAppFonts block in Info.plist
-/// (see Runa/Fonts/README.md).
+/// The OFL binaries are bundled under Runa/Fonts/ and registered via `UIAppFonts`
+/// in Info.plist (XcodeGen copies the folder's files as bundle resources). The
+/// strings below are the registered FAMILY names — they must match the family name
+/// inside each .ttf (verified: "Shippori Mincho", "Zen Kaku Gothic New",
+/// "Cormorant Garamond"). `Font.custom(_:size:)` still falls back to the system
+/// font gracefully if a family is ever missing. See Runa/Fonts/README.md.
 enum RunaFonts {
     private static let headingFamily = "Shippori Mincho"
     private static let bodyFamily = "Zen Kaku Gothic New"

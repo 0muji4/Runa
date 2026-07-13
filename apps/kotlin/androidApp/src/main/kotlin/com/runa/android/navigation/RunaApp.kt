@@ -4,8 +4,10 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.runa.android.ui.theme.RunaColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -89,7 +91,7 @@ fun RunaTabs(
         bottomBar = {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = backStackEntry?.destination
-            NavigationBar {
+            NavigationBar(containerColor = RunaColors.Background) {
                 RunaTab.entries.forEach { tab ->
                     val selected = currentDestination?.hierarchy?.any { it.route == tab.route } == true
                     NavigationBarItem(
@@ -105,6 +107,13 @@ fun RunaTabs(
                         },
                         icon = { Text(tab.glyph) },
                         label = { Text(stringResource(tab.labelRes)) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = RunaColors.Accent,
+                            selectedTextColor = RunaColors.Accent,
+                            unselectedIconColor = RunaColors.Subtle,
+                            unselectedTextColor = RunaColors.Subtle,
+                            indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                        ),
                     )
                 }
             }

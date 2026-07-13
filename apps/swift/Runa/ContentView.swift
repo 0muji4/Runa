@@ -22,7 +22,7 @@ struct ContentView: View {
 
             DiaryListView()
                 .tabItem {
-                    Label("ダイアリー", systemImage: "book.closed")
+                    Label("ダイアリー", systemImage: "doc.text")
                 }
 
             GalleryView()

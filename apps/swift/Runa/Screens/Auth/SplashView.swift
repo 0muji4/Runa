@@ -1,25 +1,26 @@
 import SwiftUI
 
 /// Quiet startup splash, shown while the shared auth state is `Restoring` (the
-/// app is checking the stored session). Moon glyph over the near-black surface.
+/// app is checking the stored session). The glowing moon over the LUNA wordmark.
 struct SplashView: View {
     var body: some View {
         ZStack {
             RunaColors.background.ignoresSafeArea()
 
-            VStack(spacing: RunaSpacing.md) {
-                Text("◐")
-                    .font(.system(size: 56))
-                    .foregroundStyle(RunaColors.accent)
-                Text("Runa")
-                    .font(RunaFonts.logo(40))
+            VStack(spacing: 0) {
+                GlowingMoon(diameter: 152)
+                Text("LUNA")
+                    .font(RunaFonts.logo(44))
+                    .tracking(14)
                     .foregroundStyle(RunaColors.heading)
+                    .padding(.top, RunaSpacing.md)
                 Text("月あかりの記録")
                     .font(RunaFonts.body(14))
                     .foregroundStyle(RunaColors.subtle)
+                    .padding(.top, RunaSpacing.xs)
                 ProgressView()
                     .tint(RunaColors.accent)
-                    .padding(.top, RunaSpacing.sm)
+                    .padding(.top, RunaSpacing.lg)
             }
         }
     }

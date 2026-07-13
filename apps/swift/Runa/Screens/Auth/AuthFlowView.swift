@@ -19,29 +19,18 @@ struct AuthFlowView: View {
         switch step {
         case .onboarding1:
             OnboardingView(
-                glyph: "☾",
-                title: "しずかに、記す。",
-                message: "一日のおわりに、月へ言葉を預ける場所。",
-                primaryLabel: "次へ",
-                onPrimary: { step = .onboarding2 }
+                title: "あなたの夜に、\nそっと寄り添う。",
+                onNext: { step = .onboarding2 }
             )
         case .onboarding2:
             OnboardingView(
-                glyph: "☽",
-                title: "あなたの夜を、そっと。",
-                message: "飾らず、余白を大切に。続けられる日記を。",
-                primaryLabel: "次へ",
-                onPrimary: { step = .notifications }
+                title: "三つの、\n静かな時間。",
+                onNext: { step = .notifications }
             )
         case .notifications:
-            OnboardingView(
-                glyph: "🔔",
-                title: "通知の許可",
-                message: "やさしい時刻に、そっとお知らせします。設定はあとからでも変えられます。",
-                primaryLabel: "次へ",
-                onPrimary: { step = .signIn },
-                secondaryLabel: "スキップ",
-                onSecondary: { step = .signIn }
+            NotificationPermissionView(
+                onContinue: { step = .signIn },
+                onSkip: { step = .signIn }
             )
         case .signIn:
             SignInView(
@@ -69,6 +58,13 @@ struct AuthFlowView: View {
                     } else {
                         auth.loginEmail(email: email, password: password)
                     }
+                },
+                // No anonymous/guest session exists yet, so "いまはスキップ" gently
+                // steps back to the intro rather than bypassing the auth gate.
+                onSkip: {
+                    localError = nil
+                    auth.clearError()
+                    step = .onboarding1
                 }
             )
         }

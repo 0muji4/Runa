@@ -1,8 +1,9 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Sign-in screen (screen 05). Apple (native button), Google, and email — email
-/// toggling between login and signup. Matches the design system's quiet tone.
+/// Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
+/// wordmark and a poetic line, then Apple / Google / メール with いまはスキップ below.
+/// "メールでつづける" opens a second, still email step rather than crowding the hero.
 struct SignInView: View {
     let isBusy: Bool
     let errorMessage: String?
@@ -10,92 +11,127 @@ struct SignInView: View {
     let onAppleError: (String) -> Void
     let onGoogle: () -> Void
     let onEmailSubmit: (_ isSignup: Bool, _ email: String, _ password: String, _ displayName: String) -> Void
+    let onSkip: () -> Void
+
+    @State private var showEmail = false
+
+    var body: some View {
+        ZStack {
+            RunaColors.background.ignoresSafeArea()
+            if showEmail {
+                emailStep
+            } else {
+                choices
+            }
+        }
+    }
+
+    // MARK: choices
+
+    private var choices: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 44)
+                GlowingMoon(diameter: 148)
+                Text("LUNA")
+                    .font(RunaFonts.logo(44))
+                    .tracking(14)
+                    .foregroundStyle(RunaColors.heading)
+                    .padding(.top, RunaSpacing.md)
+                Text("あなたの夜を、はじめましょう。")
+                    .font(RunaFonts.heading(22))
+                    .foregroundStyle(RunaColors.heading)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, RunaSpacing.sm)
+
+                Spacer().frame(height: 52)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { handleApple($0) }
+                    .signInWithAppleButtonStyle(.white)
+                    .frame(height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .disabled(isBusy)
+
+                surfacePill(title: "Googleでつづける", action: onGoogle).padding(.top, 14)
+                surfacePill(title: "メールでつづける", action: { showEmail = true }).padding(.top, 14)
+
+                if isBusy { ProgressView().tint(RunaColors.accent).padding(.top, RunaSpacing.md) }
+                if let errorMessage { errorLine(errorMessage) }
+
+                Text("いまはスキップ")
+                    .font(RunaFonts.body(13))
+                    .tracking(4)
+                    .foregroundStyle(RunaColors.subtle)
+                    .padding(12)
+                    .padding(.top, RunaSpacing.md)
+                    .onTapGesture { if !isBusy { onSkip() } }
+            }
+            .padding(.horizontal, 36)
+            .padding(.vertical, RunaSpacing.lg)
+        }
+    }
+
+    // MARK: email step
 
     @State private var isSignup = false
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
-
     private var canSubmit: Bool {
         !isBusy && !email.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty
     }
 
-    var body: some View {
-        ZStack {
-            RunaColors.background.ignoresSafeArea()
+    private var emailStep: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("‹ メールでつづける")
+                    .font(RunaFonts.body(14))
+                    .foregroundStyle(RunaColors.subtle)
+                    .padding(.vertical, 8)
+                    .onTapGesture { if !isBusy { showEmail = false } }
 
-            ScrollView {
-                VStack(spacing: RunaSpacing.sm) {
-                    Text("Runa")
-                        .font(RunaFonts.logo(40))
-                        .foregroundStyle(RunaColors.heading)
-                    Text("サインイン")
-                        .font(RunaFonts.heading(24))
-                        .foregroundStyle(RunaColors.heading)
-                        .padding(.bottom, RunaSpacing.xs)
+                Text("メールではじめる")
+                    .font(RunaFonts.heading(26))
+                    .foregroundStyle(RunaColors.heading)
+                    .padding(.top, RunaSpacing.md)
 
-                    SignInWithAppleButton(.signIn) { request in
-                        request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { result in
-                        handleApple(result)
-                    }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 48)
-                    .disabled(isBusy)
+                quietField("メールアドレス", text: $email, keyboard: .emailAddress).padding(.top, RunaSpacing.md)
+                quietSecureField("パスワード", text: $password).padding(.top, 14)
+                if isSignup {
+                    quietField("表示名（任意）", text: $displayName, keyboard: .default).padding(.top, 14)
+                }
 
-                    socialButton(title: "Googleでサインイン", action: onGoogle)
+                filledPill(
+                    title: isSignup ? "新規登録" : "ログイン",
+                    enabled: canSubmit
+                ) {
+                    onEmailSubmit(
+                        isSignup,
+                        email.trimmingCharacters(in: .whitespaces),
+                        password,
+                        displayName.trimmingCharacters(in: .whitespaces)
+                    )
+                }
+                .padding(.top, RunaSpacing.md)
 
-                    Text("または")
-                        .font(RunaFonts.body(13))
-                        .foregroundStyle(RunaColors.subtle)
-                        .padding(.vertical, RunaSpacing.xs)
-
-                    field("メールアドレス", text: $email, keyboard: .emailAddress)
-                    secureField("パスワード", text: $password)
-                    if isSignup {
-                        field("表示名（任意）", text: $displayName, keyboard: .default)
-                    }
-
-                    Button {
-                        onEmailSubmit(
-                            isSignup,
-                            email.trimmingCharacters(in: .whitespaces),
-                            password,
-                            displayName.trimmingCharacters(in: .whitespaces)
-                        )
-                    } label: {
-                        Text(isSignup ? "新規登録" : "ログイン")
-                            .font(RunaFonts.body(16))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, RunaSpacing.sm)
-                            .background(canSubmit ? RunaColors.accent : RunaColors.surface)
-                            .foregroundStyle(canSubmit ? RunaColors.background : RunaColors.subtle)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .disabled(!canSubmit)
-
-                    Button(isSignup ? "すでにアカウントをお持ちの方はこちら" : "アカウントをお持ちでない方はこちら") {
-                        isSignup.toggle()
-                    }
+                Text(isSignup ? "すでにアカウントをお持ちの方はこちら" : "アカウントをお持ちでない方はこちら")
                     .font(RunaFonts.body(13))
                     .foregroundStyle(RunaColors.subAccent)
-                    .disabled(isBusy)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, RunaSpacing.sm)
+                    .onTapGesture { if !isBusy { isSignup.toggle() } }
 
-                    if isBusy {
-                        ProgressView().tint(RunaColors.accent).padding(.top, RunaSpacing.xs)
-                    }
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(RunaFonts.body(13))
-                            .foregroundStyle(RunaColors.accent)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.horizontal, RunaSpacing.md)
-                .padding(.vertical, RunaSpacing.lg)
+                if isBusy { ProgressView().tint(RunaColors.accent).frame(maxWidth: .infinity).padding(.top, RunaSpacing.sm) }
+                if let errorMessage { errorLine(errorMessage) }
             }
+            .padding(.horizontal, 36)
+            .padding(.vertical, RunaSpacing.lg)
         }
     }
+
+    // MARK: pieces
 
     private func handleApple(_ result: Result<ASAuthorization, Error>) {
         switch result {
@@ -115,35 +151,65 @@ struct SignInView: View {
         }
     }
 
-    private func socialButton(title: String, action: @escaping () -> Void) -> some View {
+    private func filledPill(title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(RunaFonts.body(16))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, RunaSpacing.sm)
+                .frame(height: 56)
+                .background(enabled ? RunaColors.heading : RunaColors.surface)
+                .foregroundStyle(enabled ? RunaColors.background : RunaColors.subtle)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .disabled(!enabled)
+    }
+
+    private func surfacePill(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(RunaFonts.body(16))
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
                 .background(RunaColors.surface)
                 .foregroundStyle(RunaColors.heading)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(RunaColors.subtle.opacity(0.18), lineWidth: 1)
+                )
         }
         .disabled(isBusy)
     }
 
-    private func field(_ label: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {
+    private func quietField(_ label: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {
         TextField("", text: text, prompt: Text(label).foregroundColor(RunaColors.subtle))
             .keyboardType(keyboard)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .foregroundStyle(RunaColors.heading)
-            .padding(RunaSpacing.sm)
+            .padding(.horizontal, RunaSpacing.sm)
+            .frame(height: 52)
             .background(RunaColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .disabled(isBusy)
     }
 
-    private func secureField(_ label: String, text: Binding<String>) -> some View {
+    private func quietSecureField(_ label: String, text: Binding<String>) -> some View {
         SecureField("", text: text, prompt: Text(label).foregroundColor(RunaColors.subtle))
             .foregroundStyle(RunaColors.heading)
-            .padding(RunaSpacing.sm)
+            .padding(.horizontal, RunaSpacing.sm)
+            .frame(height: 52)
             .background(RunaColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .disabled(isBusy)
+    }
+
+    private func errorLine(_ message: String) -> some View {
+        Text(message)
+            .font(RunaFonts.body(13))
+            .foregroundStyle(RunaColors.accent)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, RunaSpacing.sm)
     }
 }

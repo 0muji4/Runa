@@ -45,13 +45,11 @@ fun AuthFlow(
     when (step) {
         AuthStep.Onboarding1 -> OnboardingScreen(
             titleRes = R.string.onboarding_1_title,
-            bodyRes = R.string.onboarding_1_body,
             onNext = { step = AuthStep.Onboarding2 },
         )
 
         AuthStep.Onboarding2 -> OnboardingScreen(
             titleRes = R.string.onboarding_2_title,
-            bodyRes = R.string.onboarding_2_body,
             onNext = { step = AuthStep.Notifications },
         )
 
@@ -88,6 +86,14 @@ fun AuthFlow(
                     EmailMode.Login -> authViewModel.loginEmail(email, password)
                     EmailMode.Signup -> authViewModel.signupEmail(email, password, displayName.ifBlank { null })
                 }
+            },
+            // No anonymous/guest session exists yet, so "いまはスキップ" gently steps
+            // back to the intro rather than bypassing the auth gate. Wiring a real
+            // guest mode needs shared-auth support (tracked separately).
+            onSkip = {
+                localError = null
+                authViewModel.clearError()
+                step = AuthStep.Onboarding1
             },
         )
     }

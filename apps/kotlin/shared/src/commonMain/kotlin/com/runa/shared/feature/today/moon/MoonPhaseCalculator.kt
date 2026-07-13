@@ -1,9 +1,11 @@
 package com.runa.shared.feature.today.moon
 
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
@@ -79,5 +81,17 @@ object MoonPhaseCalculator {
             illumination = illumination,
             ageDays = age,
         )
+    }
+
+    /**
+     * Convenience for callers that only hold an epoch-millis timestamp (e.g. a diary
+     * entry's creation time) and no kotlinx-datetime types. Resolves the calendar day
+     * in the system zone, then delegates to [phaseFor]. Single, non-defaulted
+     * parameter so it bridges cleanly to Swift/ObjC.
+     */
+    fun phaseForEpochMillis(epochMillis: Long): MoonPhase {
+        val zone = TimeZone.currentSystemDefault()
+        val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone).date
+        return phaseFor(date, zone)
     }
 }

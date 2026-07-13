@@ -73,16 +73,29 @@ enum DiaryMood: String, CaseIterable {
     }
 }
 
-/// Formats an epoch-millis timestamp as a quiet Japanese date line.
+/// Quiet Japanese date formatting for the diary. The design shows the day and the
+/// moon phase — never a clock time — so the record stays timeless.
 enum DiaryDate {
-    private static let formatter: DateFormatter = {
+    private static func formatter(_ pattern: String) -> DateFormatter {
         let f = DateFormatter()
         f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = "M月d日 HH:mm"
+        f.dateFormat = pattern
         return f
-    }()
+    }
 
-    static func string(_ epochMs: Int64) -> String {
-        formatter.string(from: Date(timeIntervalSince1970: Double(epochMs) / 1000.0))
+    private static let dayFmt = formatter("M月d日")
+
+    /// e.g. 7月4日 (no time).
+    static func day(_ epochMs: Int64) -> String {
+        dayFmt.string(from: Date(timeIntervalSince1970: Double(epochMs) / 1000.0))
+    }
+
+    /// e.g. 日曜 — short Japanese weekday for the editor/detail headers.
+    static func weekday(_ epochMs: Int64) -> String {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        let date = Date(timeIntervalSince1970: Double(epochMs) / 1000.0)
+        let names = ["日曜", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜"]
+        return names[(cal.component(.weekday, from: date) - 1) % 7]
     }
 }

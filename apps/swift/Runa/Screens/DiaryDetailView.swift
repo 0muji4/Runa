@@ -1,9 +1,9 @@
 import SwiftUI
 import Shared
 
-/// Diary detail (screen 11) — reading back a record. The body uses the #C8C6CE
-/// body colour in Shippori Mincho for calm legibility, with quiet edit/delete
-/// affordances. The entry is read from the (shared) list model's cache.
+/// Diary detail (11) — reading a record back. A moon-led header (phase disc, date,
+/// phase · weekday) over the body in #C8C6CE 明朝 for calm legibility, with quiet
+/// edit/delete affordances. The entry is read from the (shared) list model's cache.
 struct DiaryDetailView: View {
     let clientId: String
     @ObservedObject var model: DiaryListObservable
@@ -15,38 +15,37 @@ struct DiaryDetailView: View {
         ZStack {
             RunaColors.background.ignoresSafeArea()
 
-            if let entry = model.entry(clientId: clientId) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: RunaSpacing.md) {
-                        Text(DiaryDate.string(entry.createdAtEpochMs))
-                            .font(RunaFonts.body(13))
-                            .foregroundStyle(RunaColors.subtle)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    topBar
+                    if let entry = model.entry(clientId: clientId) {
+                        let moon = DiaryMoonCalc.moon(epochMs: entry.createdAtEpochMs)
+                        HStack(spacing: 14) {
+                            MoonPhaseDisc(illumination: moon.illumination, waxing: moon.waxing, diameter: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(DiaryDate.day(entry.createdAtEpochMs))
+                                    .font(RunaFonts.heading(26))
+                                    .foregroundStyle(RunaColors.heading)
+                                Text("\(moon.name)　・　\(DiaryDate.weekday(entry.createdAtEpochMs))")
+                                    .font(RunaFonts.body(13))
+                                    .foregroundStyle(RunaColors.subtle)
+                            }
+                        }
+                        .padding(.top, RunaSpacing.md)
 
                         Text(entry.bodyText)
                             .font(RunaFonts.heading(18, relativeTo: .body))
                             .foregroundStyle(RunaColors.body)
-
-                        if let mood = entry.mood, let label = DiaryMood(rawValue: mood)?.label {
-                            Text(label)
-                                .font(RunaFonts.body(13))
-                                .foregroundStyle(RunaColors.subAccent)
-                        }
+                            .lineSpacing(8)
+                            .padding(.top, RunaSpacing.lg)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, RunaSpacing.md)
-                    .padding(.top, RunaSpacing.sm)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, RunaSpacing.md)
+                .padding(.top, RunaSpacing.sm)
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: RunaSpacing.sm) {
-                    Button("編集") { path.append(DiaryRoute.editor(clientId: clientId)) }
-                    Button("削除", role: .destructive) { confirmDelete = true }
-                        .tint(RunaColors.accent)
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .alert("この記録を削除しますか", isPresented: $confirmDelete) {
             Button("やめる", role: .cancel) {}
             Button("削除する", role: .destructive) {
@@ -56,5 +55,26 @@ struct DiaryDetailView: View {
         } message: {
             Text("削除した記録は元に戻せません。")
         }
+    }
+
+    private var topBar: some View {
+        HStack(alignment: .center) {
+            Text("‹ 記録")
+                .font(RunaFonts.body(16))
+                .foregroundStyle(RunaColors.subtle)
+                .onTapGesture { if !path.isEmpty { path.removeLast() } }
+            Spacer()
+            Text("編集")
+                .font(RunaFonts.body(13))
+                .foregroundStyle(RunaColors.subtle)
+                .padding(8)
+                .onTapGesture { path.append(DiaryRoute.editor(clientId: clientId)) }
+            Text("削除")
+                .font(RunaFonts.body(13))
+                .foregroundStyle(RunaColors.accent)
+                .padding(8)
+                .onTapGesture { confirmDelete = true }
+        }
+        .padding(.vertical, 6)
     }
 }

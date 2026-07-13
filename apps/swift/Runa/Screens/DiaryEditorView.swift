@@ -1,12 +1,16 @@
 import SwiftUI
 import Shared
 
-/// Diary editor (screen 10) — "書く". A whitespace-first, Shippori Mincho canvas
-/// (Dynamic Type–aware) where the character count is never shown. Autosave is
-/// durable — the entry persists from the first line — with a deliberately quiet
-/// indicator. Mood is an optional, still choice.
+/// Diary editor (10) — "書く". A whitespace-first 明朝 canvas: the day's date, a
+/// quiet prompt, then the writing surface (Dynamic Type–aware). The character count
+/// is never shown; autosave is durable with a whisper of an indicator. "とじる"
+/// flushes and leaves. Mood is intentionally absent, matching the confirmed design.
 struct DiaryEditorView: View {
     @StateObject private var model: DiaryEditorObservable
+    @Environment(\.dismiss) private var dismiss
+
+    // No created-at in the editor state; the header shows the day being written.
+    private let dayMs = Int64(Date().timeIntervalSince1970 * 1000)
 
     init(clientId: String?) {
         _model = StateObject(wrappedValue: DiaryEditorObservable(clientId: clientId))
@@ -16,35 +20,52 @@ struct DiaryEditorView: View {
         ZStack {
             RunaColors.background.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: RunaSpacing.md) {
-                ZStack(alignment: .topLeading) {
-                    if (model.state?.bodyText ?? "").isEmpty {
-                        Text("今日のことを、そっと。")
-                            .font(RunaFonts.heading(18, relativeTo: .body))
-                            .foregroundStyle(RunaColors.subtle)
-                            .padding(.top, 8)
-                            .padding(.leading, 5)
-                    }
-                    TextEditor(text: bodyBinding)
-                        .font(RunaFonts.heading(18, relativeTo: .body))
-                        .foregroundColor(RunaColors.body)
-                        .scrollContentBackground(.hidden)
-                        .background(RunaColors.background)
-                }
-                .frame(maxHeight: .infinity)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(DiaryDate.day(dayMs))　\(DiaryDate.weekday(dayMs))")
+                    .font(RunaFonts.body(13))
+                    .foregroundStyle(RunaColors.subtle)
 
-                moodRow
+                Text("きょう、心にのこったこと。")
+                    .font(RunaFonts.heading(20, relativeTo: .body))
+                    .foregroundStyle(RunaColors.subtle)
+                    .padding(.top, RunaSpacing.md)
+                    .padding(.bottom, RunaSpacing.sm)
+
+                TextEditor(text: bodyBinding)
+                    .font(RunaFonts.heading(18, relativeTo: .body))
+                    .foregroundColor(RunaColors.body)
+                    .lineSpacing(8)
+                    .scrollContentBackground(.hidden)
+                    .background(RunaColors.background)
+                    .frame(maxHeight: .infinity)
+
+                HStack(alignment: .center) {
+                    Text(saveLabel(model.state?.save))
+                        .font(RunaFonts.body(13))
+                        .foregroundStyle(RunaColors.subtle)
+                    Spacer()
+                    Button {
+                        model.saveNow()
+                        dismiss()
+                    } label: {
+                        Text("とじる")
+                            .font(RunaFonts.body(16))
+                            .foregroundStyle(RunaColors.accent)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(RunaColors.accent.opacity(0.7), lineWidth: 1)
+                            )
+                    }
+                }
+                .padding(.top, RunaSpacing.sm)
             }
             .padding(.horizontal, RunaSpacing.md)
             .padding(.top, RunaSpacing.sm)
+            .padding(.bottom, RunaSpacing.sm)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Text(saveLabel(model.state?.save))
-                    .font(RunaFonts.body(13))
-                    .foregroundStyle(RunaColors.subtle)
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .onDisappear { model.saveNow() }
     }
 
@@ -55,39 +76,12 @@ struct DiaryEditorView: View {
         )
     }
 
-    private var moodRow: some View {
-        VStack(alignment: .leading, spacing: RunaSpacing.xs) {
-            Text("きょうの心もち（任意）")
-                .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(DiaryMood.allCases, id: \.self) { mood in
-                        let selected = model.state?.mood == mood.rawValue
-                        Button {
-                            model.onMoodChange(selected ? nil : mood.rawValue)
-                        } label: {
-                            Text(mood.label)
-                                .font(RunaFonts.body(13))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(selected ? RunaColors.accent.opacity(0.18) : RunaColors.surface)
-                                .foregroundStyle(selected ? RunaColors.accent : RunaColors.subtle)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.bottom, RunaSpacing.sm)
-    }
-
     private func saveLabel(_ status: SaveStatus?) -> String {
         switch status {
-        case .saving: return "保存中…"
-        case .saved: return "保存済み"
-        case .error: return "保存に失敗"
-        default: return "下書き" // .editing / nil (pre-load)
+        case .saving: return "保存しています…"
+        case .saved: return "保存しました"
+        case .error: return "保存に、つまずきました"
+        default: return "静かに、綴る" // .editing / nil (pre-load)
         }
     }
 }

@@ -35,8 +35,6 @@ func NewToday(svc *service.TodayService, logger *slog.Logger) *Today {
 	return &Today{svc: svc, logger: logger}
 }
 
-// ---- request/response DTOs (JSON contract) ----
-
 type quoteResponse struct {
 	ID       string `json:"id"`
 	Date     string `json:"date"`
@@ -79,8 +77,6 @@ type createSongRequest struct {
 	ArtworkURL string `json:"artwork_url"`
 	AudioURL   string `json:"audio_url"`
 }
-
-// ---- handlers ----
 
 // Today handles GET /api/v1/today?date=YYYY-MM-DD. An absent date uses the
 // server's current UTC day. Missing quote/song come back as null (not an error).
@@ -229,8 +225,6 @@ func (t *Today) CreateSong(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusCreated, toSongResponse(song), t.logger)
 }
-
-// ---- helpers ----
 
 func (t *Today) userID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	id, ok := auth.UserIDFromContext(r.Context())

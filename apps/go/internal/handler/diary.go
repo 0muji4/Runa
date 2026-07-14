@@ -36,8 +36,6 @@ func NewDiary(svc *service.DiaryService, logger *slog.Logger) *Diary {
 	return &Diary{svc: svc, logger: logger}
 }
 
-// ---- request/response DTOs (JSON contract) ----
-
 type createDiaryRequest struct {
 	BodyText  string  `json:"body_text"`
 	Mood      *string `json:"mood"`
@@ -69,8 +67,6 @@ type diarySyncResponse struct {
 	Entries    []diaryEntryResponse `json:"entries"`
 	ServerTime string               `json:"server_time"`
 }
-
-// ---- handlers ----
 
 // List handles GET /api/v1/diary?limit=&cursor= (newest first, keyset paging).
 func (d *Diary) List(w http.ResponseWriter, r *http.Request) {
@@ -244,8 +240,6 @@ func (d *Diary) Sync(w http.ResponseWriter, r *http.Request) {
 		ServerTime: delta.ServerTime.UTC().Format(time.RFC3339Nano),
 	}, d.logger)
 }
-
-// ---- helpers ----
 
 func (d *Diary) userID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	id, ok := auth.UserIDFromContext(r.Context())

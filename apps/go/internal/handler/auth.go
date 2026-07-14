@@ -29,8 +29,6 @@ func NewAuth(svc *service.AuthService, logger *slog.Logger) *Auth {
 	return &Auth{svc: svc, logger: logger}
 }
 
-// ---- request/response DTOs (JSON contract) ----
-
 type signupRequest struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
@@ -76,8 +74,6 @@ type userResponse struct {
 	PremiumExpiresAt *string `json:"premium_expires_at"`
 	CreatedAt        string  `json:"created_at"`
 }
-
-// ---- handlers ----
 
 // Signup handles POST /api/v1/auth/signup (email + password).
 func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
@@ -226,8 +222,6 @@ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toUserResponse(user), a.logger)
 }
 
-// ---- middleware error responders (satisfy auth.ErrorResponder) ----
-
 // Unauthorized writes the 401 body for failed Bearer verification, choosing the
 // code from the underlying error so the client can tell "expired" from "bad".
 func (a *Auth) Unauthorized(w http.ResponseWriter, r *http.Request, err error) {
@@ -246,8 +240,6 @@ func (a *Auth) Unauthorized(w http.ResponseWriter, r *http.Request, err error) {
 func (a *Auth) RateLimited(w http.ResponseWriter, _ *http.Request, _ error) {
 	writeError(w, http.StatusTooManyRequests, CodeRateLimited, "too many requests, please try again later", nil, a.logger)
 }
-
-// ---- helpers ----
 
 // decode reads a JSON body into dst, rejecting unknown fields. It writes a 400
 // on failure and reports whether decoding succeeded.

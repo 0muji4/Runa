@@ -189,6 +189,40 @@ func (r *DiaryRepository) ListChangedSince(ctx context.Context, userID string, s
 	return collectDiaryEntries(rows)
 }
 
+func (r *DiaryRepository) CountByLocalDate(ctx context.Context, userID string, lo, hi time.Time, loc *time.Location) (map[string]int, error) {
+	if r.pool == nil {
+		return nil, ErrNoDatabase
+	}
+	// Group by the local calendar date: shift created_at into the requested zone
+	// before truncating to a date, so grouping matches the client. The [lo, hi)
+	// instant bounds ride the (user_id, created_at) coverage of the keyset index.
+	const q = `
+		SELECT to_char((created_at AT TIME ZONE $4)::date, 'YYYY-MM-DD') AS local_date, count(*)
+		FROM diary_entries
+		WHERE user_id = $1 AND deleted_at IS NULL AND created_at >= $2 AND created_at < $3
+		GROUP BY local_date`
+
+	rows, err := r.pool.Query(ctx, q, userID, lo, hi, loc.String())
+	if err != nil {
+		return nil, fmt.Errorf("count diary by local date: %w", err)
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var date string
+		var count int
+		if err := rows.Scan(&date, &count); err != nil {
+			return nil, fmt.Errorf("scan diary day count: %w", err)
+		}
+		counts[date] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate diary day counts: %w", err)
+	}
+	return counts, nil
+}
+
 // collectDiaryEntries scans and closes a diary result set. It returns a non-nil
 // empty slice for zero rows so JSON encodes "[]" rather than "null".
 func collectDiaryEntries(rows pgx.Rows) ([]DiaryEntry, error) {

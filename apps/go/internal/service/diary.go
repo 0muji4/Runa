@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
@@ -125,6 +126,33 @@ func (s *DiaryService) Sync(ctx context.Context, userID string, since time.Time)
 		return DiaryDelta{}, err
 	}
 	return DiaryDelta{Entries: entries, ServerTime: serverTime}, nil
+}
+
+// DiaryCalendarDay is one local date in a month with at least one entry.
+type DiaryCalendarDay struct {
+	Date  string // local calendar date "YYYY-MM-DD"
+	Count int
+}
+
+// Calendar returns the per-local-date entry counts for the given month, grouped in
+// loc so it matches the client's local-date grouping. The month window is the
+// half-open instant range [first-of-month 00:00 loc, first-of-next-month 00:00 loc).
+// Only dates with entries are returned, ascending by date.
+func (s *DiaryService) Calendar(ctx context.Context, userID string, year, month int, loc *time.Location) ([]DiaryCalendarDay, error) {
+	lo := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, loc)
+	hi := lo.AddDate(0, 1, 0)
+
+	counts, err := s.store.CountByLocalDate(ctx, userID, lo, hi, loc)
+	if err != nil {
+		return nil, err
+	}
+
+	days := make([]DiaryCalendarDay, 0, len(counts))
+	for date, count := range counts {
+		days = append(days, DiaryCalendarDay{Date: date, Count: count})
+	}
+	sort.Slice(days, func(i, j int) bool { return days[i].Date < days[j].Date })
+	return days, nil
 }
 
 func clampLimit(limit int) int {

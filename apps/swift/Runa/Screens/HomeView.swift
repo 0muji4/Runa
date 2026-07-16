@@ -81,8 +81,14 @@ struct HomeView: View {
 
     private func todayView(_ today: Today, offline: Bool) -> some View {
         VStack(spacing: RunaSpacing.sm) {
-            Text(moonPhaseGlyph(key: today.moon.phaseKey))
-                .font(.system(size: 56))
+            // Tapping the moon opens 15 今日の月.
+            NavigationLink {
+                TodaysMoonView()
+            } label: {
+                Text(moonPhaseGlyph(key: today.moon.phaseKey))
+                    .font(.system(size: 56))
+            }
+            .buttonStyle(.plain)
             Text("\(today.dateLabel) · \(moonPhaseNameJa(key: today.moon.phaseKey))")
                 .font(RunaFonts.heading(22)).foregroundStyle(RunaColors.heading)
             Text("照度 \(Int((today.moon.illumination * 100).rounded()))%")

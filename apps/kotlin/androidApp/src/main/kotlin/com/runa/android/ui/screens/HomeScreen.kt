@@ -1,5 +1,6 @@
 package com.runa.android.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,7 @@ import org.koin.compose.koinInject
 fun HomeScreen(
     displayName: String,
     onSettingsClick: () -> Unit,
+    onOpenTodaysMoon: () -> Unit,
     viewModel: HomeViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -67,8 +69,8 @@ fun HomeScreen(
         ) {
             when (val current = state) {
                 is HomeUiState.Loading -> CircularProgressIndicator(color = RunaColors.Accent)
-                is HomeUiState.Content -> HomeContent(current.today, offline = false)
-                is HomeUiState.Offline -> HomeContent(current.today, offline = true)
+                is HomeUiState.Content -> HomeContent(current.today, offline = false, onOpenTodaysMoon)
+                is HomeUiState.Offline -> HomeContent(current.today, offline = true, onOpenTodaysMoon)
                 is HomeUiState.Error -> Text(
                     text = stringResource(R.string.home_error),
                     style = MaterialTheme.typography.bodyLarge,
@@ -81,11 +83,15 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeContent(today: Today, offline: Boolean) {
+private fun HomeContent(today: Today, offline: Boolean, onOpenTodaysMoon: () -> Unit) {
     val moon = today.moon
 
-    // Moon glyph + date + phase name above the quote.
-    Text(text = MoonPresentation.glyph(moon.phaseKey), style = MaterialTheme.typography.displayLarge)
+    // Moon glyph + date + phase name above the quote. Tapping the moon opens 今日の月.
+    Text(
+        text = MoonPresentation.glyph(moon.phaseKey),
+        style = MaterialTheme.typography.displayLarge,
+        modifier = Modifier.clickable(onClick = onOpenTodaysMoon),
+    )
     Spacer(Modifier.height(8.dp))
     Text(
         text = "${today.dateLabel} · ${MoonPresentation.name(moon.phaseKey)}",

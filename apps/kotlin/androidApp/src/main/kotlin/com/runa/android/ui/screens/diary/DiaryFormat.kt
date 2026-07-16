@@ -4,6 +4,7 @@ import com.runa.shared.feature.today.moon.MoonPhaseCalculator
 import com.runa.shared.feature.today.moon.moonPhaseNameJa
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -32,6 +33,14 @@ fun formatDiaryWeekday(epochMs: Long): String {
         DayOfWeek.SUNDAY -> "日曜"
     }
 }
+
+/**
+ * The epoch-millis of local noon on an ISO `yyyy-MM-dd` day — the backdate used when
+ * writing on a past calendar day, so the new entry lands on that day (local noon is
+ * a stable mid-day instant that never slips across the date boundary).
+ */
+fun isoDateToNoonEpochMs(isoDate: String): Long =
+    LocalDate.parse(isoDate).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 /** The moon phase for a diary entry's day: disc geometry + the shared Japanese name. */
 data class DiaryMoon(val illumination: Float, val waxing: Boolean, val name: String)

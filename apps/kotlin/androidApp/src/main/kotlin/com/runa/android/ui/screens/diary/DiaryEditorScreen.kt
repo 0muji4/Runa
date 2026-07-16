@@ -45,14 +45,18 @@ import org.koin.core.parameter.parametersOf
 fun DiaryEditorScreen(
     clientId: String?,
     onDone: () -> Unit,
+    // When set (calendar "write on this day"), a new entry is backdated to this
+    // ISO yyyy-MM-dd day and the header shows it instead of today.
+    backdateIsoDate: String? = null,
 ) {
     val koin = getKoin()
-    val viewModel = remember(clientId) {
-        koin.get<DiaryEditorViewModel> { parametersOf(clientId) }
+    val createdAtEpochMs = remember(backdateIsoDate) { backdateIsoDate?.let(::isoDateToNoonEpochMs) }
+    val viewModel = remember(clientId, createdAtEpochMs) {
+        koin.get<DiaryEditorViewModel> { parametersOf(clientId, createdAtEpochMs) }
     }
     val state by viewModel.state.collectAsState()
     // No created-at in the editor state; the header shows the day being written.
-    val dayMs = remember { System.currentTimeMillis() }
+    val dayMs = remember { createdAtEpochMs ?: System.currentTimeMillis() }
 
     val leave = {
         viewModel.saveNow()

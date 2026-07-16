@@ -8,6 +8,7 @@ import com.runa.shared.network.NetworkMonitor
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
 import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
 import com.runa.shared.network.dto.DiarySyncResponse
@@ -183,6 +184,7 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun getMe(): UserDto = unused()
     override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse = unused()
     override suspend fun getDiary(id: String): DiaryEntryDto = unused()
+    override suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse = unused()
     override suspend fun getToday(date: String?): TodayResponse = unused()
     override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse = unused()
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()

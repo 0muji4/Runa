@@ -4,6 +4,7 @@ import com.runa.shared.network.dto.ApiError
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
 import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
 import com.runa.shared.network.dto.DiarySyncResponse
@@ -57,6 +58,10 @@ interface ApiClient {
     suspend fun updateDiary(id: String, req: UpdateDiaryRequest): DiaryEntryDto
     suspend fun deleteDiary(id: String)
     suspend fun syncDiary(since: String?): DiarySyncResponse
+
+    /** GET /diary/calendar?year=&month=&tz= — server-side per-day entry counts for
+     *  the month (auxiliary consistency check; the calendar renders from local DB). */
+    suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse
 
     /** GET /today?date= — the day's curated quote and song (either may be null). */
     suspend fun getToday(date: String?): TodayResponse
@@ -171,6 +176,16 @@ class KtorApiClient(
             url {
                 appendPathSegments("api", "v1", "diary", "sync")
                 if (since != null) parameters.append("since", since)
+            }
+        }.decodeOrThrow()
+
+    override suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "diary", "calendar")
+                parameters.append("year", year.toString())
+                parameters.append("month", month.toString())
+                if (tz != null) parameters.append("tz", tz)
             }
         }.decodeOrThrow()
 

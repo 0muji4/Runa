@@ -4,11 +4,18 @@ import com.runa.shared.db.RunaDatabase
 import com.runa.shared.feature.auth.AuthRepository
 import com.runa.shared.feature.auth.AuthViewModel
 import com.runa.shared.feature.auth.DefaultAuthRepository
+import com.runa.shared.feature.calendar.CalendarRepository
+import com.runa.shared.feature.calendar.CalendarViewModel
+import com.runa.shared.feature.calendar.DayRecordsViewModel
+import com.runa.shared.feature.calendar.DefaultCalendarRepository
 import com.runa.shared.feature.diary.DefaultDiaryRepository
 import com.runa.shared.feature.diary.DiaryEditorViewModel
 import com.runa.shared.feature.diary.DiaryListViewModel
 import com.runa.shared.feature.diary.DiaryRepository
 import com.runa.shared.feature.health.HealthzViewModel
+import com.runa.shared.feature.todaymoon.DefaultTodayMoonRepository
+import com.runa.shared.feature.todaymoon.TodayMoonRepository
+import com.runa.shared.feature.todaymoon.TodayMoonViewModel
 import com.runa.shared.feature.today.DefaultSongRepository
 import com.runa.shared.feature.today.DefaultTodayRepository
 import com.runa.shared.feature.today.HomeViewModel
@@ -82,6 +89,11 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single<TodayRepository> { DefaultTodayRepository(apiClient = get(), database = get()) }
     single<SongRepository> { DefaultSongRepository(apiClient = get(), database = get()) }
 
+    // Calendar composes the local diary stream with the shared moon calc; the moon
+    // screen is a pure offline computation (no store needed).
+    single<CalendarRepository> { DefaultCalendarRepository(diaryRepository = get(), apiClient = get()) }
+    single<TodayMoonRepository> { DefaultTodayMoonRepository() }
+
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
     single { AuthViewModel(repository = get()) }
@@ -89,12 +101,26 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single { DiaryListViewModel(repository = get()) }
 
     // The editor is per-entry: `factory` so each open gets a fresh scope/state.
-    // The optional clientId (null = new entry) is passed as a resolution param.
-    factory { params -> DiaryEditorViewModel(repository = get(), clientId = params.getOrNull<String>()) }
+    // Params are matched by type: an optional clientId (null = new entry) and an
+    // optional createdAt epoch-ms (calendar "write on this day" backdate).
+    factory { params ->
+        DiaryEditorViewModel(
+            repository = get(),
+            clientId = params.getOrNull<String>(),
+            createdAtEpochMs = params.getOrNull<Long>(),
+        )
+    }
 
     single { HomeViewModel(repository = get()) }
     single { SongPlayerViewModel(audioPlayer = get(), songRepository = get()) }
     single { SongArchiveViewModel(repository = get()) }
+
+    // Calendar view model is a `factory` so each open starts at today's month.
+    factory { CalendarViewModel(repository = get()) }
+    single { TodayMoonViewModel(repository = get()) }
+
+    // Per-day records: `factory` keyed by the tapped ISO date (yyyy-MM-dd).
+    factory { params -> DayRecordsViewModel(repository = get(), isoDate = params.get()) }
 }
 
 /**
@@ -121,6 +147,13 @@ fun resolveDiaryListViewModel(): DiaryListViewModel = KoinPlatform.getKoin().get
 fun resolveDiaryEditorViewModel(clientId: String?): DiaryEditorViewModel =
     KoinPlatform.getKoin().get { parametersOf(clientId) }
 
+/**
+ * Resolve a [DiaryEditorViewModel] for a NEW entry backdated to [createdAtEpochMs]
+ * (the calendar's "write on this day" flow). iOS entry point.
+ */
+fun resolveNewDiaryEditorViewModelOn(createdAtEpochMs: Long): DiaryEditorViewModel =
+    KoinPlatform.getKoin().get { parametersOf(createdAtEpochMs) }
+
 /** Resolve [HomeViewModel] from the started Koin graph (iOS entry point). */
 fun resolveHomeViewModel(): HomeViewModel = KoinPlatform.getKoin().get()
 
@@ -129,3 +162,14 @@ fun resolveSongPlayerViewModel(): SongPlayerViewModel = KoinPlatform.getKoin().g
 
 /** Resolve [SongArchiveViewModel] from the started Koin graph (iOS entry point). */
 fun resolveSongArchiveViewModel(): SongArchiveViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve a fresh [CalendarViewModel] (iOS entry point; starts at today's month). */
+fun resolveCalendarViewModel(): CalendarViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve [TodayMoonViewModel] from the started Koin graph (iOS entry point). */
+fun resolveTodayMoonViewModel(): TodayMoonViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve a [DayRecordsViewModel] for a tapped calendar day (iOS entry point).
+ *  [isoDate] is the day as `yyyy-MM-dd`. */
+fun resolveDayRecordsViewModel(isoDate: String): DayRecordsViewModel =
+    KoinPlatform.getKoin().get { parametersOf(isoDate) }

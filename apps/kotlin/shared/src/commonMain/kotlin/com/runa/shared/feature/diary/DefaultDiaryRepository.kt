@@ -74,11 +74,16 @@ class DefaultDiaryRepository(
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    override suspend fun createEntry(bodyText: String, mood: String?): DiaryEntry {
+    override suspend fun createEntry(bodyText: String, mood: String?, createdAt: Instant?): DiaryEntry {
         val entry = withContext(dispatcher) {
-            val now = clock.now().toString()
+            // created_at may be backdated (calendar "write on this day"); updated_at
+            // is always "now" so the row is newer than any server delta and pushes
+            // cleanly under last-write-wins.
+            val now = clock.now()
+            val created = (createdAt ?: now).toString()
+            val updated = now.toString()
             val clientId = Uuid.random().toString()
-            queries.insertEntry(clientId, null, bodyText, mood, now, now, null, STATE_PENDING_CREATE)
+            queries.insertEntry(clientId, null, bodyText, mood, created, updated, null, STATE_PENDING_CREATE)
             toDomain(queries.selectByClientId(clientId).executeAsOne())
         }
         scope.launch { sync() } // best-effort push; no-op offline

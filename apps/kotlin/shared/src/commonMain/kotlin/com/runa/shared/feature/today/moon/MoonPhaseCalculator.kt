@@ -1,9 +1,11 @@
 package com.runa.shared.feature.today.moon
 
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.PI
@@ -94,4 +96,36 @@ object MoonPhaseCalculator {
         val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone).date
         return phaseFor(date, zone)
     }
+
+    /** The four principal (quarter) phases the "next" hint reports. */
+    private val PRINCIPAL_PHASES = setOf(
+        MoonPhaseKey.NEW_MOON,
+        MoonPhaseKey.FIRST_QUARTER,
+        MoonPhaseKey.FULL_MOON,
+        MoonPhaseKey.LAST_QUARTER,
+    )
+
+    /**
+     * The next principal phase (新月 / 上弦 / 満月 / 下弦) strictly after [after], for
+     * the 今日の月 "next ▶" line. Built purely on [phaseFor] — a day-by-day forward
+     * scan for the onset of the next principal bucket — so it reuses the calculator
+     * rather than adding any new moon math. Bounded to one synodic month.
+     */
+    fun nextPrincipalPhase(after: LocalDate, zone: TimeZone): PrincipalPhase {
+        var previousKey = phaseFor(after, zone).phaseKey
+        var date = after
+        repeat(40) {
+            date = date.plus(1, DateTimeUnit.DAY)
+            val key = phaseFor(date, zone).phaseKey
+            if (key != previousKey && key in PRINCIPAL_PHASES) {
+                return PrincipalPhase(date, key)
+            }
+            previousKey = key
+        }
+        // Unreachable within a synodic month; return the last day scanned as a floor.
+        return PrincipalPhase(date, phaseFor(date, zone).phaseKey)
+    }
 }
+
+/** A principal moon phase and the day it next occurs. */
+data class PrincipalPhase(val date: LocalDate, val phaseKey: MoonPhaseKey)

@@ -2,6 +2,7 @@ package com.runa.shared.feature.diary
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.datetime.Instant
 
 /**
  * The diary boundary the UI depends on. It is local-first: [observeEntries]
@@ -19,8 +20,9 @@ interface DiaryRepository {
     suspend fun getEntry(clientId: String): DiaryEntry?
 
     /** Create an entry: persist locally as pending_create (rendered at once) and
-     *  return it; a background push follows. */
-    suspend fun createEntry(bodyText: String, mood: String?): DiaryEntry
+     *  return it; a background push follows. [createdAt] backdates the entry (used
+     *  by the calendar's "write on this day" flow); null uses the current clock. */
+    suspend fun createEntry(bodyText: String, mood: String?, createdAt: Instant? = null): DiaryEntry
 
     /** Replace an entry's body/mood locally, marking it pending; a push follows. */
     suspend fun updateEntry(clientId: String, bodyText: String, mood: String?): Result<Unit>

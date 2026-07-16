@@ -20,6 +20,22 @@ fun moonPhaseGlyph(key: MoonPhaseKey): String = when (key) {
     MoonPhaseKey.WANING_CRESCENT -> "🌘"
 }
 
+/**
+ * Whether the phase is waxing (its lit limb on the right), used to orient the
+ * drawn moon disc. Derived from the phase key so Android and iOS pick the same
+ * side. New/full are (un)lit so the side is cosmetic; new is treated as waxing.
+ */
+fun moonIsWaxing(key: MoonPhaseKey): Boolean = when (key) {
+    MoonPhaseKey.NEW_MOON,
+    MoonPhaseKey.WAXING_CRESCENT,
+    MoonPhaseKey.FIRST_QUARTER,
+    MoonPhaseKey.WAXING_GIBBOUS -> true
+    MoonPhaseKey.FULL_MOON,
+    MoonPhaseKey.WANING_GIBBOUS,
+    MoonPhaseKey.LAST_QUARTER,
+    MoonPhaseKey.WANING_CRESCENT -> false
+}
+
 /** The Japanese name for the phase (Runa is a Japanese-only product). */
 fun moonPhaseNameJa(key: MoonPhaseKey): String = when (key) {
     MoonPhaseKey.NEW_MOON -> "新月"

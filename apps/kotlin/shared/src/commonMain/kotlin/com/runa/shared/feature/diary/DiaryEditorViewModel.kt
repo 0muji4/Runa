@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
 
 /**
  * Drives the "write" screen for a single entry — new (clientId == null) or an
@@ -19,6 +20,9 @@ import kotlinx.coroutines.launch
 class DiaryEditorViewModel(
     private val repository: DiaryRepository,
     clientId: String? = null,
+    // Backdate for a new entry authored from the calendar's empty day (epoch-ms of
+    // that day's local noon); null for a plain new entry dated now.
+    private val createdAtEpochMs: Long? = null,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val autosaveDelayMs: Long = 700,
 ) {
@@ -72,7 +76,8 @@ class DiaryEditorViewModel(
         val result = runCatching {
             val id = clientId
             if (id == null) {
-                clientId = repository.createEntry(snapshot.bodyText, snapshot.mood).clientId
+                val createdAt = createdAtEpochMs?.let { Instant.fromEpochMilliseconds(it) }
+                clientId = repository.createEntry(snapshot.bodyText, snapshot.mood, createdAt).clientId
             } else {
                 repository.updateEntry(id, snapshot.bodyText, snapshot.mood).getOrThrow()
             }

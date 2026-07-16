@@ -102,4 +102,14 @@
 
     <!-- Moon (phase glyph + name come from shared; these are the numeric labels). -->
     <string name="moon_illumination">照度 %1$d%%</string>
+
+    <!-- Calendar (12 ふりかえり) + its day-records view. -->
+    <string name="diary_open_calendar">ふりかえり</string>
+    <string name="calendar_legend">記録のある日に、月あかり</string>
+    <string name="calendar_write_on_day">この日を綴る</string>
+
+    <!-- Today\'s Moon (15). %1$s = 月齢 value, %2$s = date; next: %1$s = date, %2$s = phase. -->
+    <string name="todays_moon_label">今日の月</string>
+    <string name="todays_moon_age">月齢 %1$s ・ %2$s</string>
+    <string name="todays_moon_next">next ▸ %1$s　%2$s</string>
 </resources>

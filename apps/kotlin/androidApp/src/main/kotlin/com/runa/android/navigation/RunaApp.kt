@@ -23,6 +23,9 @@ import androidx.navigation.navArgument
 import com.runa.android.R
 import com.runa.android.ui.screens.GalleryScreen
 import com.runa.android.ui.screens.HomeScreen
+import com.runa.android.ui.screens.TodaysMoonScreen
+import com.runa.android.ui.screens.calendar.CalendarScreen
+import com.runa.android.ui.screens.calendar.DayRecordsScreen
 import com.runa.android.ui.screens.diary.DiaryDetailScreen
 import com.runa.android.ui.screens.diary.DiaryEditorScreen
 import com.runa.android.ui.screens.diary.DiaryListScreen
@@ -44,6 +47,10 @@ object Routes {
     const val DIARY_EDITOR_NEW = "diary/editor"
     const val DIARY_EDITOR_EDIT = "diary/editor/{clientId}"
     const val DIARY_DETAIL = "diary/detail/{clientId}"
+    const val DIARY_WRITE_ON = "diary/write-on/{date}"
+    const val CALENDAR = "calendar"
+    const val DAY_RECORDS = "calendar/day/{date}"
+    const val TODAYS_MOON = "todays_moon"
     const val GALLERY = "gallery"
     const val SETTINGS = "settings"
 }
@@ -51,6 +58,10 @@ object Routes {
 /** Route builders for the diary sub-screens (clientId is a UUID, path-safe). */
 fun diaryEditorRoute(clientId: String): String = "diary/editor/$clientId"
 fun diaryDetailRoute(clientId: String): String = "diary/detail/$clientId"
+
+/** Route builders for the calendar sub-screens (date is ISO yyyy-MM-dd, path-safe). */
+fun dayRecordsRoute(isoDate: String): String = "calendar/day/$isoDate"
+fun diaryWriteOnRoute(isoDate: String): String = "diary/write-on/$isoDate"
 
 /**
  * Root auth gate. Subscribes to the shared [AuthViewModel] and switches the whole
@@ -128,6 +139,7 @@ fun RunaTabs(
                 HomeScreen(
                     displayName = displayName,
                     onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                    onOpenTodaysMoon = { navController.navigate(Routes.TODAYS_MOON) },
                 )
             }
             composable(Routes.TODAYS_SONG) {
@@ -145,6 +157,7 @@ fun RunaTabs(
                 DiaryListScreen(
                     onOpenEntry = { clientId -> navController.navigate(diaryDetailRoute(clientId)) },
                     onNewEntry = { navController.navigate(Routes.DIARY_EDITOR_NEW) },
+                    onOpenCalendar = { navController.navigate(Routes.CALENDAR) },
                 )
             }
             composable(Routes.DIARY_EDITOR_NEW) {
@@ -169,6 +182,38 @@ fun RunaTabs(
                     onDeleted = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(Routes.CALENDAR) {
+                CalendarScreen(
+                    onOpenDayRecords = { iso -> navController.navigate(dayRecordsRoute(iso)) },
+                    onWriteOnDay = { iso -> navController.navigate(diaryWriteOnRoute(iso)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                Routes.DAY_RECORDS,
+                arguments = listOf(navArgument("date") { type = NavType.StringType }),
+            ) { entry ->
+                val date = entry.arguments?.getString("date").orEmpty()
+                DayRecordsScreen(
+                    isoDate = date,
+                    onOpenEntry = { clientId -> navController.navigate(diaryDetailRoute(clientId)) },
+                    onWrite = { navController.navigate(diaryWriteOnRoute(date)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                Routes.DIARY_WRITE_ON,
+                arguments = listOf(navArgument("date") { type = NavType.StringType }),
+            ) { entry ->
+                DiaryEditorScreen(
+                    clientId = null,
+                    onDone = { navController.popBackStack() },
+                    backdateIsoDate = entry.arguments?.getString("date"),
+                )
+            }
+            composable(Routes.TODAYS_MOON) {
+                TodaysMoonScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.GALLERY) { GalleryScreen() }
             composable(Routes.SETTINGS) {

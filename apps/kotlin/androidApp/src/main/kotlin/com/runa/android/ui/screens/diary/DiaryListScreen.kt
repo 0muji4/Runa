@@ -59,6 +59,7 @@ import org.koin.compose.koinInject
 fun DiaryListScreen(
     onOpenEntry: (String) -> Unit,
     onNewEntry: () -> Unit,
+    onOpenCalendar: () -> Unit,
     viewModel: DiaryListViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -66,12 +67,28 @@ fun DiaryListScreen(
 
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {
         Column(Modifier.fillMaxSize()) {
-            Text(
-                text = stringResource(R.string.diary_list_title),
-                style = TextStyle(fontFamily = ShipporiMincho, fontSize = 34.sp, lineHeight = 42.sp),
-                color = RunaColors.Heading,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 16.dp),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.diary_list_title),
+                    style = TextStyle(fontFamily = ShipporiMincho, fontSize = 34.sp, lineHeight = 42.sp),
+                    color = RunaColors.Heading,
+                    modifier = Modifier.weight(1f),
+                )
+                // Quiet link into the retrospective calendar (12).
+                Text(
+                    text = stringResource(R.string.diary_open_calendar),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = RunaColors.Accent,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenCalendar)
+                        .padding(8.dp),
+                )
+            }
             SyncBannerLine(banner)
             PullToRefreshBox(
                 isRefreshing = banner == SyncBanner.Syncing,

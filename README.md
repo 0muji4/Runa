@@ -96,6 +96,12 @@ curl http://localhost:8080/api/v1/healthz
 - トークンはセキュアストレージに永続化（Android: EncryptedSharedPreferences、iOS: Keychain）。保護リクエストが 401 を返すと HTTP 層が**自動でリフレッシュ→元リクエストを再送**し、失敗時は未認証へ遷移する。
 - 起動フロー: 保存トークンから復元し `GET /me` で確認。未認証は導入→サインイン、認証済はタブ本体を出し分け、サインアウトで戻る。認証済みホームは `/me` の `display_name` を表示する。
 
+### ローカルファースト（ダイアリー / ふりかえりカレンダー / 今日の月）
+
+- **描画の正はローカル DB＋月相計算**。ふりかえりカレンダー（12）と今日の月（15）は、端末の SQLDelight 日記と `MoonPhaseCalculator` だけで組み立てるため**機内モードでも完全動作**する。`CalendarRepository.observeMonth` が唯一のレンダリング源、`TodayMoonRepository.getTodayMoon` は純粋なオフライン計算。
+- **タイムゾーンはユーザーの現地日付でグルーピング**（`kotlinx-datetime`）。日付境界は**現地 0:00–24:00**で、現地 23:30 に書いた記録は UTC で翌日でもその現地日に留まる。各日の月相は現地正午で計算する。空の日に「書く」と、その日付でバックデート記録される。
+- **`GET /diary/calendar?year=&month=&tz=` はサーバ側の件数の正（整合性確認の補助）**で、描画には使わない。他端末で書いた分は既存の `/diary/sync` でローカルへ流し込み、`tz`（IANA）でサーバ側も同一の現地日グルーピングを行う（既定 UTC）。詳細は [apps/go/README.md](apps/go/README.md) の「Calendar design」。
+
 ### 各 OS のネイティブ設定（実クレデンシャル）
 
 ネイティブは IDトークンを取得して shared の `loginApple/loginGoogle` に渡すだけ。検証は BE が行う。**メール＋パスワードは設定なしで E2E 動作**する。

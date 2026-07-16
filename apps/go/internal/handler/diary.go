@@ -68,6 +68,17 @@ type diarySyncResponse struct {
 	ServerTime string               `json:"server_time"`
 }
 
+type diaryCalendarDayResponse struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+type diaryCalendarResponse struct {
+	Year  int                        `json:"year"`
+	Month int                        `json:"month"`
+	Days  []diaryCalendarDayResponse `json:"days"`
+}
+
 // List handles GET /api/v1/diary?limit=&cursor= (newest first, keyset paging).
 func (d *Diary) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := d.userID(w, r)
@@ -241,6 +252,75 @@ func (d *Diary) Sync(w http.ResponseWriter, r *http.Request) {
 	}, d.logger)
 }
 
+// Calendar handles GET /api/v1/diary/calendar?year=&month=&tz= — the per-local-date
+// entry counts for a month. Grouping uses the requested IANA time zone (default
+// UTC) so it matches the client's local-date grouping. The client renders the
+// calendar from its own local DB; this is the server-side count of record.
+func (d *Diary) Calendar(w http.ResponseWriter, r *http.Request) {
+	userID, ok := d.userID(w, r)
+	if !ok {
+		return
+	}
+
+	year, ok := d.parseYear(w, r)
+	if !ok {
+		return
+	}
+	month, ok := d.parseMonth(w, r)
+	if !ok {
+		return
+	}
+	loc, ok := d.parseTZ(w, r)
+	if !ok {
+		return
+	}
+
+	days, err := d.svc.Calendar(r.Context(), userID, year, month, loc)
+	if err != nil {
+		d.internal(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, diaryCalendarResponse{
+		Year:  year,
+		Month: month,
+		Days:  toDiaryCalendarDays(days),
+	}, d.logger)
+}
+
+func (d *Diary) parseYear(w http.ResponseWriter, r *http.Request) (int, bool) {
+	year, err := strconv.Atoi(r.URL.Query().Get("year"))
+	if err != nil || year < 1 || year > 9999 {
+		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
+			[]FieldError{{Field: "year", Message: "must be a 4-digit year"}}, d.logger)
+		return 0, false
+	}
+	return year, true
+}
+
+func (d *Diary) parseMonth(w http.ResponseWriter, r *http.Request) (int, bool) {
+	month, err := strconv.Atoi(r.URL.Query().Get("month"))
+	if err != nil || month < 1 || month > 12 {
+		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
+			[]FieldError{{Field: "month", Message: "must be between 1 and 12"}}, d.logger)
+		return 0, false
+	}
+	return month, true
+}
+
+func (d *Diary) parseTZ(w http.ResponseWriter, r *http.Request) (*time.Location, bool) {
+	raw := r.URL.Query().Get("tz")
+	if raw == "" {
+		return time.UTC, true
+	}
+	loc, err := time.LoadLocation(raw)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
+			[]FieldError{{Field: "tz", Message: "must be an IANA time zone"}}, d.logger)
+		return nil, false
+	}
+	return loc, true
+}
+
 func (d *Diary) userID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	id, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -350,6 +430,14 @@ func decodeCursor(s string) (*repository.DiaryCursor, error) {
 		return nil, err
 	}
 	return &repository.DiaryCursor{CreatedAt: createdAt, ID: id}, nil
+}
+
+func toDiaryCalendarDays(days []service.DiaryCalendarDay) []diaryCalendarDayResponse {
+	out := make([]diaryCalendarDayResponse, 0, len(days))
+	for _, d := range days {
+		out = append(out, diaryCalendarDayResponse{Date: d.Date, Count: d.Count})
+	}
+	return out
 }
 
 func toDiaryEntryResponses(entries []repository.DiaryEntry) []diaryEntryResponse {

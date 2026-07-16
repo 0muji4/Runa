@@ -82,4 +82,10 @@ type DiaryStore interface {
 	// ListChangedSince returns every entry (including tombstones) whose updated_at
 	// is strictly after since, oldest change first. A zero since returns all.
 	ListChangedSince(ctx context.Context, userID string, since time.Time) ([]DiaryEntry, error)
+
+	// CountByLocalDate counts a user's non-deleted entries created in [lo, hi),
+	// grouped by their local calendar date in loc. The key is the local date
+	// "YYYY-MM-DD"; only dates with at least one entry appear. Backs the calendar
+	// endpoint, whose grouping must match the client's local-date grouping.
+	CountByLocalDate(ctx context.Context, userID string, lo, hi time.Time, loc *time.Location) (map[string]int, error)
 }

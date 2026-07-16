@@ -322,6 +322,56 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /api/v1/diary/calendar:
+    get:
+      operationId: getDiaryCalendar
+      summary: Per-day diary entry counts for a month (protected)
+      description: |
+        Returns, for each local calendar date in the month that has at least one
+        entry, how many entries fall on it. Grouping uses the caller's local date
+        in `tz` (an IANA zone; default UTC), so the boundary matches the client's
+        own local-date grouping — an entry authored at 23:30 local stays on that
+        local day even when it is the next day in UTC.
+
+        This is the server-side count of record and an auxiliary consistency check
+        only: clients render the calendar from their local database (local-first)
+        and reconcile other devices' entries through /diary/sync.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 9999
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: tz
+          in: query
+          required: false
+          schema:
+            type: string
+            default: UTC
+          description: IANA time zone (e.g. Asia/Tokyo) to group local dates by.
+      responses:
+        "200":
+          description: The month's per-day counts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiaryCalendarResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /api/v1/diary/{id}:
     parameters:
       - name: id
@@ -892,6 +942,33 @@ components:
         server_time:
           type: string
           format: date-time
+
+    DiaryCalendarResponse:
+      type: object
+      required:
+        - year
+        - month
+        - days
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        days:
+          type: array
+          description: Local dates with at least one entry, ascending by date.
+          items:
+            type: object
+            required:
+              - date
+              - count
+            properties:
+              date:
+                type: string
+                format: date
+                description: Local calendar date (YYYY-MM-DD) under the requested tz.
+              count:
+                type: integer
 
     Quote:
       type: object

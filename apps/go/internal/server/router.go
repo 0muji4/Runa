@@ -91,6 +91,7 @@ func New(deps Deps) *chi.Mux {
 			pr.Get("/diary", deps.Diary.List)
 			pr.Post("/diary", deps.Diary.Create)
 			pr.Get("/diary/sync", deps.Diary.Sync)
+			pr.Get("/diary/calendar", deps.Diary.Calendar)
 			pr.Get("/diary/{id}", deps.Diary.Get)
 			pr.Patch("/diary/{id}", deps.Diary.Update)
 			pr.Delete("/diary/{id}", deps.Diary.Delete)

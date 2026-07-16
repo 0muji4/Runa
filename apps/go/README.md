@@ -43,6 +43,7 @@ append `/api/v1/...` themselves.
 | PATCH  | `/api/v1/diary/{id}`    | `200 DiaryEntry` — replaces `body_text` + `mood`     |
 | DELETE | `/api/v1/diary/{id}`    | `204` — soft delete (idempotent)                     |
 | GET    | `/api/v1/diary/sync`    | `200 DiarySyncResponse` — changes since `?since=` (incl. tombstones) |
+| GET    | `/api/v1/diary/calendar` | `200 DiaryCalendarResponse` — per-local-date entry counts for `?year=&month=&tz=` |
 | GET    | `/api/v1/today`         | `200 TodayResponse` — the day's `quote` + `song` (either may be null) for `?date=YYYY-MM-DD` |
 | GET    | `/api/v1/songs`         | `200 SongsListResponse` — song archive, newest first, keyset paging (`limit`, `cursor`) |
 | POST   | `/api/v1/songs/{id}/played` | `204` — record a play (`404` if the song is unknown) |
@@ -88,6 +89,26 @@ reconnect. Two contract choices make that safe:
   merge. Ownership is enforced in the data layer — a query for another user's row
   returns not-found, and the handler answers `404` so existence never leaks.
 - The flow mirrors auth: `internal/repository/diary_repository.go` →
+  `internal/service/diary.go` → `internal/handler/diary.go`.
+
+### Calendar design (local-first, server counts are auxiliary)
+
+The retrospective calendar (12 ふりかえりカレンダー) and 今日の月 are **local-first**:
+the client draws the month grid entirely from its own SQLDelight diary DB plus the
+on-device moon calculator, so both work with no network (airplane mode included).
+Cross-device entries arrive through the existing `/diary/sync`.
+
+- **`GET /diary/calendar?year=&month=&tz=` is the server-side count of record**, an
+  auxiliary consistency check — it does **not** drive rendering. It returns, for
+  each local date in the month that has entries, how many entries fall on it.
+- **Grouping is by the caller's local date.** Pass `tz` as an IANA zone (e.g.
+  `Asia/Tokyo`; default `UTC`); the server derives each entry's local date in that
+  zone (`created_at AT TIME ZONE tz`). The month window is the half-open instant
+  range `[first-of-month 00:00 tz, first-of-next-month 00:00 tz)`, and the day
+  boundary is local midnight — an entry authored at 23:30 local stays on that local
+  day even when it is already the next day in UTC. This mirrors the client's own
+  `kotlinx-datetime` grouping so the two never disagree.
+- No new table: it aggregates `diary_entries` (`CountByLocalDate`). The flow reuses
   `internal/service/diary.go` → `internal/handler/diary.go`.
 
 ### Today design (home payload + song archive)
@@ -220,7 +241,10 @@ real router (`internal/server/auth_flow_test.go`). Diary tests cover the service
 (idempotent upsert, ownership, keyset paging, soft-delete/sync delta), the handler
 (validation, 201-vs-200, 404), and a full `create → list → get → patch → sync →
 delete` flow with a real Bearer token (`internal/server/diary_flow_test.go`),
-including cross-user `404`. Today tests cover the service (exact-date lookup,
+including cross-user `404`. The calendar endpoint has its own flow test
+(`internal/server/calendar_flow_test.go`) asserting local-date grouping across a
+time-zone boundary (`Asia/Tokyo` vs UTC), per-user scoping, and `year/month/tz`
+validation. Today tests cover the service (exact-date lookup,
 archive paging, unknown-song `404`) and a full `admin seed → /today → archive
 paging → played` flow, plus the admin `403` gate
 (`internal/server/today_flow_test.go`). CI has no Postgres, so the tests use the

@@ -141,6 +141,25 @@ func (s *Store) ListChangedSince(_ context.Context, userID string, since time.Ti
 	return out, nil
 }
 
+func (s *Store) CountByLocalDate(_ context.Context, userID string, lo, hi time.Time, loc *time.Location) (map[string]int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	counts := make(map[string]int)
+	for _, e := range s.entries {
+		if e.UserID != userID || e.DeletedAt != nil {
+			continue
+		}
+		// [lo, hi) as instants: the month window in loc, so an entry counts iff its
+		// local date falls in the month.
+		if e.CreatedAt.Before(lo) || !e.CreatedAt.Before(hi) {
+			continue
+		}
+		counts[e.CreatedAt.In(loc).Format("2006-01-02")]++
+	}
+	return counts, nil
+}
+
 // findByClient locates an entry by (userID, clientID). Caller holds the lock.
 func (s *Store) findByClient(userID, clientID string) (repository.DiaryEntry, bool) {
 	for _, e := range s.entries {

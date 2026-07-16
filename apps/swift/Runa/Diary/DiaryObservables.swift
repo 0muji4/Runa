@@ -42,6 +42,17 @@ final class DiaryEditorObservable: ObservableObject {
 
     init(clientId: String?) {
         self.viewModel = resolveDiaryEditorViewModel(clientId: clientId)
+        startCollecting()
+    }
+
+    /// New entry backdated to a calendar day (12 の空の日から綴る), created_at set to
+    /// that day's local noon.
+    init(backdateEpochMs: Int64) {
+        self.viewModel = resolveNewDiaryEditorViewModelOn(createdAtEpochMs: backdateEpochMs)
+        startCollecting()
+    }
+
+    private func startCollecting() {
         collectTask = Task { [weak self] in
             guard let self else { return }
             let flow: SkieSwiftStateFlow<DiaryEditorState> = self.viewModel.state

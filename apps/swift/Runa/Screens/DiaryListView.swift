@@ -6,6 +6,9 @@ enum DiaryRoute: Hashable {
     case editorNew
     case editor(clientId: String)
     case detail(clientId: String)
+    case calendar
+    case dayRecords(isoDate: String)
+    case writeOn(isoDate: String)
 }
 
 /// Diary list (09) — "日々の記録". A large 明朝 heading over a still column of record
@@ -31,6 +34,12 @@ struct DiaryListView: View {
                     DiaryEditorView(clientId: clientId)
                 case .detail(let clientId):
                     DiaryDetailView(clientId: clientId, model: model, path: $path)
+                case .calendar:
+                    CalendarView(path: $path)
+                case .dayRecords(let isoDate):
+                    DayRecordsView(isoDate: isoDate, path: $path)
+                case .writeOn(let isoDate):
+                    DiaryEditorView(backdateIsoDate: isoDate)
                 }
             }
         }
@@ -60,11 +69,15 @@ struct DiaryListView: View {
     private func listBody(entries: [DiaryEntry], banner: SyncBanner) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("日々の記録")
-                    .font(RunaFonts.heading(34))
-                    .foregroundStyle(RunaColors.heading)
-                    .padding(.top, 40)
-                    .padding(.bottom, 4)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("日々の記録")
+                        .font(RunaFonts.heading(34))
+                        .foregroundStyle(RunaColors.heading)
+                    Spacer()
+                    calendarLink
+                }
+                .padding(.top, 40)
+                .padding(.bottom, 4)
                 bannerLine(banner)
                 ForEach(entries, id: \.clientId) { entry in
                     DiaryCardRow(entry: entry)
@@ -81,6 +94,11 @@ struct DiaryListView: View {
 
     private func emptyState(banner: SyncBanner) -> some View {
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                calendarLink
+            }
+            .padding(.top, 40)
             bannerLine(banner)
             Spacer()
             NewMoonEmblem(diameter: 116)
@@ -110,6 +128,15 @@ struct DiaryListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, RunaSpacing.lg)
+    }
+
+    /// Quiet link into the retrospective calendar (12 ふりかえり).
+    private var calendarLink: some View {
+        Button { path.append(DiaryRoute.calendar) } label: {
+            Text("ふりかえり")
+                .font(RunaFonts.body(13))
+                .foregroundStyle(RunaColors.accent)
+        }
     }
 
     private var plusFab: some View {

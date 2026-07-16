@@ -9,11 +9,37 @@ struct DiaryEditorView: View {
     @StateObject private var model: DiaryEditorObservable
     @Environment(\.dismiss) private var dismiss
 
-    // No created-at in the editor state; the header shows the day being written.
-    private let dayMs = Int64(Date().timeIntervalSince1970 * 1000)
+    // The day being written; the header shows it. For a backdated entry (calendar
+    // "write on this day") it is that day's local noon.
+    private let dayMs: Int64
 
     init(clientId: String?) {
         _model = StateObject(wrappedValue: DiaryEditorObservable(clientId: clientId))
+        dayMs = Int64(Date().timeIntervalSince1970 * 1000)
+    }
+
+    /// Backdated new entry for a calendar day (ISO yyyy-MM-dd).
+    init(backdateIsoDate: String) {
+        let epoch = DiaryEditorView.noonEpochMs(isoDate: backdateIsoDate)
+        _model = StateObject(wrappedValue: DiaryEditorObservable(backdateEpochMs: epoch))
+        dayMs = epoch
+    }
+
+    /// Epoch-millis of local noon on an ISO yyyy-MM-dd day — a stable mid-day instant
+    /// that never slips across the date boundary.
+    private static func noonEpochMs(isoDate: String) -> Int64 {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .current
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = .current
+        parser.dateFormat = "yyyy-MM-dd"
+        let day = parser.date(from: isoDate) ?? Date()
+        var comps = cal.dateComponents([.year, .month, .day], from: day)
+        comps.hour = 12
+        comps.minute = 0
+        let noon = cal.date(from: comps) ?? day
+        return Int64(noon.timeIntervalSince1970 * 1000)
     }
 
     var body: some View {

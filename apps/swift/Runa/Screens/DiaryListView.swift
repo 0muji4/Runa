@@ -7,6 +7,7 @@ enum DiaryRoute: Hashable {
     case editor(clientId: String)
     case detail(clientId: String)
     case calendar
+    case insight
     case dayRecords(isoDate: String)
     case writeOn(isoDate: String)
 }
@@ -36,6 +37,8 @@ struct DiaryListView: View {
                     DiaryDetailView(clientId: clientId, model: model, path: $path)
                 case .calendar:
                     CalendarView(path: $path)
+                case .insight:
+                    InsightView()
                 case .dayRecords(let isoDate):
                     DayRecordsView(isoDate: isoDate, path: $path)
                 case .writeOn(let isoDate):
@@ -74,7 +77,10 @@ struct DiaryListView: View {
                         .font(RunaFonts.heading(34))
                         .foregroundStyle(RunaColors.heading)
                     Spacer()
-                    calendarLink
+                    HStack(spacing: 16) {
+                        insightLink
+                        calendarLink
+                    }
                 }
                 .padding(.top, 40)
                 .padding(.bottom, 4)
@@ -96,7 +102,10 @@ struct DiaryListView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                calendarLink
+                HStack(spacing: 16) {
+                    insightLink
+                    calendarLink
+                }
             }
             .padding(.top, 40)
             bannerLine(banner)
@@ -134,6 +143,15 @@ struct DiaryListView: View {
     private var calendarLink: some View {
         Button { path.append(DiaryRoute.calendar) } label: {
             Text("ふりかえり")
+                .font(RunaFonts.body(13))
+                .foregroundStyle(RunaColors.accent)
+        }
+    }
+
+    /// Quiet link into the insight letter (16 インサイト).
+    private var insightLink: some View {
+        Button { path.append(DiaryRoute.insight) } label: {
+            Text("うつろい")
                 .font(RunaFonts.body(13))
                 .foregroundStyle(RunaColors.accent)
         }

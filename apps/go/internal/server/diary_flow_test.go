@@ -48,12 +48,17 @@ func newDiaryFlowRouter() http.Handler {
 		RefreshTTL:     time.Hour,
 	})
 	ah := handler.NewAuth(authSvc, logger)
-	dh := handler.NewDiary(service.NewDiaryService(memdiary.New(), nil), logger)
+	// One diary store backs both the diary handler and the (auxiliary) insights
+	// aggregation, matching how main.go wires the two over the same repository.
+	diaryStore := memdiary.New()
+	dh := handler.NewDiary(service.NewDiaryService(diaryStore, nil), logger)
+	ih := handler.NewInsights(service.NewInsightsService(diaryStore), logger)
 
 	return server.New(server.Deps{
 		Health:         handler.NewHealth(service.NewHealth(), logger),
 		Auth:           ah,
 		Diary:          dh,
+		Insights:       ih,
 		RequireAuth:    auth.RequireAuth(issuer, ah.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(100, time.Minute).Middleware(ah.RateLimited),
 		AllowedOrigins: []string{"*"},

@@ -96,11 +96,17 @@ func main() {
 	todayService := service.NewTodayService(todayRepo, nil)
 	todayHandler := handler.NewToday(todayService, logger)
 
+	// Insights wiring: the auxiliary server-side aggregation reads the same diary
+	// store (no new table). The client renders from its own local aggregation.
+	insightsService := service.NewInsightsService(diaryRepo)
+	insightsHandler := handler.NewInsights(insightsService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
 		Diary:          diaryHandler,
 		Today:          todayHandler,
+		Insights:       insightsHandler,
 		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
 		RequireAdmin:   auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),

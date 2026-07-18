@@ -223,6 +223,26 @@ func (r *DiaryRepository) CountByLocalDate(ctx context.Context, userID string, l
 	return counts, nil
 }
 
+// EntriesInRange returns a user's non-deleted entries created in [lo, hi), for the
+// insights aggregation. The [lo, hi) instant bounds ride the (user_id, created_at)
+// coverage of the keyset index.
+func (r *DiaryRepository) EntriesInRange(ctx context.Context, userID string, lo, hi time.Time) ([]DiaryEntry, error) {
+	if r.pool == nil {
+		return nil, ErrNoDatabase
+	}
+	const q = `
+		SELECT ` + diaryColumns + `
+		FROM diary_entries
+		WHERE user_id = $1 AND deleted_at IS NULL AND created_at >= $2 AND created_at < $3
+		ORDER BY created_at ASC`
+
+	rows, err := r.pool.Query(ctx, q, userID, lo, hi)
+	if err != nil {
+		return nil, fmt.Errorf("list diary entries in range: %w", err)
+	}
+	return collectDiaryEntries(rows)
+}
+
 // collectDiaryEntries scans and closes a diary result set. It returns a non-nil
 // empty slice for zero rows so JSON encodes "[]" rather than "null".
 func collectDiaryEntries(rows pgx.Rows) ([]DiaryEntry, error) {

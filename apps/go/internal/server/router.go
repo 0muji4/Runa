@@ -20,10 +20,11 @@ const requestTimeout = 30 * time.Second
 // Deps carries the handlers and middleware the router mounts. Passing a struct
 // keeps New's signature stable as feature slices add their own routes.
 type Deps struct {
-	Health *handler.Health
-	Auth   *handler.Auth
-	Diary  *handler.Diary
-	Today  *handler.Today
+	Health   *handler.Health
+	Auth     *handler.Auth
+	Diary    *handler.Diary
+	Today    *handler.Today
+	Insights *handler.Insights
 	// RequireAuth guards Bearer-protected routes (verifies the access token).
 	RequireAuth func(http.Handler) http.Handler
 	// AuthRateLimit throttles the credential endpoints (signup/login).
@@ -103,6 +104,11 @@ func New(deps Deps) *chi.Mux {
 			pr.Get("/today", deps.Today.Today)
 			pr.Get("/songs", deps.Today.Songs)
 			pr.Post("/songs/{id}/played", deps.Today.Played)
+
+			// Insights: the auxiliary server-side per-period aggregation. The client
+			// still renders from its own local aggregation; this is the count of
+			// record for a future server summary / cross-device path.
+			pr.Get("/insights", deps.Insights.Insights)
 		})
 
 		// Admin seed endpoints: curated content injection, gated by the shared

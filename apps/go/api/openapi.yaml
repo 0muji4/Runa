@@ -6,7 +6,7 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
@@ -436,6 +436,62 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /api/v1/insights:
+    get:
+      operationId: getInsights
+      summary: Per-period diary aggregation — days, entries, mood distribution (protected)
+      description: |
+        Aggregates the caller's diary entries over one week or one month into day
+        counts and a mood distribution. The window is `[start, start+period)`; days
+        are grouped by the caller's local date in `tz` (an IANA zone; default UTC),
+        so the boundary matches the client's own local-date grouping.
+
+        This is an **auxiliary** server-side aggregation, offered for a future
+        server-summary / cross-device path. Clients render insights from their own
+        local database (local-first): they compute the same day/mood facts plus the
+        streak and the moon-phase overlap, and the poetic summary, entirely offline.
+        The moon phase is computed client-side, so it is not returned here.
+
+        Weekly `start` is the client's configured week start (default Sunday);
+        monthly `start` is the first of the month. Entries with no mood (older
+        entries, or a night left unmarked) are counted in entry_count but excluded
+        from mood_distribution and reported as unmooded_count ("未選択").
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [weekly, monthly]
+          description: The aggregation window kind.
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Window start (YYYY-MM-DD) — a week start for weekly, the 1st for monthly.
+        - name: tz
+          in: query
+          required: false
+          schema:
+            type: string
+            default: UTC
+          description: IANA time zone (e.g. Asia/Tokyo) to group local dates by.
+      responses:
+        "200":
+          description: The period's aggregation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightsResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/today:
     get:
@@ -967,6 +1023,49 @@ components:
                 type: string
                 format: date
                 description: Local calendar date (YYYY-MM-DD) under the requested tz.
+              count:
+                type: integer
+
+    InsightsResponse:
+      type: object
+      required:
+        - period
+        - start
+        - days_journaled
+        - entry_count
+        - unmooded_count
+        - mood_distribution
+      properties:
+        period:
+          type: string
+          enum: [weekly, monthly]
+        start:
+          type: string
+          format: date
+          description: The window's local start date (YYYY-MM-DD) under the requested tz.
+        days_journaled:
+          type: integer
+          description: Distinct local dates in the window with at least one entry.
+        entry_count:
+          type: integer
+          description: Total entries in the window (mood-less ones included).
+        unmooded_count:
+          type: integer
+          description: Entries with no (recognised) mood; excluded from the distribution.
+        mood_distribution:
+          type: array
+          description: >-
+            Per-mood counts in the canonical order (calm, gentle, tired, hopeful,
+            heavy); moods with no entries are present with count 0.
+          items:
+            type: object
+            required:
+              - mood
+              - count
+            properties:
+              mood:
+                type: string
+                enum: [calm, gentle, tired, hopeful, heavy]
               count:
                 type: integer
 

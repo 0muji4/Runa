@@ -111,6 +111,29 @@ Cross-device entries arrive through the existing `/diary/sync`.
 - No new table: it aggregates `diary_entries` (`CountByLocalDate`). The flow reuses
   `internal/service/diary.go` → `internal/handler/diary.go`.
 
+### Insights design (local-first, server aggregation is auxiliary)
+
+The insight screen (16 インサイト — "うつろい") is **local-first**: the client
+computes the whole period aggregation (day/mood counts, streak, moon-phase overlap)
+and the poetic summary from its own diary DB, with no network. The moon phase is
+client-only, so it is not served here.
+
+- **`GET /api/v1/insights?period=weekly|monthly&start=&tz=` is an auxiliary
+  server-side aggregation**, offered for a future server-summary / cross-device
+  path — it does **not** drive rendering. It returns `days_journaled`,
+  `entry_count`, `unmooded_count`, and `mood_distribution` (the canonical moods
+  `calm, gentle, tired, hopeful, heavy` in order, zeros included).
+- **Window + grouping match the client.** The half-open instant range is
+  `[start 00:00 tz, start+period 00:00 tz)` (a week or a month); days are grouped by
+  the caller's local date in `tz` (IANA; default `UTC`), so the boundary lines up
+  with the client's `kotlinx-datetime` grouping. `start` is the client's week start
+  (default Sunday) for weekly, the 1st for monthly.
+- **Mood-less entries** are counted in `entry_count` but excluded from
+  `mood_distribution` and reported as `unmooded_count` ("未選択"), matching the
+  client. No new table: it aggregates `diary_entries` (`EntriesInRange`); the flow is
+  `internal/service/insights.go` → `internal/handler/insights.go`, tested in
+  `internal/server/insights_flow_test.go`.
+
 ### Today design (home payload + song archive)
 
 The home screen shows three daily elements: a poetic quote, the moon phase, and a

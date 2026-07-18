@@ -160,6 +160,26 @@ func (s *Store) CountByLocalDate(_ context.Context, userID string, lo, hi time.T
 	return counts, nil
 }
 
+// EntriesInRange returns a user's non-deleted entries created in [lo, hi), for the
+// insights aggregation. Ordering is unspecified; the caller aggregates. Mirrors the
+// pgx implementation so server-side insights match the client's local grouping.
+func (s *Store) EntriesInRange(_ context.Context, userID string, lo, hi time.Time) ([]repository.DiaryEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	out := make([]repository.DiaryEntry, 0)
+	for _, e := range s.entries {
+		if e.UserID != userID || e.DeletedAt != nil {
+			continue
+		}
+		if e.CreatedAt.Before(lo) || !e.CreatedAt.Before(hi) {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
 // findByClient locates an entry by (userID, clientID). Caller holds the lock.
 func (s *Store) findByClient(userID, clientID string) (repository.DiaryEntry, bool) {
 	for _, e := range s.entries {

@@ -13,6 +13,9 @@ import com.runa.shared.feature.diary.DiaryEditorViewModel
 import com.runa.shared.feature.diary.DiaryListViewModel
 import com.runa.shared.feature.diary.DiaryRepository
 import com.runa.shared.feature.health.HealthzViewModel
+import com.runa.shared.feature.insight.DefaultInsightRepository
+import com.runa.shared.feature.insight.InsightRepository
+import com.runa.shared.feature.insight.InsightViewModel
 import com.runa.shared.feature.todaymoon.DefaultTodayMoonRepository
 import com.runa.shared.feature.todaymoon.TodayMoonRepository
 import com.runa.shared.feature.todaymoon.TodayMoonViewModel
@@ -94,6 +97,10 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single<CalendarRepository> { DefaultCalendarRepository(diaryRepository = get(), apiClient = get()) }
     single<TodayMoonRepository> { DefaultTodayMoonRepository() }
 
+    // Insight composes the local diary stream with the shared aggregation +
+    // rule-based summariser; no new persistence, no network on the render path.
+    single<InsightRepository> { DefaultInsightRepository(diaryRepository = get()) }
+
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
     single { AuthViewModel(repository = get()) }
@@ -118,6 +125,9 @@ internal fun sharedModule(baseUrl: String): Module = module {
     // Calendar view model is a `factory` so each open starts at today's month.
     factory { CalendarViewModel(repository = get()) }
     single { TodayMoonViewModel(repository = get()) }
+
+    // Insight view model is a `factory` so each open starts at the current month.
+    factory { InsightViewModel(repository = get()) }
 
     // Per-day records: `factory` keyed by the tapped ISO date (yyyy-MM-dd).
     factory { params -> DayRecordsViewModel(repository = get(), isoDate = params.get()) }
@@ -168,6 +178,9 @@ fun resolveCalendarViewModel(): CalendarViewModel = KoinPlatform.getKoin().get()
 
 /** Resolve [TodayMoonViewModel] from the started Koin graph (iOS entry point). */
 fun resolveTodayMoonViewModel(): TodayMoonViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve a fresh [InsightViewModel] (iOS entry point; starts at the current month). */
+fun resolveInsightViewModel(): InsightViewModel = KoinPlatform.getKoin().get()
 
 /** Resolve a [DayRecordsViewModel] for a tapped calendar day (iOS entry point).
  *  [isoDate] is the day as `yyyy-MM-dd`. */

@@ -29,6 +29,7 @@ import com.runa.android.ui.screens.calendar.DayRecordsScreen
 import com.runa.android.ui.screens.diary.DiaryDetailScreen
 import com.runa.android.ui.screens.diary.DiaryEditorScreen
 import com.runa.android.ui.screens.diary.DiaryListScreen
+import com.runa.android.ui.screens.insight.InsightScreen
 import com.runa.android.ui.screens.SettingsScreen
 import com.runa.android.ui.screens.SongArchiveScreen
 import com.runa.android.ui.screens.SplashScreen
@@ -50,6 +51,7 @@ object Routes {
     const val DIARY_WRITE_ON = "diary/write-on/{date}"
     const val CALENDAR = "calendar"
     const val DAY_RECORDS = "calendar/day/{date}"
+    const val INSIGHT = "insight"
     const val TODAYS_MOON = "todays_moon"
     const val GALLERY = "gallery"
     const val SETTINGS = "settings"
@@ -158,6 +160,7 @@ fun RunaTabs(
                     onOpenEntry = { clientId -> navController.navigate(diaryDetailRoute(clientId)) },
                     onNewEntry = { navController.navigate(Routes.DIARY_EDITOR_NEW) },
                     onOpenCalendar = { navController.navigate(Routes.CALENDAR) },
+                    onOpenInsight = { navController.navigate(Routes.INSIGHT) },
                 )
             }
             composable(Routes.DIARY_EDITOR_NEW) {
@@ -189,6 +192,9 @@ fun RunaTabs(
                     onWriteOnDay = { iso -> navController.navigate(diaryWriteOnRoute(iso)) },
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(Routes.INSIGHT) {
+                InsightScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 Routes.DAY_RECORDS,

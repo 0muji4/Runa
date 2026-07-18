@@ -67,7 +67,7 @@ fun DiaryDetailScreen(
                     color = RunaColors.Subtle,
                     modifier = Modifier
                         .clickable(onClick = onBack)
-                        .padding(vertical = 6.dp, end = 12.dp)
+                        .padding(top = 6.dp, bottom = 6.dp, end = 12.dp)
                         .weight(1f),
                 )
                 Text(

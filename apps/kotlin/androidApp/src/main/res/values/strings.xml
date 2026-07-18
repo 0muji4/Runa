@@ -79,13 +79,19 @@
     <string name="action_delete">削除する</string>
     <string name="action_cancel">やめる</string>
 
-    <!-- Quiet mood options retained in the data model (no longer shown on the editor,
-         to match the confirmed 10 書く design). Values map to the API's mood strings. -->
-    <string name="diary_mood_calm">しずか</string>
-    <string name="diary_mood_gentle">おだやか</string>
-    <string name="diary_mood_tired">つかれ</string>
-    <string name="diary_mood_hopeful">のぞみ</string>
-    <string name="diary_mood_heavy">おもい</string>
+    <!-- Mood labels + values now live in shared (com.runa.shared.feature.diary.DiaryMood.labelJa),
+         the single source the editor's mood chips and the insight aggregation both read. -->
+
+    <!-- Insight (16 インサイト — the retrospective letter). -->
+    <string name="diary_open_insight">うつろい</string>
+    <string name="insight_letter_title">あなたへの、手紙</string>
+    <string name="insight_toggle_week">週</string>
+    <string name="insight_toggle_month">月</string>
+    <string name="insight_moon_new">新月</string>
+    <string name="insight_moon_full">満月</string>
+    <string name="insight_unmooded">しるしのない夜も、%1$d。</string>
+    <string name="insight_empty_title">まだ、しるした夜がありません。</string>
+    <string name="insight_empty_body">この期間は、静かなままです。</string>
 
     <!-- Today (home / player / archive). -->
     <string name="home_offline_hint">オフライン表示中（月あかりは端末で算出しています）</string>

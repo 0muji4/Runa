@@ -60,6 +60,7 @@ fun DiaryListScreen(
     onOpenEntry: (String) -> Unit,
     onNewEntry: () -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenInsight: () -> Unit,
     viewModel: DiaryListViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -79,7 +80,15 @@ fun DiaryListScreen(
                     color = RunaColors.Heading,
                     modifier = Modifier.weight(1f),
                 )
-                // Quiet link into the retrospective calendar (12).
+                // Quiet links into the retrospective calendar (12) and insight (16).
+                Text(
+                    text = stringResource(R.string.diary_open_insight),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = RunaColors.Accent,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenInsight)
+                        .padding(8.dp),
+                )
                 Text(
                     text = stringResource(R.string.diary_open_calendar),
                     style = MaterialTheme.typography.labelLarge,

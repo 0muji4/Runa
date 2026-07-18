@@ -102,6 +102,16 @@ curl http://localhost:8080/api/v1/healthz
 - **タイムゾーンはユーザーの現地日付でグルーピング**（`kotlinx-datetime`）。日付境界は**現地 0:00–24:00**で、現地 23:30 に書いた記録は UTC で翌日でもその現地日に留まる。各日の月相は現地正午で計算する。空の日に「書く」と、その日付でバックデート記録される。
 - **`GET /diary/calendar?year=&month=&tz=` はサーバ側の件数の正（整合性確認の補助）**で、描画には使わない。他端末で書いた分は既存の `/diary/sync` でローカルへ流し込み、`tz`（IANA）でサーバ側も同一の現地日グルーピングを行う（既定 UTC）。詳細は [apps/go/README.md](apps/go/README.md) の「Calendar design」。
 
+### インサイト（16 ふりかえり）
+
+「うつろい」= ダイアリーの mood と記録から週/月の傾向を映し返す静かな画面。**描画の正はローカル集計**で通信不要。
+
+- **集計ロジックは `shared` の純ロジックが主役**。`InsightCalculator.calculate(period, entries, zone)` が `daysJournaled`／`moodDistribution`／`mostFrequentMood`／`longestStreak`／`moonOverlap`（月相バケット、`MoonPhaseCalculator` を再利用）を算出。純 `commonMain`（`kotlin.math` + `kotlinx-datetime`）なので Android/iOS で結果が一致し、`commonTest` がピン留め値で担保する。`InsightRepository.observeInsight` は既存の `DiaryRepository.observeEntries()` を畳むだけで新規永続化なし。
+- **mood は静かな 5 カテゴリ**（`shared` の `DiaryMood`：しずか/おだやか/つかれ/のぞみ/おもい、値 `calm/gentle/tired/hopeful/heavy`）。感情を数値化しない。「書く」画面の mood 選択がこの値を書き込み、集計が同じ値を読む（単一の真実）。**mood 未選択（過去データ含む）は日数・記録数には数えるが分布からは除外**し、「しるしのない夜」として静かに示す。
+- **週起点は既定 日曜**（`InsightPeriods.DEFAULT_WEEK_START = DayOfWeek.SUNDAY`、カレンダーの 日〜土 に合わせる）。`InsightViewModel(weekStart = …)` で変更可能。期間は `[start, endExclusive)` の半開区間で、**タイムゾーンはユーザー現地日付**（`TimeZone.currentSystemDefault()`、日境界は現地 0:00）。うるう 2 月・月/年跨ぎ・TZ 境界は `InsightPeriodsTest`／`InsightCalculatorTest` が網羅。
+- **要約はまずルールベースで `shared` に閉じる**。`SummaryComposer`（interface）越しに `RuleBasedSummaryComposer` がテンプレ＋条件分岐で静かな詩文を組み立てる（断定・診断・助言はしない）。**将来サーバ LLM 要約へ差し替える場合は `SummaryComposer` の別実装を `InsightRepository` の裏で注入するだけ**で、ViewModel と両 UI は無変更（`compose` は `suspend` なので通信実装も収まる）。
+- **`GET /api/v1/insights?period=weekly|monthly&start=&tz=` は任意・最小のサーバ側集計**（`days_journaled`／`entry_count`／`unmooded_count`／`mood_distribution`）。カレンダー同様の**整合性確認の補助**で、描画には使わない（クライアントはローカル集計が正）。月相はクライアント専用のためサーバは返さない。詳細は [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
+
 ### 各 OS のネイティブ設定（実クレデンシャル）
 
 ネイティブは IDトークンを取得して shared の `loginApple/loginGoogle` に渡すだけ。検証は BE が行う。**メール＋パスワードは設定なしで E2E 動作**する。

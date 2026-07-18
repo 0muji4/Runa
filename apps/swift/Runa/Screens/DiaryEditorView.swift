@@ -4,7 +4,8 @@ import Shared
 /// Diary editor (10) — "書く". A whitespace-first 明朝 canvas: the day's date, a
 /// quiet prompt, then the writing surface (Dynamic Type–aware). The character count
 /// is never shown; autosave is durable with a whisper of an indicator. "とじる"
-/// flushes and leaves. Mood is intentionally absent, matching the confirmed design.
+/// flushes and leaves. A quiet mood chip row sits under the prompt — one gentle word
+/// for the night, feeding the insight read-back; leaving it unset is natural.
 struct DiaryEditorView: View {
     @StateObject private var model: DiaryEditorObservable
     @Environment(\.dismiss) private var dismiss
@@ -57,6 +58,9 @@ struct DiaryEditorView: View {
                     .padding(.top, RunaSpacing.md)
                     .padding(.bottom, RunaSpacing.sm)
 
+                moodChips(model.state?.mood)
+                    .padding(.bottom, RunaSpacing.sm)
+
                 TextEditor(text: bodyBinding)
                     .font(RunaFonts.heading(18, relativeTo: .body))
                     .foregroundColor(RunaColors.body)
@@ -93,6 +97,37 @@ struct DiaryEditorView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .onDisappear { model.saveNow() }
+    }
+
+    /// The quiet mood row: one gentle word for the night. Tapping the selected chip
+    /// again clears it (未選択). Options come from the shared `DiaryMood`, so what's
+    /// written is exactly what the insight aggregation reads.
+    private func moodChips(_ selected: String?) -> some View {
+        // fixedSize(vertical:) keeps the horizontal scroll strip hugging its content
+        // height, so it never competes with the greedy TextEditor below for space.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(diaryMoods(), id: \.self) { mood in
+                    let value = diaryMoodValue(mood: mood)
+                    let isSelected = value == selected
+                    Text(diaryMoodLabelJa(mood: mood))
+                        .font(RunaFonts.body(13))
+                        .foregroundStyle(isSelected ? RunaColors.accent : RunaColors.subtle)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(isSelected ? RunaColors.accent.opacity(0.10) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(isSelected ? RunaColors.accent.opacity(0.7) : RunaColors.subtle.opacity(0.3), lineWidth: 1)
+                        )
+                        .onTapGesture { model.onMoodChange(isSelected ? nil : value) }
+                }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var bodyBinding: Binding<String> {

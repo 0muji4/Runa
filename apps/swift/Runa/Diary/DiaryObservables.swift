@@ -69,20 +69,11 @@ final class DiaryEditorObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// Quiet mood options; `rawValue` is the string persisted through the API.
-enum DiaryMood: String, CaseIterable {
-    case calm, gentle, tired, hopeful, heavy
-
-    var label: String {
-        switch self {
-        case .calm: return "しずか"
-        case .gentle: return "おだやか"
-        case .tired: return "つかれ"
-        case .hopeful: return "のぞみ"
-        case .heavy: return "おもい"
-        }
-    }
-}
+// Mood options live in the shared `DiaryMood` (com.runa.shared.feature.diary), the
+// single source the editor's chips and the insight aggregation both read. iOS reaches
+// them through the shared free functions `diaryMoods()` / `diaryMoodValue(mood:)` /
+// `diaryMoodLabelJa(mood:)` (see DiaryMoodKt), the same way the moon phase name is
+// read — no local mirror to drift out of sync.
 
 /// Quiet Japanese date formatting for the diary. The design shows the day and the
 /// moon phase — never a clock time — so the record stays timeless.

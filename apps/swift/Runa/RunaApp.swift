@@ -4,6 +4,11 @@ import Shared
 @main
 struct RunaApp: App {
     init() {
+        // Give AsyncImage a real disk cache so gallery images fetched from their
+        // presigned GET URLs survive going offline (the gallery delegates the image
+        // body to the OS image cache; the shared layer only manages the URL's expiry).
+        URLCache.shared = URLCache(memoryCapacity: 32 * 1024 * 1024, diskCapacity: 256 * 1024 * 1024)
+
         // Read the backend host+port injected via Info.plist (host+port ONLY,
         // WITHOUT /api/v1 — the shared module appends the API path itself).
         let baseUrl = (Bundle.main.object(forInfoDictionaryKey: "BASE_URL") as? String)

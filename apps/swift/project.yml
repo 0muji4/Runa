@@ -55,6 +55,9 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreMedia.framework
       - sdk: libsqlite3.tbd
+      # PhotosUI (PhotosPicker) for the gallery image picker. Used from Swift, so
+      # it would auto-link, but listed for parity with the other explicit SDKs.
+      - sdk: PhotosUI.framework
 
 # Shared scheme so `xcodebuild -scheme Runa` works and Xcode has a runnable target.
 schemes:

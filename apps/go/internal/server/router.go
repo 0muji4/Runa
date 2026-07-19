@@ -25,6 +25,7 @@ type Deps struct {
 	Diary    *handler.Diary
 	Today    *handler.Today
 	Insights *handler.Insights
+	Gallery  *handler.Gallery
 	// RequireAuth guards Bearer-protected routes (verifies the access token).
 	RequireAuth func(http.Handler) http.Handler
 	// AuthRateLimit throttles the credential endpoints (signup/login).
@@ -109,6 +110,15 @@ func New(deps Deps) *chi.Mux {
 			// still renders from its own local aggregation; this is the count of
 			// record for a future server summary / cross-device path.
 			pr.Get("/insights", deps.Insights.Insights)
+
+			// Gallery: image metadata + presigned URLs (the bytes go client↔store
+			// directly, never through here). The static "/gallery/upload-url" is
+			// registered before the "/gallery/{id}" wildcard so it never collides.
+			pr.Post("/gallery/upload-url", deps.Gallery.UploadURL)
+			pr.Get("/gallery", deps.Gallery.List)
+			pr.Post("/gallery", deps.Gallery.Create)
+			pr.Get("/gallery/{id}", deps.Gallery.Get)
+			pr.Delete("/gallery/{id}", deps.Gallery.Delete)
 		})
 
 		// Admin seed endpoints: curated content injection, gated by the shared

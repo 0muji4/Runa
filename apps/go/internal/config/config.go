@@ -8,6 +8,7 @@ package config
 import (
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -42,6 +43,35 @@ type Config struct {
 	// /admin/songs) via the X-Admin-Token header. Empty (the default) DISABLES
 	// the admin surface entirely — it must be set to seed content.
 	AdminAPIToken string
+
+	// S3Endpoint is the host the SERVER reaches the object store on (e.g.
+	// "minio:9000" inside docker). Empty (the default) DISABLES the gallery
+	// storage surface: the gallery endpoints then answer 503.
+	S3Endpoint string
+	// S3PublicEndpoint is the host the CLIENT reaches the store on; presigned
+	// URLs are built with it. Empty falls back to S3Endpoint. In docker the two
+	// differ (server: "minio:9000", client: "localhost:9000"; Android emulator:
+	// "10.0.2.2:9000").
+	S3PublicEndpoint string
+	// S3Region is the signing region (MinIO ignores it but SigV4 requires one).
+	S3Region string
+	// S3Bucket is the bucket gallery objects live in.
+	S3Bucket string
+	// S3AccessKey / S3SecretKey are the static credentials for signing.
+	S3AccessKey string
+	S3SecretKey string
+	// S3UseSSL toggles https for both real requests and presigned URLs.
+	S3UseSSL bool
+
+	// GalleryUploadURLTTL is how long a presigned PUT URL is valid.
+	GalleryUploadURLTTL time.Duration
+	// GalleryViewURLTTL is how long a presigned GET (view) URL is valid.
+	GalleryViewURLTTL time.Duration
+	// GalleryMaxUploadBytes is the hard size cap enforced when issuing an upload
+	// URL and re-checked against the real object at registration.
+	GalleryMaxUploadBytes int64
+	// GalleryAllowedContentTypes is the image MIME allowlist.
+	GalleryAllowedContentTypes []string
 }
 
 // Load reads configuration from the environment, applying sensible local
@@ -59,7 +89,58 @@ func Load() Config {
 		AppleClientIDs:     splitList(getenv("APPLE_CLIENT_IDS", "")),
 		GoogleClientIDs:    splitList(getenv("GOOGLE_CLIENT_IDS", "")),
 		AdminAPIToken:      getenv("ADMIN_API_TOKEN", ""),
+
+		S3Endpoint:       getenv("S3_ENDPOINT", ""),
+		S3PublicEndpoint: getenv("S3_PUBLIC_ENDPOINT", ""),
+		S3Region:         getenv("S3_REGION", "us-east-1"),
+		S3Bucket:         getenv("S3_BUCKET", "runa-gallery"),
+		S3AccessKey:      getenv("S3_ACCESS_KEY", ""),
+		S3SecretKey:      getenv("S3_SECRET_KEY", ""),
+		S3UseSSL:         getbool("S3_USE_SSL", false),
+
+		GalleryUploadURLTTL:        getduration("GALLERY_UPLOAD_URL_TTL", 15*time.Minute),
+		GalleryViewURLTTL:          getduration("GALLERY_VIEW_URL_TTL", 60*time.Minute),
+		GalleryMaxUploadBytes:      getint64("GALLERY_MAX_UPLOAD_BYTES", 10*1024*1024), // 10 MiB
+		GalleryAllowedContentTypes: splitListDefault("GALLERY_ALLOWED_CONTENT_TYPES", []string{"image/jpeg", "image/png", "image/webp", "image/heic"}),
 	}
+}
+
+// getbool parses a boolean env value (1/t/true/0/f/false), falling back on parse
+// errors or when unset.
+func getbool(key string, fallback bool) bool {
+	raw, ok := os.LookupEnv(key)
+	if !ok || raw == "" {
+		return fallback
+	}
+	v, err := strconv.ParseBool(raw)
+	if err != nil {
+		slog.Warn("invalid bool, using default", slog.String("key", key), slog.String("value", raw))
+		return fallback
+	}
+	return v
+}
+
+// getint64 parses an int64 env value, falling back on parse errors or when unset.
+func getint64(key string, fallback int64) int64 {
+	raw, ok := os.LookupEnv(key)
+	if !ok || raw == "" {
+		return fallback
+	}
+	v, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		slog.Warn("invalid int, using default", slog.String("key", key), slog.String("value", raw))
+		return fallback
+	}
+	return v
+}
+
+// splitListDefault parses a comma-separated env value, returning fallback when
+// unset/empty (unlike splitList which returns an empty slice).
+func splitListDefault(key string, fallback []string) []string {
+	if list := splitList(getenv(key, "")); len(list) > 0 {
+		return list
+	}
+	return fallback
 }
 
 // getduration parses a Go duration (e.g. "15m", "720h") from the environment,

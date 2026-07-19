@@ -19,10 +19,34 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible object storage for the gallery feature. The API talks to it on
+  # the internal host `minio:9000`; presigned URLs handed to the client use the
+  # PUBLIC host `localhost:9000` (Android emulator: `10.0.2.2:9000`). Console UI
+  # on http://localhost:9001 (runa / runa-secret).
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: runa
+      MINIO_ROOT_PASSWORD: runa-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - runa_minio:/data
+    healthcheck:
+      # gates the app's depends_on so the bucket can be ensured at boot.
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
     depends_on:
       db:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     environment:
       PORT: "8080"
@@ -30,6 +54,17 @@ services:
       LOG_LEVEL: info
       CORS_ALLOWED_ORIGINS: "*"
       APP_ENV: development
+      # Gallery object storage (MinIO). S3_ENDPOINT is where the server reaches
+      # the store; S3_PUBLIC_ENDPOINT is baked into presigned URLs the client
+      # hits (host-reachable). The server signs URLs for the public host without
+      # ever calling it (presigning is offline).
+      S3_ENDPOINT: minio:9000
+      S3_PUBLIC_ENDPOINT: localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: runa-gallery
+      S3_ACCESS_KEY: runa
+      S3_SECRET_KEY: runa-secret
+      S3_USE_SSL: "false"
       # Auth (development defaults; override for real Apple/Google sign-in).
       JWT_SECRET: dev-insecure-secret-change-me
       ACCESS_TOKEN_TTL: 15m
@@ -46,3 +81,4 @@ services:
 
 volumes:
   runa_pgdata:
+  runa_minio:

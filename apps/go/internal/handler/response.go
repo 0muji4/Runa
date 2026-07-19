@@ -23,6 +23,7 @@ const (
 	CodeNotFound             ErrorCode = "not_found"
 	CodeForbidden            ErrorCode = "forbidden"
 	CodeInternal             ErrorCode = "internal_error"
+	CodeServiceUnavailable   ErrorCode = "service_unavailable"
 )
 
 // FieldError describes one field that failed validation.

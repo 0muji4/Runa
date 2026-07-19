@@ -12,6 +12,10 @@ import com.runa.shared.feature.diary.DefaultDiaryRepository
 import com.runa.shared.feature.diary.DiaryEditorViewModel
 import com.runa.shared.feature.diary.DiaryListViewModel
 import com.runa.shared.feature.diary.DiaryRepository
+import com.runa.shared.feature.gallery.DefaultGalleryRepository
+import com.runa.shared.feature.gallery.GalleryRepository
+import com.runa.shared.feature.gallery.GalleryViewModel
+import com.runa.shared.feature.gallery.ImageDetailViewModel
 import com.runa.shared.feature.health.HealthzViewModel
 import com.runa.shared.feature.insight.DefaultInsightRepository
 import com.runa.shared.feature.insight.InsightRepository
@@ -29,6 +33,8 @@ import com.runa.shared.feature.today.player.SongPlayerViewModel
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.HttpClientFactory
 import com.runa.shared.network.KtorApiClient
+import com.runa.shared.network.KtorStorageClient
+import com.runa.shared.network.StorageClient
 import com.runa.shared.network.auth.TokenRefresher
 import com.runa.shared.network.auth.TokenStore
 import com.runa.shared.platform.httpClientEngine
@@ -40,9 +46,10 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
 
-// Koin qualifiers for the two HTTP clients (bare vs. authenticated).
+// Koin qualifiers for the HTTP clients (bare vs. authenticated vs. object-storage).
 internal val BARE_CLIENT = named("bareClient")
 internal val AUTH_CLIENT = named("authClient")
+internal val STORAGE_CLIENT = named("storageClient")
 
 /**
  * DI entry point for iOS (via SKIE as `doInitKoin(baseUrl:)`) and the fallback
@@ -81,6 +88,11 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     single<ApiClient> { KtorApiClient(httpClient = get(AUTH_CLIENT), baseUrl = baseUrl) }
 
+    // Bare, Bearer-free client for raw-byte PUT to presigned object-storage URLs.
+    // Must NOT be the auth client (it would attach the Runa token to the store host).
+    single(STORAGE_CLIENT) { HttpClientFactory.createStorage(httpClientEngine()) }
+    single<StorageClient> { KtorStorageClient(client = get(STORAGE_CLIENT)) }
+
     single<AuthRepository> { DefaultAuthRepository(apiClient = get(), tokenStore = get()) }
 
     // Local persistence. The SqlDriver + NetworkMonitor come from platformModule();
@@ -100,6 +112,17 @@ internal fun sharedModule(baseUrl: String): Module = module {
     // Insight composes the local diary stream with the shared aggregation +
     // rule-based summariser; no new persistence, no network on the render path.
     single<InsightRepository> { DefaultInsightRepository(diaryRepository = get()) }
+
+    // Gallery: local-first image metadata + presigned-URL upload/download. The
+    // storage client does the direct byte PUT; the API client issues the URLs.
+    single<GalleryRepository> {
+        DefaultGalleryRepository(
+            database = get(),
+            apiClient = get(),
+            storageClient = get(),
+            networkMonitor = get(),
+        )
+    }
 
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
@@ -131,6 +154,12 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     // Per-day records: `factory` keyed by the tapped ISO date (yyyy-MM-dd).
     factory { params -> DayRecordsViewModel(repository = get(), isoDate = params.get()) }
+
+    // Gallery grid view model is a `single` (app-lifetime, like the diary list).
+    single { GalleryViewModel(repository = get()) }
+
+    // The lightbox is per-open: `factory` keyed by the tapped image's clientId.
+    factory { params -> ImageDetailViewModel(repository = get(), startClientId = params.get()) }
 }
 
 /**
@@ -186,3 +215,11 @@ fun resolveInsightViewModel(): InsightViewModel = KoinPlatform.getKoin().get()
  *  [isoDate] is the day as `yyyy-MM-dd`. */
 fun resolveDayRecordsViewModel(isoDate: String): DayRecordsViewModel =
     KoinPlatform.getKoin().get { parametersOf(isoDate) }
+
+/** Resolve the [GalleryViewModel] from the started Koin graph (iOS entry point). */
+fun resolveGalleryViewModel(): GalleryViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve an [ImageDetailViewModel] for the lightbox, focused on [startClientId]
+ *  (iOS entry point). */
+fun resolveImageDetailViewModel(startClientId: String): ImageDetailViewModel =
+    KoinPlatform.getKoin().get { parametersOf(startClientId) }

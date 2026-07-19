@@ -1,0 +1,120 @@
+-- Local gallery store for the offline-first image feature.
+--
+-- Like the diary, client_id is the stable LOCAL primary key (generated the moment
+-- an image is picked), so a row exists and renders from pending_bytes before the
+-- upload ever reaches the store. server_id is null until the upload completes;
+-- object_key is the storage path assigned by the upload-url step. sync_state:
+--   synced | pending_upload | pending_delete
+-- The image BYTES for a queued upload live in pending_bytes (a BLOB) and are
+-- cleared once uploaded; a synced image is displayed from its presigned view_url
+-- (refetched when view_url_expires_at passes). Timestamps are ISO-8601 strings;
+-- view_url_expires_at is epoch-millis.
+
+CREATE TABLE gallery_images (
+    client_id           TEXT NOT NULL PRIMARY KEY,
+    server_id           TEXT,
+    object_key          TEXT,
+    width               INTEGER NOT NULL,
+    height              INTEGER NOT NULL,
+    theme               TEXT NOT NULL,
+    view_url            TEXT,
+    view_url_expires_at INTEGER,
+    pending_bytes       BLOB,
+    content_type        TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL,
+    deleted_at          TEXT,
+    sync_state          TEXT NOT NULL
+);
+
+CREATE INDEX gallery_images_created_idx ON gallery_images(created_at);
+
+-- Key/value table for gallery bookkeeping (the persisted display-theme toggle).
+CREATE TABLE gallery_sync_meta (
+    key   TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- ---- reads ----
+
+-- Visible grid, newest first. Soft-deleted rows (locally or pulled) drop out.
+selectVisible:
+SELECT *
+FROM gallery_images
+WHERE deleted_at IS NULL
+ORDER BY created_at DESC;
+
+selectByClientId:
+SELECT *
+FROM gallery_images
+WHERE client_id = ?;
+
+selectByServerId:
+SELECT *
+FROM gallery_images
+WHERE server_id = ?;
+
+-- Everything with unsynced local work (queued uploads / deletes), oldest first so
+-- uploads replay in the order they were added.
+selectPending:
+SELECT *
+FROM gallery_images
+WHERE sync_state != 'synced'
+ORDER BY created_at ASC;
+
+-- Synced, live rows — used to reconcile against the server list (an image absent
+-- from the server was deleted on another device and is dropped locally).
+selectSynced:
+SELECT *
+FROM gallery_images
+WHERE sync_state = 'synced' AND deleted_at IS NULL;
+
+selectAll:
+SELECT *
+FROM gallery_images;
+
+-- ---- local mutations ----
+
+-- Queue a newly picked image for upload; the bytes ride in pending_bytes until
+-- the direct PUT succeeds.
+insertPendingUpload:
+INSERT INTO gallery_images(client_id, server_id, object_key, width, height, theme, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, NULL, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, NULL, 'pending_upload');
+
+-- After a successful upload + registration: pin to the server id/object_key, cache
+-- the view URL, drop the now-redundant bytes, and mark synced.
+markUploaded:
+UPDATE gallery_images
+SET server_id = ?, object_key = ?, view_url = ?, view_url_expires_at = ?, pending_bytes = NULL, updated_at = ?, sync_state = 'synced'
+WHERE client_id = ?;
+
+-- Refresh only the presigned view URL + its expiry (URL rotated after expiry).
+updateViewUrl:
+UPDATE gallery_images
+SET view_url = ?, view_url_expires_at = ?
+WHERE client_id = ?;
+
+markPendingDelete:
+UPDATE gallery_images
+SET deleted_at = ?, updated_at = ?, sync_state = 'pending_delete'
+WHERE client_id = ?;
+
+deleteByClientId:
+DELETE FROM gallery_images
+WHERE client_id = ?;
+
+-- ---- sync application ----
+
+-- Apply a server image wholesale during pull (server wins). Keyed by client_id
+-- (reused for a known row, freshly generated for one first seen from the server).
+applyServerRow:
+INSERT OR REPLACE INTO gallery_images(client_id, server_id, object_key, width, height, theme, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, 'synced');
+
+-- ---- meta ----
+
+getMeta:
+SELECT value FROM gallery_sync_meta WHERE key = ?;
+
+setMeta:
+INSERT OR REPLACE INTO gallery_sync_meta(key, value) VALUES (?, ?);

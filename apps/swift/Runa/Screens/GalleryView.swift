@@ -8,13 +8,14 @@ import SwiftUI
 /// Everything renders from the local DB; adds queue offline and flush on reconnect.
 /// Matches the Android GalleryScreen so both OSes agree.
 struct GalleryView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = GalleryObservable()
     @State private var pickerItem: PhotosPickerItem?
     @State private var lightbox: LightboxContext?
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 header
                 content
@@ -33,11 +34,11 @@ struct GalleryView: View {
             Text("ひかりの記録")
                 .font(RunaFonts.heading(26))
                 .tracking(6)
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
             HStack {
                 Spacer()
                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Text("＋").font(RunaFonts.body(24)).foregroundStyle(RunaColors.subtle)
+                    Text("＋").font(RunaFonts.body(24)).foregroundStyle(runaTheme.subtle)
                 }
             }
         }
@@ -74,7 +75,7 @@ struct GalleryView: View {
                 themeSegment("ピンク", selected: !isMonotone(selected)) { model.setDisplayTheme(.pink) }
             }
             .padding(4)
-            .background(RunaColors.surface)
+            .background(runaTheme.surface)
             .clipShape(Capsule())
             Spacer()
         }
@@ -85,10 +86,10 @@ struct GalleryView: View {
         Button(action: action) {
             Text(label)
                 .font(RunaFonts.body(15))
-                .foregroundStyle(selected ? RunaColors.background : RunaColors.subtle)
+                .foregroundStyle(selected ? runaTheme.background : runaTheme.subtle)
                 .padding(.horizontal, 26)
                 .padding(.vertical, 8)
-                .background(selected ? RunaColors.accent : Color.clear)
+                .background(selected ? runaTheme.accent : Color.clear)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -124,7 +125,7 @@ struct GalleryView: View {
         // A fixed-ratio surface box (width = column width, height = width/ratio) with
         // the image filling and clipped — the reliable masonry-cell idiom.
         return RoundedRectangle(cornerRadius: 20)
-            .fill(RunaColors.surface)
+            .fill(runaTheme.surface)
             .aspectRatio(min(max(ratio, 0.6), 1.6), contentMode: .fit)
             .overlay {
                 GalleryImageView(image: image, theme: theme, contentMode: .fill)
@@ -146,7 +147,7 @@ struct GalleryView: View {
             NewMoonEmblem()
             Text("まだ、ひかりの記録はありません。")
                 .font(RunaFonts.heading(16))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
             Spacer()
         }
@@ -157,7 +158,7 @@ struct GalleryView: View {
         if let text = bannerText(banner) {
             Text(text)
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 12)
         }
@@ -213,6 +214,7 @@ struct GalleryView: View {
 /// The image itself: the presigned GET URL for an uploaded image (cached by
 /// URLCache for offline viewing), or a placeholder + progress while it uploads.
 struct GalleryImageView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let image: GalleryImage
     let theme: GalleryDisplayTheme
     let contentMode: ContentMode
@@ -222,14 +224,14 @@ struct GalleryImageView: View {
             AsyncImage(url: url) { img in
                 img.resizable().aspectRatio(contentMode: contentMode).galleryTheme(theme)
             } placeholder: {
-                RunaColors.surface
+                runaTheme.surface
             }
         } else {
             ZStack {
-                RunaColors.surface
+                runaTheme.surface
                 if !isUploaded(image.uploadState) {
                     ProgressView(value: Double(image.progress))
-                        .tint(RunaColors.accent)
+                        .tint(runaTheme.accent)
                         .padding(24)
                 }
             }
@@ -255,6 +257,7 @@ private struct LightboxContext: Identifiable {
 }
 
 private struct LightboxView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let context: LightboxContext
     let onDelete: (String) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -268,7 +271,7 @@ private struct LightboxView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             TabView(selection: $selection) {
                 ForEach(Array(context.images.enumerated()), id: \.element.clientId) { index, image in
@@ -281,7 +284,7 @@ private struct LightboxView: View {
                         Text(formatDateTime(image.createdAtEpochMs))
                             .font(RunaFonts.body(14))
                             .tracking(2)
-                            .foregroundStyle(RunaColors.subtle)
+                            .foregroundStyle(runaTheme.subtle)
                         Spacer()
                     }
                     .tag(index)
@@ -291,7 +294,7 @@ private struct LightboxView: View {
 
             HStack {
                 Button { dismiss() } label: {
-                    Text("✕").font(RunaFonts.body(22)).foregroundStyle(RunaColors.body)
+                    Text("✕").font(RunaFonts.body(22)).foregroundStyle(runaTheme.body)
                 }
                 Spacer()
                 Button {
@@ -300,7 +303,7 @@ private struct LightboxView: View {
                     }
                     dismiss()
                 } label: {
-                    Text("削除").font(RunaFonts.body(14)).foregroundStyle(RunaColors.subtle)
+                    Text("削除").font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
                 }
             }
             .padding(.horizontal, 20)
@@ -317,7 +320,9 @@ private extension View {
         case .monotone:
             self.saturation(0)
         case .pink:
-            self.saturation(0).colorMultiply(RunaColors.accent)
+            // The gallery's pink duotone is a fixed, gallery-scoped treatment (NOT the
+            // app theme), so it uses the fixed brand pink rather than the theme accent.
+            self.saturation(0).colorMultiply(Color(hex: 0xF4A9C0))
         default:
             self
         }

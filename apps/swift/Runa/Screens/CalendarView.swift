@@ -7,6 +7,7 @@ import Shared
 /// ("記録のある日に、月あかり"); today wears a soft moonlight-pink outline. Tapping a
 /// day opens its records, or the backdated writer when it has none.
 struct CalendarView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @Binding var path: NavigationPath
     @StateObject private var model = CalendarObservable()
     @Environment(\.dismiss) private var dismiss
@@ -16,10 +17,10 @@ struct CalendarView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
                 Button { dismiss() } label: {
-                    Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                    Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                 }
                 .padding(.top, 14)
                 .padding(.vertical, 6)
@@ -67,19 +68,19 @@ struct CalendarView: View {
     private func header(_ c: CalendarUiStateContent) -> some View {
         HStack {
             Button { model.showPreviousMonth() } label: {
-                Text("‹").font(RunaFonts.logo(34)).foregroundStyle(RunaColors.subtle)
+                Text("‹").font(RunaFonts.logo(34)).foregroundStyle(runaTheme.subtle)
             }
             Spacer()
             Button { model.showToday() } label: {
                 HStack(spacing: 14) {
-                    Text("\(c.year)").font(RunaFonts.logo(32)).foregroundStyle(RunaColors.heading)
-                    Text("\(c.month)月").font(RunaFonts.heading(30)).foregroundStyle(RunaColors.heading)
+                    Text("\(c.year)").font(RunaFonts.logo(32)).foregroundStyle(runaTheme.heading)
+                    Text("\(c.month)月").font(RunaFonts.heading(30)).foregroundStyle(runaTheme.heading)
                 }
             }
             .buttonStyle(.plain)
             Spacer()
             Button { model.showNextMonth() } label: {
-                Text("›").font(RunaFonts.logo(34)).foregroundStyle(RunaColors.subtle)
+                Text("›").font(RunaFonts.logo(34)).foregroundStyle(runaTheme.subtle)
             }
         }
     }
@@ -89,7 +90,7 @@ struct CalendarView: View {
             ForEach(weekdays, id: \.self) { d in
                 Text(d)
                     .font(RunaFonts.body(12))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -100,7 +101,7 @@ struct CalendarView: View {
         return VStack(spacing: 4) {
             Text("\(day.day)")
                 .font(RunaFonts.body(15))
-                .foregroundStyle(bright ? RunaColors.heading : RunaColors.subtle)
+                .foregroundStyle(bright ? runaTheme.heading : runaTheme.subtle)
             if day.entryCount > 0 {
                 MoonPhaseDisc(
                     illumination: CGFloat(day.illumination),
@@ -112,7 +113,7 @@ struct CalendarView: View {
         .frame(maxWidth: .infinity, minHeight: 58)
         .overlay(
             day.isToday
-                ? RoundedRectangle(cornerRadius: 14).stroke(RunaColors.accent.opacity(0.8), lineWidth: 1)
+                ? RoundedRectangle(cornerRadius: 14).stroke(runaTheme.accent.opacity(0.8), lineWidth: 1)
                 : nil
         )
         .contentShape(Rectangle())
@@ -122,13 +123,13 @@ struct CalendarView: View {
     private func legend(_ banner: CalendarBanner) -> some View {
         VStack(spacing: 12) {
             if let text = bannerText(banner) {
-                Text(text).font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                Text(text).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
             HStack(spacing: 10) {
-                Circle().fill(RunaColors.subAccent).frame(width: 8, height: 8)
+                Circle().fill(runaTheme.subAccent).frame(width: 8, height: 8)
                 Text("記録のある日に、月あかり")
                     .font(RunaFonts.heading(13))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
             }
         }
         .frame(maxWidth: .infinity)

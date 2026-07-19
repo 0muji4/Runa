@@ -16,13 +16,14 @@ enum DiaryRoute: Hashable {
 /// cards, each led by its day's moon phase. Pull-to-refresh, a whisper-quiet sync
 /// line, a new-moon empty state, and a round moonlight-pink FAB into the editor.
 struct DiaryListView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = DiaryListObservable()
     @State private var path = NavigationPath()
 
     var body: some View {
         NavigationStack(path: $path) {
             ZStack(alignment: .bottomTrailing) {
-                RunaColors.background.ignoresSafeArea()
+                runaTheme.background.ignoresSafeArea()
                 content
                 if isContent { plusFab }
             }
@@ -46,7 +47,7 @@ struct DiaryListView: View {
                 }
             }
         }
-        .tint(RunaColors.accent)
+        .tint(runaTheme.accent)
     }
 
     private var isContent: Bool {
@@ -75,7 +76,7 @@ struct DiaryListView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("日々の記録")
                         .font(RunaFonts.heading(34))
-                        .foregroundStyle(RunaColors.heading)
+                        .foregroundStyle(runaTheme.heading)
                     Spacer()
                     HStack(spacing: 16) {
                         insightLink
@@ -113,22 +114,22 @@ struct DiaryListView: View {
             NewMoonEmblem(diameter: 116)
             Text("まだ、なにもない夜。")
                 .font(RunaFonts.heading(26))
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
                 .padding(.top, RunaSpacing.md)
             Text("最初のひとことを、\nそっと綴ってみませんか。")
                 .font(RunaFonts.body(14))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
                 .padding(.top, RunaSpacing.sm)
             Button { path.append(DiaryRoute.editorNew) } label: {
                 Text("綴りはじめる")
                     .font(RunaFonts.body(16))
-                    .foregroundStyle(RunaColors.accent)
+                    .foregroundStyle(runaTheme.accent)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 14)
                     .overlay(
                         RoundedRectangle(cornerRadius: 28)
-                            .stroke(RunaColors.accent.opacity(0.7), lineWidth: 1)
+                            .stroke(runaTheme.accent.opacity(0.7), lineWidth: 1)
                     )
             }
             .padding(.top, RunaSpacing.lg)
@@ -144,7 +145,7 @@ struct DiaryListView: View {
         Button { path.append(DiaryRoute.calendar) } label: {
             Text("ふりかえり")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.accent)
+                .foregroundStyle(runaTheme.accent)
         }
     }
 
@@ -153,21 +154,21 @@ struct DiaryListView: View {
         Button { path.append(DiaryRoute.insight) } label: {
             Text("うつろい")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.accent)
+                .foregroundStyle(runaTheme.accent)
         }
     }
 
     private var plusFab: some View {
         Button { path.append(DiaryRoute.editorNew) } label: {
             ZStack {
-                Circle().fill(RunaColors.accent).frame(width: 64, height: 64)
+                Circle().fill(runaTheme.accent).frame(width: 64, height: 64)
                 Canvas { ctx, size in
                     let c = CGPoint(x: size.width / 2, y: size.height / 2)
                     let arm = size.width * 0.34
                     var h = Path(); h.move(to: CGPoint(x: c.x - arm, y: c.y)); h.addLine(to: CGPoint(x: c.x + arm, y: c.y))
                     var v = Path(); v.move(to: CGPoint(x: c.x, y: c.y - arm)); v.addLine(to: CGPoint(x: c.x, y: c.y + arm))
-                    ctx.stroke(h, with: .color(RunaColors.background), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                    ctx.stroke(v, with: .color(RunaColors.background), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    ctx.stroke(h, with: .color(runaTheme.background), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    ctx.stroke(v, with: .color(runaTheme.background), style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 }
                 .frame(width: 22, height: 22)
             }
@@ -180,7 +181,7 @@ struct DiaryListView: View {
         if let text = bannerText(banner) {
             Text(text)
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
         }
     }
 
@@ -195,6 +196,7 @@ struct DiaryListView: View {
 
 /// One quiet record card, led by its day's moon phase.
 private struct DiaryCardRow: View {
+    @Environment(\.runaTheme) private var runaTheme
     let entry: DiaryEntry
 
     var body: some View {
@@ -204,21 +206,21 @@ private struct DiaryCardRow: View {
                 MoonPhaseDisc(illumination: moon.illumination, waxing: moon.waxing, diameter: 20)
                 Text(DiaryDate.day(entry.createdAtEpochMs))
                     .font(RunaFonts.body(13))
-                    .foregroundStyle(RunaColors.body)
+                    .foregroundStyle(runaTheme.body)
                 Text(moon.name)
                     .font(RunaFonts.body(13))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
             }
             Text(entry.bodyText)
                 .font(RunaFonts.heading(16))
-                .foregroundStyle(RunaColors.body)
+                .foregroundStyle(runaTheme.body)
                 .lineLimit(2)
                 .lineSpacing(6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 22)
         .padding(.vertical, 20)
-        .background(RunaColors.surface)
+        .background(runaTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 22))
     }
 }

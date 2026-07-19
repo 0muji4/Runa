@@ -5,10 +5,16 @@ import SwiftUI
 /// a glowing hero moon, a phase disc for diary records, and the empty / offline /
 /// error / notification emblems.
 
+// The moon is a FIXED cross-theme motif (design decision): it never recolors with
+// the app theme, so it holds its own dark-motif constants rather than reading the
+// theme tokens. Values match the original dark palette.
 private let moonLit = Color(hex: 0xF7F2E4)
-private let moonCream = RunaColors.subAccent // #E8E2D0
+private let moonCream = Color(hex: 0xE8E2D0)
 private let moonDark = Color(hex: 0x34343E)
 private let moonRing = Color(hex: 0x3E3E48)
+private let moonMuted = Color(hex: 0x9A9AA5)      // subtle
+private let moonAccent = Color(hex: 0xF4A9C0)     // moonlight accent
+private let moonBackground = Color(hex: 0x0E0E12) // background
 
 private func drawGlow(_ ctx: inout GraphicsContext, center: CGPoint, radius: CGFloat, tint: Color, alpha: Double) {
     guard radius > 0 else { return }
@@ -27,7 +33,7 @@ private func disc(_ center: CGPoint, _ r: CGFloat) -> Path {
 /// A full, softly glowing moon — the hero mark for sign-in / onboarding / splash.
 struct GlowingMoon: View {
     var diameter: CGFloat = 132
-    var haloTint: Color = RunaColors.subAccent
+    var haloTint: Color = moonCream
 
     var body: some View {
         Canvas { ctx, size in
@@ -81,7 +87,7 @@ struct NewMoonEmblem: View {
         Canvas { ctx, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
             let r = min(size.width, size.height) * 0.32
-            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.46, tint: RunaColors.subAccent, alpha: 0.10)
+            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.46, tint: moonCream, alpha: 0.10)
             ctx.stroke(disc(c, r * 1.32), with: .color(moonRing), lineWidth: 1.4)
             let shading = GraphicsContext.Shading.radialGradient(
                 Gradient(colors: [Color(hex: 0x26262E), Color(hex: 0x14141A)]),
@@ -111,7 +117,7 @@ struct CloudedMoon: View {
             var line = Path()
             line.move(to: CGPoint(x: c.x - r * 1.15, y: c.y + r * 0.8))
             line.addLine(to: CGPoint(x: c.x + r * 1.15, y: c.y - r * 0.8))
-            ctx.stroke(line, with: .color(RunaColors.subtle), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            ctx.stroke(line, with: .color(moonMuted), style: StrokeStyle(lineWidth: 2, lineCap: .round))
         }
         .frame(width: diameter, height: diameter)
         .accessibilityHidden(true)
@@ -125,7 +131,7 @@ struct StumbleEmblem: View {
         Canvas { ctx, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
             let r = min(size.width, size.height) * 0.30
-            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.44, tint: RunaColors.subtle, alpha: 0.12)
+            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.44, tint: moonMuted, alpha: 0.12)
             let shading = GraphicsContext.Shading.radialGradient(
                 Gradient(colors: [Color(hex: 0xB9B4AC), Color(hex: 0x8F8B84)]),
                 center: CGPoint(x: c.x - r * 0.25, y: c.y - r * 0.25),
@@ -135,8 +141,8 @@ struct StumbleEmblem: View {
             var stem = Path()
             stem.move(to: CGPoint(x: c.x, y: c.y - r * 0.42))
             stem.addLine(to: CGPoint(x: c.x, y: c.y + r * 0.10))
-            ctx.stroke(stem, with: .color(RunaColors.background), style: StrokeStyle(lineWidth: r * 0.16, lineCap: .round))
-            ctx.fill(disc(CGPoint(x: c.x, y: c.y + r * 0.40), r * 0.09), with: .color(RunaColors.background))
+            ctx.stroke(stem, with: .color(moonBackground), style: StrokeStyle(lineWidth: r * 0.16, lineCap: .round))
+            ctx.fill(disc(CGPoint(x: c.x, y: c.y + r * 0.40), r * 0.09), with: .color(moonBackground))
         }
         .frame(width: diameter, height: diameter)
         .accessibilityHidden(true)
@@ -151,7 +157,7 @@ struct NotificationMoon: View {
         Canvas { ctx, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
             let moonR = min(size.width, size.height) * 0.28
-            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.5, tint: RunaColors.subAccent, alpha: 0.20)
+            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.5, tint: moonCream, alpha: 0.20)
             drawGlow(&ctx, center: c, radius: moonR * 1.7, tint: moonLit, alpha: 0.28)
             let shading = GraphicsContext.Shading.radialGradient(
                 Gradient(colors: [moonLit, moonCream]),
@@ -162,9 +168,9 @@ struct NotificationMoon: View {
 
             let badgeC = CGPoint(x: c.x + moonR * 0.95, y: c.y - moonR * 0.95)
             let badgeR = moonR * 0.6
-            drawGlow(&ctx, center: badgeC, radius: badgeR * 2.1, tint: RunaColors.accent, alpha: 0.35)
-            ctx.fill(disc(badgeC, badgeR), with: .color(RunaColors.accent))
-            drawBell(&ctx, center: badgeC, s: badgeR * 0.92, color: RunaColors.background)
+            drawGlow(&ctx, center: badgeC, radius: badgeR * 2.1, tint: moonAccent, alpha: 0.35)
+            ctx.fill(disc(badgeC, badgeR), with: .color(moonAccent))
+            drawBell(&ctx, center: badgeC, s: badgeR * 0.92, color: moonBackground)
         }
         .frame(width: diameter, height: diameter)
         .accessibilityHidden(true)

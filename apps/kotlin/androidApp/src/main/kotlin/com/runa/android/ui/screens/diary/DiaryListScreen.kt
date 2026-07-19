@@ -227,11 +227,14 @@ private fun PlusFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
+        // Read the token in composable scope, then draw with it (a draw lambda is not
+        // composable, so it cannot read the RunaColors accessor directly).
+        val plusColor = RunaColors.Background
         Canvas(Modifier.size(22.dp)) {
             val c = center
             val arm = size.minDimension * 0.34f
-            drawLine(RunaColors.Background, androidx.compose.ui.geometry.Offset(c.x - arm, c.y), androidx.compose.ui.geometry.Offset(c.x + arm, c.y), strokeWidth = 4f, cap = StrokeCap.Round)
-            drawLine(RunaColors.Background, androidx.compose.ui.geometry.Offset(c.x, c.y - arm), androidx.compose.ui.geometry.Offset(c.x, c.y + arm), strokeWidth = 4f, cap = StrokeCap.Round)
+            drawLine(plusColor, androidx.compose.ui.geometry.Offset(c.x - arm, c.y), androidx.compose.ui.geometry.Offset(c.x + arm, c.y), strokeWidth = 4f, cap = StrokeCap.Round)
+            drawLine(plusColor, androidx.compose.ui.geometry.Offset(c.x, c.y - arm), androidx.compose.ui.geometry.Offset(c.x, c.y + arm), strokeWidth = 4f, cap = StrokeCap.Round)
         }
     }
 }

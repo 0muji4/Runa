@@ -128,4 +128,43 @@
     <string name="todays_moon_label">今日の月</string>
     <string name="todays_moon_age">月齢 %1$s ・ %2$s</string>
     <string name="todays_moon_next">next ▸ %1$s　%2$s</string>
+
+    <!-- Settings top (19). Notification / privacy-lock rows are 導線 only (next feature). -->
+    <string name="settings_title">設定</string>
+    <string name="settings_row_theme">テーマ</string>
+    <string name="settings_row_notifications">通知</string>
+    <string name="settings_row_privacy_lock">プライバシー・ロック</string>
+    <string name="settings_row_account">アカウント・データ</string>
+    <string name="settings_premium_title">LUNA +</string>
+    <string name="settings_premium_subtitle">プレミアムで、もっと深く</string>
+    <string name="settings_version">LUNA version %1$s</string>
+
+    <!-- Theme picker (20). -->
+    <string name="theme_eyebrow">THEME</string>
+    <string name="theme_title">テーマ</string>
+    <string name="theme_dark_name">夜（ダーク）</string>
+    <string name="theme_dark_desc">深い夜色に、月あかり</string>
+    <string name="theme_light_name">あさ（ライト）</string>
+    <string name="theme_light_desc">朝の光のような、白</string>
+    <string name="theme_pink_name">ピンク×ピンク</string>
+    <string name="theme_pink_desc">ルナピンクの、灯り</string>
+    <string name="theme_footer">あなたの夜に、あわせて。</string>
+    <string name="theme_selected">選択中</string>
+
+    <!-- Account・データ (23). -->
+    <string name="account_eyebrow">ACCOUNT</string>
+    <string name="account_title">アカウント・データ</string>
+    <string name="account_edit_name">表示名を編集</string>
+    <string name="account_name_label">表示名</string>
+    <string name="account_save">保存</string>
+    <string name="account_export">エクスポート</string>
+    <string name="account_export_json">JSON で書き出す</string>
+    <string name="account_export_text">テキストで書き出す</string>
+    <string name="account_export_preparing">エクスポートを準備しています…</string>
+    <string name="account_export_share_title">データのエクスポート</string>
+    <string name="account_delete">アカウントを削除</string>
+    <string name="account_delete_confirm_title">アカウントを削除しますか</string>
+    <string name="account_delete_confirm_body">日記・画像を含むすべてのデータが完全に削除され、元に戻せません。</string>
+    <string name="account_deleting">削除しています…</string>
+    <string name="account_load_error">プロフィールを取得できませんでした。</string>
 </resources>

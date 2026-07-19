@@ -7,7 +7,9 @@ import com.runa.shared.feature.diary.SyncStatus
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.CreateGalleryRequest
 import com.runa.shared.network.dto.DiaryCalendarResponse
+import com.runa.shared.network.dto.GalleryUploadURLRequest
 import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
@@ -164,4 +166,9 @@ private class FakeCalendarApi : ApiClient {
     override suspend fun getToday(date: String?) = error("unused")
     override suspend fun getSongs(limit: Int?, cursor: String?) = error("unused")
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = error("unused")
+    override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest) = error("unused")
+    override suspend fun createGallery(req: CreateGalleryRequest) = error("unused")
+    override suspend fun listGallery(limit: Int?, cursor: String?) = error("unused")
+    override suspend fun getGallery(id: String) = error("unused")
+    override suspend fun deleteGallery(id: String) = error("unused")
 }

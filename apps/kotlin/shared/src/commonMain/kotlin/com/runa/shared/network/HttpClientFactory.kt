@@ -15,13 +15,18 @@ import kotlinx.serialization.json.Json
 /**
  * Builds the shared [HttpClient]s.
  *
- * Two flavours exist:
+ * Three flavours exist:
  *  - [createBase]: JSON only, no auth. Used by the [TokenRefresher] to call
  *    /auth/refresh without risking a refresh-of-a-refresh loop.
  *  - [createAuthenticated]: JSON plus an [HttpSend] interceptor that attaches the
  *    stored Bearer access token and, on a 401 from a protected route, refreshes
  *    once and replays the original request. Public /api/v1/auth/... routes are
  *    skipped so sign-in calls carry no token and never trigger a refresh.
+ *  - [createStorage]: NO content negotiation and NO auth interceptor — a bare
+ *    client for raw-byte PUT/GET against arbitrary presigned object-storage URLs.
+ *    It must NOT be the authenticated client: that one would attach the Runa
+ *    Bearer to the storage host (the presigned URL path has no `auth` segment to
+ *    skip on), leaking the token to a third-party host.
  */
 object HttpClientFactory {
 
@@ -34,6 +39,8 @@ object HttpClientFactory {
         HttpClient(engine) {
             install(ContentNegotiation) { json(json) }
         }
+
+    fun createStorage(engine: HttpClientEngine): HttpClient = HttpClient(engine)
 
     fun createAuthenticated(
         engine: HttpClientEngine,

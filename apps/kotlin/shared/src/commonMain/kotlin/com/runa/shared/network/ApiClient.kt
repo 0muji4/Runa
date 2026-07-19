@@ -8,6 +8,11 @@ import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
 import com.runa.shared.network.dto.DiarySyncResponse
+import com.runa.shared.network.dto.CreateGalleryRequest
+import com.runa.shared.network.dto.GalleryImageDto
+import com.runa.shared.network.dto.GalleryListResponse
+import com.runa.shared.network.dto.GalleryUploadURLRequest
+import com.runa.shared.network.dto.GalleryUploadURLResponse
 import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
@@ -71,6 +76,15 @@ interface ApiClient {
 
     /** POST /songs/{id}/played — record a play (server clock when playedAt is null). */
     suspend fun markSongPlayed(songId: String, playedAt: String?)
+
+    // Gallery (all Bearer-protected; the HTTP layer injects the token). The image
+    // bytes never pass through here — createGalleryUploadUrl returns a presigned
+    // PUT URL the client uploads to directly, then createGallery registers it.
+    suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse
+    suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto
+    suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse
+    suspend fun getGallery(id: String): GalleryImageDto
+    suspend fun deleteGallery(id: String)
 }
 
 /**
@@ -188,6 +202,33 @@ class KtorApiClient(
                 if (tz != null) parameters.append("tz", tz)
             }
         }.decodeOrThrow()
+
+    override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse =
+        postJson(listOf("api", "v1", "gallery", "upload-url"), req).decodeOrThrow()
+
+    override suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto =
+        postJson(listOf("api", "v1", "gallery"), req).decodeOrThrow()
+
+    override suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse =
+        httpClient.get(baseUrl) {
+            url {
+                appendPathSegments("api", "v1", "gallery")
+                if (limit != null) parameters.append("limit", limit.toString())
+                if (cursor != null) parameters.append("cursor", cursor)
+            }
+        }.decodeOrThrow()
+
+    override suspend fun getGallery(id: String): GalleryImageDto =
+        httpClient.get(baseUrl) {
+            url { appendPathSegments("api", "v1", "gallery", id) }
+        }.decodeOrThrow()
+
+    override suspend fun deleteGallery(id: String) {
+        val response = httpClient.delete(baseUrl) {
+            url { appendPathSegments("api", "v1", "gallery", id) }
+        }
+        if (!response.status.isSuccess()) response.throwApiError()
+    }
 
     private suspend inline fun <reified B> postJson(segments: List<String>, body: B): HttpResponse =
         httpClient.post(baseUrl) {

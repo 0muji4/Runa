@@ -12,6 +12,11 @@ import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
 import com.runa.shared.network.dto.DiarySyncResponse
+import com.runa.shared.network.dto.CreateGalleryRequest
+import com.runa.shared.network.dto.GalleryImageDto
+import com.runa.shared.network.dto.GalleryListResponse
+import com.runa.shared.network.dto.GalleryUploadURLRequest
+import com.runa.shared.network.dto.GalleryUploadURLResponse
 import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
@@ -188,6 +193,11 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun getToday(date: String?): TodayResponse = unused()
     override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse = unused()
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()
+    override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse = unused()
+    override suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto = unused()
+    override suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse = unused()
+    override suspend fun getGallery(id: String): GalleryImageDto = unused()
+    override suspend fun deleteGallery(id: String) = unused()
 
     private fun unused(): Nothing = error("endpoint not used by the diary sync engine")
 }

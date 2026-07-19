@@ -1,6 +1,6 @@
 # Runa
 
-Runa は月をモチーフにしたモバイルアプリ（Android / iOS）である。日々の記憶を静かに書き留め、一日を月の光のように振り返るための場所を提供することを目指す。UI はダークテーマのみで、余白を広くとった最小限の装飾と月の意匠で統一する。
+Runa は月をモチーフにしたモバイルアプリ（Android / iOS）である。日々の記憶を静かに書き留め、一日を月の光のように振り返るための場所を提供することを目指す。UI は 3 つのテーマ（夜／あさ／ピンク×ピンク、既定は夜のダーク）を切り替えられ、余白を広くとった最小限の装飾と月の意匠で統一する。
 
 このリポジトリは Runa の**ウォーキングスケルトン**である。バックエンド・共有ロジック・各 OS の UI を貫く縦の配線と、単一の疎通確認パス（`healthz`）だけが通っており、各画面は空のシェル（タイトルとプレースホルダのみ）に留めてある。プロダクト機能は、この骨組みの上に**縦切り（vertical slice）**で 1 本ずつ載せていく。機能の足し方は [docs/adding-a-feature.md](docs/adding-a-feature.md) を参照する。
 
@@ -111,6 +111,37 @@ curl http://localhost:8080/api/v1/healthz
 - **週起点は既定 日曜**（`InsightPeriods.DEFAULT_WEEK_START = DayOfWeek.SUNDAY`、カレンダーの 日〜土 に合わせる）。`InsightViewModel(weekStart = …)` で変更可能。期間は `[start, endExclusive)` の半開区間で、**タイムゾーンはユーザー現地日付**（`TimeZone.currentSystemDefault()`、日境界は現地 0:00）。うるう 2 月・月/年跨ぎ・TZ 境界は `InsightPeriodsTest`／`InsightCalculatorTest` が網羅。
 - **要約はまずルールベースで `shared` に閉じる**。`SummaryComposer`（interface）越しに `RuleBasedSummaryComposer` がテンプレ＋条件分岐で静かな詩文を組み立てる（断定・診断・助言はしない）。**将来サーバ LLM 要約へ差し替える場合は `SummaryComposer` の別実装を `InsightRepository` の裏で注入するだけ**で、ViewModel と両 UI は無変更（`compose` は `suspend` なので通信実装も収まる）。
 - **`GET /api/v1/insights?period=weekly|monthly&start=&tz=` は任意・最小のサーバ側集計**（`days_journaled`／`entry_count`／`unmooded_count`／`mood_distribution`）。カレンダー同様の**整合性確認の補助**で、描画には使わない（クライアントはローカル集計が正）。月相はクライアント専用のためサーバは返さない。詳細は [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
+
+### 設定（テーマ切替 / アカウント・データ）
+
+「認証済み前提」の設定機能。アプリ全体の外観テーマ切替と、プロフィール編集・データエクスポート・アカウント削除を持つ。通知設定・プライバシーロックは導線（枠）のみで、次の機能で扱う。
+
+**3 テーマ（全クライアント共通のトークン）**
+
+外観は 7 つの意味的トークンで表し、テーマ選択でまとめて差し替える。各画面はトークンを参照し、色をハードコードしない（月の意匠 `MoonArt` は全テーマ共通の固定モチーフとして例外的に固定色を持つ）。選択は `shared` が持ち（`ThemeRepository` ＝ multiplatform-settings で永続化、`observeTheme(): StateFlow<AppTheme>`、起動時に適用）、色の値は各クライアントにネイティブ定義する（Android: `RunaColorScheme` + `LocalRunaColors`、iOS: `RunaTheme` + `@Environment(\.runaTheme)`）。下表を唯一の正典とし、3 クライアントで一致させる。
+
+| トークン | 夜 dark（既定） | あさ light | ピンク pink |
+| --- | --- | --- | --- |
+| background | `#0E0E12` | `#FAF7F5` | `#141017` |
+| surface | `#16161C` | `#FFFFFF` | `#1E1622` |
+| heading | `#F5F3EF` | `#2A2620` | `#F6EEF2` |
+| body | `#C8C6CE` | `#4E483F` | `#D6C4CE` |
+| subtle | `#9A9AA5` | `#8C8579` | `#A08E99` |
+| accent | `#F4A9C0` | `#E79CB6` | `#F4A9C0` |
+| subAccent | `#E8E2D0` | `#C9B8A0` | `#E8B7C8` |
+
+> 夜（ダーク）と pink の accent は確定値。light の背景（`#FAF7F5`）を除く light/pink の各色は確定デザイン画像がなく、テーマ選択画面のスウォッチと文章仕様から導出した暫定値（要サインオフ）。
+
+**API（`/api/v1`、要 Bearer・本人のみ。詳細は [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)）**
+
+| Method / Path | 内容 |
+| --- | --- |
+| `PATCH /me` | 表示名（`display_name`）を更新 |
+| `GET /me/export` | 本人データを JSON で一括エクスポート |
+| `DELETE /me` | アカウントを完全削除（`204`） |
+
+- **エクスポート形式**: サーバは JSON 1 本を返す（`exported_at` / `schema_version` / `user` / `diaries[]`（tombstone 除く）/ `images[]`）。画像はメタデータ＋短命の署名付き GET URL（ストレージ未設定時は `url` を省略）。クライアントの「テキスト」形式はこの JSON から日記本文を整形して生成する（整形はクライアント責務、サーバ契約は JSON 単一）。
+- **削除方針（ハードデリート）**: `DELETE FROM users` を 1 トランザクションで実行し、既存の `ON DELETE CASCADE` で `refresh_tokens` / `diary_entries` / `gallery_images` / `song_history` を連鎖削除する（ソフトデリートの `deleted_at` は用いない）。リフレッシュトークンは連鎖削除で失効。アクセストークンはステートレス JWT だが、ユーザ行の消失により以後の `GET /me` 等が `401` となり構造的に無効化される（残存窓は `ACCESS_TOKEN_TTL`、既定 15 分）。オブジェクトストレージ上の画像は DB cascade の対象外のため、削除前にキーを列挙し、行削除後に非同期・ベストエフォートで削除する。クライアントは削除成功時に認証状態を未認証へ落とし、ローカル DB とトークンを消去してサインイン画面へ戻る。
 
 ### 各 OS のネイティブ設定（実クレデンシャル）
 

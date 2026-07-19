@@ -15,6 +15,7 @@ import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
 import com.runa.shared.network.dto.DiarySyncResponse
+import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.GalleryImageDto
 import com.runa.shared.network.dto.GalleryListResponse
 import com.runa.shared.network.dto.GalleryUploadURLRequest
@@ -28,6 +29,7 @@ import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.SongsArchiveResponse
 import com.runa.shared.network.dto.TodayResponse
 import com.runa.shared.network.dto.UpdateDiaryRequest
+import com.runa.shared.network.dto.UpdateMeRequest
 import com.runa.shared.network.dto.UserDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -176,6 +178,9 @@ class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
     override suspend fun refresh(req: RefreshRequest): AuthTokens = unused()
     override suspend fun logout(req: LogoutRequest) = unused()
     override suspend fun getMe(): UserDto = unused()
+    override suspend fun updateMe(req: UpdateMeRequest): UserDto = unused()
+    override suspend fun exportData(): ExportDto = unused()
+    override suspend fun deleteAccount() = unused()
     override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse = unused()
     override suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto = unused()
     override suspend fun getDiary(id: String): DiaryEntryDto = unused()

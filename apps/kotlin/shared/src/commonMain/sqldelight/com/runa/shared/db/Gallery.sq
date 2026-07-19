@@ -103,6 +103,13 @@ deleteByClientId:
 DELETE FROM gallery_images
 WHERE client_id = ?;
 
+-- Full wipe (account deletion). Truncates the whole local gallery store.
+deleteAllImages:
+DELETE FROM gallery_images;
+
+deleteAllSyncMeta:
+DELETE FROM gallery_sync_meta;
+
 -- ---- sync application ----
 
 -- Apply a server image wholesale during pull (server wins). Keyed by client_id

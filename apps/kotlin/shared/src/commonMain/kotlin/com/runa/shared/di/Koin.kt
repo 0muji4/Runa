@@ -20,6 +20,15 @@ import com.runa.shared.feature.health.HealthzViewModel
 import com.runa.shared.feature.insight.DefaultInsightRepository
 import com.runa.shared.feature.insight.InsightRepository
 import com.runa.shared.feature.insight.InsightViewModel
+import com.runa.shared.feature.settings.AccountViewModel
+import com.runa.shared.feature.settings.DefaultLocalDataCleaner
+import com.runa.shared.feature.settings.DefaultSettingsRepository
+import com.runa.shared.feature.settings.DefaultThemeRepository
+import com.runa.shared.feature.settings.LocalDataCleaner
+import com.runa.shared.feature.settings.SettingsRepository
+import com.runa.shared.feature.settings.SettingsViewModel
+import com.runa.shared.feature.settings.ThemeRepository
+import com.runa.shared.feature.settings.ThemeViewModel
 import com.runa.shared.feature.todaymoon.DefaultTodayMoonRepository
 import com.runa.shared.feature.todaymoon.TodayMoonRepository
 import com.runa.shared.feature.todaymoon.TodayMoonViewModel
@@ -124,6 +133,19 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
+    // Settings: theme selection is a local preference (persisted via the
+    // platform-provided Settings); account data (profile/export/delete) is
+    // network-backed and reuses auth teardown + a local-DB wipe on deletion.
+    single<ThemeRepository> { DefaultThemeRepository(settings = get()) }
+    single<LocalDataCleaner> { DefaultLocalDataCleaner(database = get()) }
+    single<SettingsRepository> {
+        DefaultSettingsRepository(
+            apiClient = get(),
+            authRepository = get(),
+            localDataCleaner = get(),
+        )
+    }
+
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
     single { AuthViewModel(repository = get()) }
@@ -160,6 +182,12 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     // The lightbox is per-open: `factory` keyed by the tapped image's clientId.
     factory { params -> ImageDetailViewModel(repository = get(), startClientId = params.get()) }
+
+    // Settings view models. Theme + settings-top are app-lifetime singles (the theme
+    // one also feeds the root); account is a single that reloads its profile on open.
+    single { ThemeViewModel(repository = get()) }
+    single { SettingsViewModel(themeRepository = get()) }
+    single { AccountViewModel(repository = get()) }
 }
 
 /**
@@ -223,3 +251,12 @@ fun resolveGalleryViewModel(): GalleryViewModel = KoinPlatform.getKoin().get()
  *  (iOS entry point). */
 fun resolveImageDetailViewModel(startClientId: String): ImageDetailViewModel =
     KoinPlatform.getKoin().get { parametersOf(startClientId) }
+
+/** Resolve the [ThemeViewModel] (iOS entry point; drives the picker and the root). */
+fun resolveThemeViewModel(): ThemeViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve the [SettingsViewModel] for the settings top (iOS entry point). */
+fun resolveSettingsViewModel(): SettingsViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve the [AccountViewModel] for the account-data screen (iOS entry point). */
+fun resolveAccountViewModel(): AccountViewModel = KoinPlatform.getKoin().get()

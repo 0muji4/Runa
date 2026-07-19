@@ -59,3 +59,13 @@ SELECT id, song_id, title, artist, artwork_url, played_at
 FROM song_history
 ORDER BY played_at DESC
 LIMIT ?;
+
+-- ---- full wipe (account deletion) ----
+deleteAllQuotes:
+DELETE FROM today_quote;
+
+deleteAllSongs:
+DELETE FROM today_song;
+
+deleteAllHistory:
+DELETE FROM song_history;

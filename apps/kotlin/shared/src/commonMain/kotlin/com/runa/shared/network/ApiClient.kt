@@ -20,9 +20,11 @@ import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.PlayedRequest
 import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
+import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.SongsArchiveResponse
 import com.runa.shared.network.dto.TodayResponse
 import com.runa.shared.network.dto.UpdateDiaryRequest
+import com.runa.shared.network.dto.UpdateMeRequest
 import com.runa.shared.network.dto.UserDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -55,6 +57,11 @@ interface ApiClient {
     suspend fun refresh(req: RefreshRequest): AuthTokens
     suspend fun logout(req: LogoutRequest)
     suspend fun getMe(): UserDto
+
+    // Account-data management (all Bearer-protected).
+    suspend fun updateMe(req: UpdateMeRequest): UserDto
+    suspend fun exportData(): ExportDto
+    suspend fun deleteAccount()
 
     // Diary (all Bearer-protected; the HTTP layer injects the token).
     suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse
@@ -127,6 +134,25 @@ class KtorApiClient(
         httpClient.get(baseUrl) {
             url { appendPathSegments("api", "v1", "me") }
         }.decodeOrThrow()
+
+    override suspend fun updateMe(req: UpdateMeRequest): UserDto =
+        httpClient.patch(baseUrl) {
+            url { appendPathSegments("api", "v1", "me") }
+            contentType(ContentType.Application.Json)
+            setBody(req)
+        }.decodeOrThrow()
+
+    override suspend fun exportData(): ExportDto =
+        httpClient.get(baseUrl) {
+            url { appendPathSegments("api", "v1", "me", "export") }
+        }.decodeOrThrow()
+
+    override suspend fun deleteAccount() {
+        val response = httpClient.delete(baseUrl) {
+            url { appendPathSegments("api", "v1", "me") }
+        }
+        if (!response.status.isSuccess()) response.throwApiError()
+    }
 
     override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse =
         httpClient.get(baseUrl) {

@@ -107,6 +107,39 @@ func (r *AuthRepository) getUserBy(ctx context.Context, query string, arg any) (
 	return u, nil
 }
 
+func (r *AuthRepository) UpdateDisplayName(ctx context.Context, id, displayName string) (User, error) {
+	if r.pool == nil {
+		return User{}, ErrNoDatabase
+	}
+	const q = `UPDATE users SET display_name = $2 WHERE id = $1 RETURNING ` + userColumns
+	u, err := scanUser(r.pool.QueryRow(ctx, q, id, displayName))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, ErrNotFound
+		}
+		return User{}, fmt.Errorf("update display name: %w", err)
+	}
+	return u, nil
+}
+
+func (r *AuthRepository) DeleteUser(ctx context.Context, id string) error {
+	if r.pool == nil {
+		return ErrNoDatabase
+	}
+	// ON DELETE CASCADE (migrations 0002–0005) removes refresh_tokens,
+	// diary_entries, gallery_images and song_history for this user in the same
+	// statement. Object storage is not reachable from SQL and is purged separately.
+	const q = `DELETE FROM users WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, id)
+	if err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *AuthRepository) InsertRefreshToken(ctx context.Context, p InsertRefreshTokenParams) error {
 	if r.pool == nil {
 		return ErrNoDatabase

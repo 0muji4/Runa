@@ -96,6 +96,36 @@ func (s *Store) GetUserByProviderSub(_ context.Context, provider, sub string) (r
 	return repository.User{}, repository.ErrNotFound
 }
 
+func (s *Store) UpdateDisplayName(_ context.Context, id, displayName string) (repository.User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return repository.User{}, repository.ErrNotFound
+	}
+	u.DisplayName = displayName
+	s.users[id] = u
+	return u, nil
+}
+
+func (s *Store) DeleteUser(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.users[id]; !ok {
+		return repository.ErrNotFound
+	}
+	delete(s.users, id)
+	// Mirror the DB's ON DELETE CASCADE for refresh tokens so tests observe that a
+	// deleted user can no longer refresh. Diary/gallery rows live in their own
+	// stores; that cascade is a DB-level guarantee, exercised only against Postgres.
+	for hash, t := range s.refresh {
+		if t.UserID == id {
+			delete(s.refresh, hash)
+		}
+	}
+	return nil
+}
+
 func (s *Store) InsertRefreshToken(_ context.Context, p repository.InsertRefreshTokenParams) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

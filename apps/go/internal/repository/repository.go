@@ -73,6 +73,16 @@ type AuthStore interface {
 	// GetUserByProviderSub looks a user up by ("apple"|"google", subject).
 	GetUserByProviderSub(ctx context.Context, provider, sub string) (User, error)
 
+	// UpdateDisplayName sets a user's display_name and returns the updated row.
+	// Returns ErrNotFound when the id matches no user.
+	UpdateDisplayName(ctx context.Context, id, displayName string) (User, error)
+	// DeleteUser permanently removes a user. The users table's ON DELETE CASCADE
+	// (migrations 0002–0005) removes the caller's refresh_tokens, diary_entries,
+	// gallery_images and song_history in the same statement; object-storage
+	// cleanup is NOT cascaded and stays the service's concern. Returns ErrNotFound
+	// when the id matches no user.
+	DeleteUser(ctx context.Context, id string) error
+
 	InsertRefreshToken(ctx context.Context, p InsertRefreshTokenParams) error
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	// RevokeRefreshToken marks a token revoked. Revoking an unknown token is a

@@ -112,6 +112,19 @@ func (s *Store) SoftDeleteImage(_ context.Context, userID, id string) (string, e
 	return img.ObjectKey, nil
 }
 
+func (s *Store) ListObjectKeys(_ context.Context, userID string) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Includes soft-deleted rows, mirroring the pgx query used by account deletion.
+	keys := make([]string, 0)
+	for _, img := range s.images {
+		if img.UserID == userID {
+			keys = append(keys, img.ObjectKey)
+		}
+	}
+	return keys, nil
+}
+
 // findByObjectKey locates an image by object_key. Caller holds the lock.
 func (s *Store) findByObjectKey(objectKey string) (repository.GalleryImage, bool) {
 	for _, img := range s.images {

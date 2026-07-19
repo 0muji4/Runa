@@ -64,4 +64,10 @@ type GalleryStore interface {
 	// so the caller can remove the stored object. Returns ErrNotFound when the id
 	// is not the caller's. Idempotent for an already-deleted own image.
 	SoftDeleteImage(ctx context.Context, userID, id string) (objectKey string, err error)
+
+	// ListObjectKeys returns every object_key the user has, INCLUDING
+	// soft-deleted rows, so account deletion can purge every stored object the
+	// user ever registered — not only the currently-visible ones. Ordering is
+	// unspecified.
+	ListObjectKeys(ctx context.Context, userID string) ([]string, error)
 }

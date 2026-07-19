@@ -22,6 +22,7 @@ const requestTimeout = 30 * time.Second
 type Deps struct {
 	Health   *handler.Health
 	Auth     *handler.Auth
+	Account  *handler.Account
 	Diary    *handler.Diary
 	Today    *handler.Today
 	Insights *handler.Insights
@@ -85,6 +86,16 @@ func New(deps Deps) *chi.Mux {
 		api.Group(func(pr chi.Router) {
 			pr.Use(deps.RequireAuth)
 			pr.Get("/me", deps.Auth.Me)
+
+			// Account-data management shares the /me resource but lives on its own
+			// handler (profile edit, export, deletion span multiple stores). Guarded
+			// like the admin routes so test routers that omit it don't register a nil
+			// handler. "/me/export" is a distinct path from "/me"; chi routes both.
+			if deps.Account != nil {
+				pr.Patch("/me", deps.Account.UpdateMe)
+				pr.Delete("/me", deps.Account.DeleteMe)
+				pr.Get("/me/export", deps.Account.Export)
+			}
 
 			// Diary: all endpoints are Bearer-protected and scoped to the caller.
 			// Registered flat (not via Route("/diary")) so the collection matches

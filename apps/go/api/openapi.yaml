@@ -234,6 +234,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateMe
+      summary: Update the authenticated user's display name (protected)
+      description: |
+        Replaces display_name. The name is trimmed; an empty result is rejected
+        (400) and it may be at most 50 characters.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeRequest"
+      responses:
+        "200":
+          description: The updated user record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: deleteMe
+      summary: Permanently delete the authenticated account (protected)
+      description: |
+        Hard-deletes the user and every row that cascades from it — refresh
+        tokens, diary entries, gallery image rows and song history — in a single
+        statement. The user's stored image objects are purged from object storage
+        asynchronously (best-effort). This is irreversible: there is no recovery
+        window. Refresh tokens are revoked by the cascade; a still-valid access
+        token stops working on its next request (the user no longer exists), so the
+        residual window is bounded by the short access-token lifetime.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Account deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me/export:
+    get:
+      operationId: exportMe
+      summary: Export the caller's data as JSON (protected)
+      description: |
+        Returns the caller's profile, all live diary entries (tombstones excluded)
+        and gallery image metadata. Each image carries a short-lived presigned GET
+        URL when object storage is available; `url` is omitted otherwise (the
+        metadata still exports). The response is a single JSON document — clients
+        that offer a plain-text export render it from this payload.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The export document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/diary:
     get:
@@ -1026,6 +1091,77 @@ components:
         created_at:
           type: string
           format: date-time
+
+    UpdateMeRequest:
+      type: object
+      required:
+        - display_name
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: New display name; trimmed server-side, must be non-empty.
+
+    ExportResponse:
+      type: object
+      required:
+        - exported_at
+        - schema_version
+        - user
+        - diaries
+        - images
+      properties:
+        exported_at:
+          type: string
+          format: date-time
+        schema_version:
+          type: integer
+          description: Export payload schema version; bumped on breaking changes.
+        user:
+          $ref: "#/components/schemas/User"
+        diaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiaryEntry"
+          description: All live entries (soft-deleted tombstones are excluded).
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExportImage"
+
+    ExportImage:
+      type: object
+      required:
+        - id
+        - object_key
+        - width
+        - height
+        - theme
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        object_key:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        theme:
+          type: string
+          enum: [monotone, pink]
+        created_at:
+          type: string
+          format: date-time
+        url:
+          type: string
+          description: Short-lived presigned GET URL. Omitted when storage is unavailable.
+        url_expires_at:
+          type: string
+          format: date-time
+          description: When `url` expires. Present only when `url` is present.
 
     Error:
       type: object

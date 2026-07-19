@@ -115,9 +115,19 @@ func main() {
 	}, nil)
 	galleryHandler := handler.NewGallery(galleryService, logger)
 
+	// Account wiring: profile update, self-service export and account deletion.
+	// It composes the auth, diary and gallery stores plus the object store because
+	// "the account" spans all of them. Export presigns image URLs with the same
+	// lifetime as gallery view URLs.
+	accountService := service.NewAccountService(authRepo, diaryRepo, galleryRepo, objectStore, service.AccountConfig{
+		ExportURLTTL: cfg.GalleryViewURLTTL,
+	}, nil)
+	accountHandler := handler.NewAccount(accountService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
+		Account:        accountHandler,
 		Diary:          diaryHandler,
 		Today:          todayHandler,
 		Insights:       insightsHandler,

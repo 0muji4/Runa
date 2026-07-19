@@ -138,6 +138,34 @@ func (r *GalleryRepository) SoftDeleteImage(ctx context.Context, userID, id stri
 	return objectKey, nil
 }
 
+func (r *GalleryRepository) ListObjectKeys(ctx context.Context, userID string) ([]string, error) {
+	if r.pool == nil {
+		return nil, ErrNoDatabase
+	}
+	// No deleted_at filter: account deletion purges every object the user ever
+	// stored, including rows already soft-deleted (whose background object cleanup
+	// may have failed).
+	const q = `SELECT object_key FROM gallery_images WHERE user_id = $1`
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list object keys: %w", err)
+	}
+	defer rows.Close()
+
+	keys := make([]string, 0)
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, fmt.Errorf("scan object key: %w", err)
+		}
+		keys = append(keys, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate object keys: %w", err)
+	}
+	return keys, nil
+}
+
 // collectGalleryImages scans and closes a gallery result set. It returns a
 // non-nil empty slice for zero rows so JSON encodes "[]" rather than "null".
 func collectGalleryImages(rows pgx.Rows) ([]GalleryImage, error) {

@@ -17,6 +17,16 @@
     <string name="placeholder_coming_soon">準備中</string>
     <string name="action_back">戻る</string>
 
+    <!-- Gallery (13 ひかりの記録 / 14 画像詳細). The display-theme toggle re-grades the
+         whole grid (monotone ⇔ pink) and is gallery-scoped — NOT the app theme. -->
+    <string name="gallery_title">ひかりの記録</string>
+    <string name="gallery_theme_monotone">モノトーン</string>
+    <string name="gallery_theme_pink">ピンク</string>
+    <string name="gallery_add">写真を追加</string>
+    <string name="gallery_empty_line">まだ、ひかりの記録はありません。</string>
+    <string name="gallery_close">閉じる</string>
+    <string name="gallery_delete">削除</string>
+
     <!-- Brand / splash. The wordmark is set in Cormorant Garamond per the design. -->
     <string name="brand_name">Runa</string>
     <string name="logo_wordmark">LUNA</string>

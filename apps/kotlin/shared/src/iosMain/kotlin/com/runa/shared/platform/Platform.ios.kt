@@ -4,6 +4,8 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.native.NativeSqliteDriver
 import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
+import com.russhwolf.settings.NSUserDefaultsSettings
+import com.russhwolf.settings.Settings
 import com.runa.shared.db.RunaDatabase
 import com.runa.shared.feature.today.player.AudioPlayer
 import com.runa.shared.feature.today.player.AvAudioPlayer
@@ -23,6 +25,7 @@ import platform.Network.nw_path_monitor_set_queue
 import platform.Network.nw_path_monitor_set_update_handler
 import platform.Network.nw_path_monitor_start
 import platform.Network.nw_path_status_satisfied
+import platform.Foundation.NSUserDefaults
 import platform.darwin.dispatch_queue_create
 
 /** iOS uses the Darwin (NSURLSession) Ktor engine. */
@@ -35,6 +38,9 @@ actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
  */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { KeychainSecureStore() }
+    // Non-sensitive preferences (the app theme) live in NSUserDefaults; tokens stay
+    // in the Keychain-backed secure store above.
+    single<Settings> { NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults) }
     single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
     single<NetworkMonitor> { IosNetworkMonitor() }
     single<AudioPlayer> { AvAudioPlayer() }

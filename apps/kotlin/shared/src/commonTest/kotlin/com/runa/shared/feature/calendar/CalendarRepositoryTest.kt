@@ -16,6 +16,7 @@ import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.UpdateDiaryRequest
+import com.runa.shared.network.dto.UpdateMeRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -157,6 +158,9 @@ private class FakeCalendarApi : ApiClient {
     override suspend fun refresh(req: RefreshRequest) = error("unused")
     override suspend fun logout(req: LogoutRequest) = error("unused")
     override suspend fun getMe() = error("unused")
+    override suspend fun updateMe(req: UpdateMeRequest) = error("unused")
+    override suspend fun exportData() = error("unused")
+    override suspend fun deleteAccount() = error("unused")
     override suspend fun listDiary(limit: Int?, cursor: String?) = error("unused")
     override suspend fun createDiary(req: CreateDiaryRequest) = error("unused")
     override suspend fun getDiary(id: String) = error("unused")

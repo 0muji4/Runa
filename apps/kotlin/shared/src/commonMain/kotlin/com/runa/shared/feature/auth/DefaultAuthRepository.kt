@@ -114,6 +114,17 @@ class DefaultAuthRepository(
         }
     }
 
+    override fun endSession() {
+        tokenStore.clear()
+        _authState.value = AuthState.Unauthenticated
+    }
+
+    override fun updateCachedUser(user: UserDto) {
+        if (_authState.value is AuthState.Authenticated) {
+            _authState.value = AuthState.Authenticated(user)
+        }
+    }
+
     /** Runs a sign-in call, persisting tokens and moving to Authenticated on
      *  success or Error on failure. */
     private suspend fun authenticate(call: suspend () -> AuthTokens): Result<Unit> {

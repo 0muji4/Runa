@@ -34,4 +34,18 @@ interface AuthRepository {
 
     /** Dismiss an [AuthState.Error] back to [AuthState.Unauthenticated]. */
     fun clearError()
+
+    /**
+     * Local-only session teardown after the account was deleted server-side.
+     * Unlike [logout] this makes NO network call (the account no longer exists):
+     * it clears the stored tokens and drops [authState] to unauthenticated.
+     */
+    fun endSession()
+
+    /**
+     * Replace the cached user in [authState] when it is [AuthState.Authenticated]
+     * (e.g. after a display-name edit), keeping the app-wide user record
+     * consistent. A no-op in any other state.
+     */
+    fun updateCachedUser(user: UserDto)
 }

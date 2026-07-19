@@ -8,6 +8,8 @@ import android.net.NetworkCapabilities
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import app.cash.sqldelight.db.SqlDriver
+import com.russhwolf.settings.Settings
+import com.russhwolf.settings.SharedPreferencesSettings
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.runa.shared.db.RunaDatabase
 import com.runa.shared.feature.today.player.AudioPlayer
@@ -33,6 +35,13 @@ actual fun httpClientEngine(): HttpClientEngine = OkHttp.create()
  */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { EncryptedPrefsStore(androidContext()) }
+    // Non-sensitive preferences (the app theme). Plain SharedPreferences — no need
+    // for the encrypted store used by tokens.
+    single<Settings> {
+        SharedPreferencesSettings(
+            androidContext().getSharedPreferences("runa_settings", Context.MODE_PRIVATE),
+        )
+    }
     single<SqlDriver> { AndroidSqliteDriver(RunaDatabase.Schema, androidContext(), "runa.db") }
     single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
     single<AudioPlayer> { ExoAudioPlayer(androidContext()) }

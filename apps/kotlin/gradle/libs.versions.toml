@@ -58,6 +58,8 @@ koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", versi
 
 # --- multiplatform-settings ---
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
+# In-memory MapSettings for tests (theme persistence).
+multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-test", version.ref = "multiplatformSettings" }
 
 # --- SQLDelight ---
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }

@@ -67,6 +67,8 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.mock)
             implementation(libs.kotlinx.coroutines.test)
+            // In-memory MapSettings for the theme-persistence tests.
+            implementation(libs.multiplatform.settings.test)
         }
 
         // Shared repository tests run on the JVM (Android unit test) with the REAL

@@ -73,6 +73,13 @@ deleteByClientId:
 DELETE FROM diary_entries
 WHERE client_id = ?;
 
+-- Full wipe (account deletion). Truncates the whole local diary store.
+deleteAllEntries:
+DELETE FROM diary_entries;
+
+deleteAllSyncMeta:
+DELETE FROM diary_sync_meta;
+
 -- ---- sync application ----
 
 -- After a successful push, pin the entry to the server's authoritative id and

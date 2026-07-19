@@ -25,7 +25,9 @@ import com.runa.shared.network.dto.RefreshRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.SongsArchiveResponse
 import com.runa.shared.network.dto.TodayResponse
+import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.UpdateDiaryRequest
+import com.runa.shared.network.dto.UpdateMeRequest
 import com.runa.shared.network.dto.UserDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -187,6 +189,9 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun refresh(req: RefreshRequest): AuthTokens = unused()
     override suspend fun logout(req: LogoutRequest) = unused()
     override suspend fun getMe(): UserDto = unused()
+    override suspend fun updateMe(req: UpdateMeRequest): UserDto = unused()
+    override suspend fun exportData(): ExportDto = unused()
+    override suspend fun deleteAccount() = unused()
     override suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse = unused()
     override suspend fun getDiary(id: String): DiaryEntryDto = unused()
     override suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse = unused()

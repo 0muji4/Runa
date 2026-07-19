@@ -6,7 +6,7 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
@@ -28,6 +28,19 @@ info:
     here; it is computed on the client in shared code (Meeus-simplified) so the
     home works fully offline. GET /songs is the newest-first song archive and
     POST /songs/{id}/played records play history.
+
+    Gallery (presigned-URL scheme): image BYTES never traverse this API. To add an
+    image the client (1) POSTs /gallery/upload-url to get a short-lived presigned
+    PUT URL + a server-generated object_key, (2) PUTs the bytes DIRECTLY to the
+    object store (S3/MinIO), then (3) POSTs /gallery to register metadata. The
+    server re-verifies the real object (existence, size, content-type) at step 3,
+    since the presigned PUT enforces none of those. GET /gallery and GET
+    /gallery/{id} attach a short-lived presigned GET URL to each image. Presigned
+    URL lifetimes: PUT (upload) 15 min, GET (view) 60 min (both configurable).
+    Upload limits: max 10 MiB, content-type in {image/jpeg,image/png,image/webp,
+    image/heic} (both configurable). Object storage is configured via S3_* env; if
+    unset the gallery URL endpoints answer 503. This presigned-URL contract is the
+    reusable pattern for all future image features.
 servers:
   - url: http://localhost:8080
     description: Local development (iOS simulator uses this host)
@@ -651,6 +664,142 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /api/v1/gallery/upload-url:
+    post:
+      operationId: createGalleryUploadURL
+      summary: Issue a presigned PUT URL for a gallery image upload (protected)
+      description: |
+        Returns a short-lived presigned PUT URL and the server-generated
+        object_key. The client PUTs the raw bytes directly to `upload_url`
+        (sending the given Content-Type), then registers metadata with POST
+        /gallery. The presigned PUT does not enforce content-type/size — those are
+        re-checked against the real object at registration.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GalleryUploadURLRequest"
+      responses:
+        "200":
+          description: The upload target.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryUploadURLResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/gallery:
+    get:
+      operationId: listGallery
+      summary: List the caller's gallery images, newest first (protected)
+      description: |
+        Keyset pagination on (created_at, id). Each item carries a short-lived
+        presigned GET URL (`url`) valid until `url_expires_at`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+          description: Opaque next_cursor from a previous page.
+      responses:
+        "200":
+          description: One page of images.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryList"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    post:
+      operationId: createGalleryImage
+      summary: Register an uploaded image's metadata (protected)
+      description: |
+        Called after the direct upload. The object_key must be in the caller's
+        namespace ("gallery/{user_id}/..."), else 404. The real object is verified
+        (existence → 400 if missing, size/content-type re-checked). Idempotent by
+        object_key.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGalleryRequest"
+      responses:
+        "201":
+          description: The registered image with a presigned GET URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryImage"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/gallery/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getGalleryImage
+      summary: Get a single gallery image with a presigned GET URL (protected)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The image.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryImage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    delete:
+      operationId: deleteGalleryImage
+      summary: Soft-delete a gallery image (protected)
+      description: |
+        Soft-deletes the metadata row and removes the stored object
+        asynchronously. Idempotent; another user's image is a 404.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted (no body).
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -734,6 +883,19 @@ components:
             error:
               code: forbidden
               message: admin access forbidden
+    ServiceUnavailable:
+      description: |
+        A backing dependency is unavailable. For gallery endpoints this means
+        object storage is not configured/reachable (no S3_* env), so presigned
+        URLs cannot be issued.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: service_unavailable
+              message: image storage is unavailable
 
   schemas:
     HealthzResponse:
@@ -1189,3 +1351,123 @@ components:
           type: string
           minLength: 1
           description: Send this back as the next `since` (last_synced_at).
+
+    GalleryUploadURLRequest:
+      type: object
+      required:
+        - content_type
+        - size
+      properties:
+        content_type:
+          type: string
+          description: MIME type of the image to upload (must be in the allowlist).
+          example: image/jpeg
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Byte size of the image (must be ≤ the server's max).
+
+    GalleryUploadURLResponse:
+      type: object
+      required:
+        - object_key
+        - upload_url
+        - method
+        - headers
+        - expires_at
+        - max_size
+      properties:
+        object_key:
+          type: string
+          description: Server-generated storage key ("gallery/{user_id}/{uuid}").
+        upload_url:
+          type: string
+          description: Presigned URL to PUT the raw bytes to (client↔store direct).
+        method:
+          type: string
+          example: PUT
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Headers to send with the PUT (e.g. Content-Type).
+        expires_at:
+          type: string
+          format: date-time
+          description: When the upload URL stops being valid.
+        max_size:
+          type: integer
+          format: int64
+          description: Maximum accepted byte size.
+
+    CreateGalleryRequest:
+      type: object
+      required:
+        - object_key
+        - width
+        - height
+        - theme
+      properties:
+        object_key:
+          type: string
+          description: The object_key returned by /gallery/upload-url.
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        theme:
+          type: string
+          enum: [monotone, pink]
+          description: |
+            The image's saved color mood at upload time. Distinct from the
+            client-side gallery display-theme toggle, which only re-grades the
+            whole grid and is never persisted.
+
+    GalleryImage:
+      type: object
+      required:
+        - id
+        - url
+        - url_expires_at
+        - width
+        - height
+        - theme
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          description: Short-lived presigned GET URL for the image bytes.
+        url_expires_at:
+          type: string
+          format: date-time
+          description: When `url` stops being valid; refetch to refresh.
+        width:
+          type: integer
+        height:
+          type: integer
+        theme:
+          type: string
+          enum: [monotone, pink]
+        created_at:
+          type: string
+          format: date-time
+
+    GalleryList:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GalleryImage"
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page; null on the last page.

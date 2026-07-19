@@ -31,6 +31,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/server"
 	"github.com/0muji4/Runa/apps/go/internal/service"
+	"github.com/0muji4/Runa/apps/go/internal/storage"
 )
 
 const (
@@ -101,12 +102,26 @@ func main() {
 	insightsService := service.NewInsightsService(diaryRepo)
 	insightsHandler := handler.NewInsights(insightsService, logger)
 
+	// Gallery wiring. The object store is nil when S3_ENDPOINT is unset (the
+	// gallery URL endpoints then answer 503) so the process still boots without
+	// storage. When present, ensure the bucket exists (best-effort).
+	objectStore := newObjectStore(ctx, cfg, logger)
+	galleryRepo := repository.NewGalleryRepository(pool)
+	galleryService := service.NewGalleryService(galleryRepo, objectStore, service.GalleryConfig{
+		UploadURLTTL:        cfg.GalleryUploadURLTTL,
+		ViewURLTTL:          cfg.GalleryViewURLTTL,
+		MaxUploadBytes:      cfg.GalleryMaxUploadBytes,
+		AllowedContentTypes: cfg.GalleryAllowedContentTypes,
+	}, nil)
+	galleryHandler := handler.NewGallery(galleryService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
 		Diary:          diaryHandler,
 		Today:          todayHandler,
 		Insights:       insightsHandler,
+		Gallery:        galleryHandler,
 		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
 		RequireAdmin:   auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),
@@ -195,6 +210,35 @@ func connectDB(ctx context.Context, url string, logger *slog.Logger) *pgxpool.Po
 
 	logger.Warn("continuing without database; /api/v1/healthz remains a liveness check")
 	return nil
+}
+
+// newObjectStore builds the S3-compatible object store from config. It returns
+// nil when storage is unconfigured (S3_ENDPOINT unset), so the server boots with
+// the gallery URL endpoints disabled (503) rather than failing. When present it
+// ensures the bucket exists (best-effort; a failure only defers bucket creation
+// to first use).
+func newObjectStore(ctx context.Context, cfg config.Config, logger *slog.Logger) storage.ObjectStore {
+	store, err := storage.NewMinioObjectStore(storage.Config{
+		Endpoint:       cfg.S3Endpoint,
+		PublicEndpoint: cfg.S3PublicEndpoint,
+		Region:         cfg.S3Region,
+		Bucket:         cfg.S3Bucket,
+		AccessKey:      cfg.S3AccessKey,
+		SecretKey:      cfg.S3SecretKey,
+		UseSSL:         cfg.S3UseSSL,
+	})
+	if err != nil {
+		logger.Warn("object storage disabled: init failed", slog.Any("error", err))
+		return nil
+	}
+	if store == nil {
+		logger.Info("object storage not configured; gallery endpoints return 503")
+		return nil
+	}
+	if err := store.EnsureBucket(ctx); err != nil {
+		logger.Warn("could not ensure gallery bucket at boot", slog.Any("error", err))
+	}
+	return store
 }
 
 // runMigrations applies all up migrations. ErrNoChange is treated as success.

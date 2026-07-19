@@ -15,7 +15,12 @@ curl http://localhost:8080/api/v1/healthz
 # -> {"status":"ok"}
 ```
 
-To run the server directly (Go 1.23+) without Docker:
+`docker compose` brings up Postgres **and MinIO** (S3-compatible object storage
+for the gallery). MinIO's console is on http://localhost:9001 (user `runa`, pass
+`runa-secret`); the server ensures the `runa-gallery` bucket at boot. See
+[Gallery design](#gallery-design-presigned-url-scheme).
+
+To run the server directly (Go 1.25+) without Docker:
 
 ```sh
 go run ./cmd/api
@@ -47,13 +52,18 @@ append `/api/v1/...` themselves.
 | GET    | `/api/v1/today`         | `200 TodayResponse` — the day's `quote` + `song` (either may be null) for `?date=YYYY-MM-DD` |
 | GET    | `/api/v1/songs`         | `200 SongsListResponse` — song archive, newest first, keyset paging (`limit`, `cursor`) |
 | POST   | `/api/v1/songs/{id}/played` | `204` — record a play (`404` if the song is unknown) |
+| POST   | `/api/v1/gallery/upload-url` | `200 GalleryUploadURLResponse` — presigned PUT URL + `object_key` |
+| GET    | `/api/v1/gallery`       | `200 GalleryList` — newest first, keyset paging (`limit`, `cursor`) |
+| POST   | `/api/v1/gallery`       | `201 GalleryImage` — register metadata after upload (idempotent by `object_key`) |
+| GET    | `/api/v1/gallery/{id}`  | `200 GalleryImage` (`404` if not the caller's)       |
+| DELETE | `/api/v1/gallery/{id}`  | `204` — soft delete + async object removal (idempotent) |
 | POST   | `/api/v1/admin/quotes`  | `201 Quote` — upsert a day's quote (**admin**, `X-Admin-Token`) |
 | POST   | `/api/v1/admin/songs`   | `201 Song` — upsert a day's song (**admin**, `X-Admin-Token`) |
 
-All `/api/v1/diary*`, `/api/v1/today` and `/api/v1/songs*` routes **require
-`Authorization: Bearer`** and only ever touch the caller's own data. The
-`/api/v1/admin/*` seed routes use a separate shared **admin token**, not a user
-session. The full contract lives in
+All `/api/v1/diary*`, `/api/v1/today`, `/api/v1/songs*` and `/api/v1/gallery*`
+routes **require `Authorization: Bearer`** and only ever touch the caller's own
+data. The `/api/v1/admin/*` seed routes use a separate shared **admin token**, not
+a user session. The full contract lives in
 [`api/openapi.yaml`](api/openapi.yaml) and grows with each new endpoint.
 
 ### Auth design
@@ -157,6 +167,40 @@ song. Only the quote and song are curated content served here — one row per da
 - The flow mirrors auth/diary: `internal/repository/today_repository.go` →
   `internal/service/today.go` → `internal/handler/today.go`.
 
+### Gallery design (presigned-URL scheme)
+
+The gallery stores image **metadata** only; the bytes live in S3-compatible object
+storage and are exchanged **directly between the client and the store** — large
+binaries never traverse the API. This is the reusable pattern for every future
+image feature (avatars, diary attachments): the `internal/storage.ObjectStore`
+seam and the three-step contract below.
+
+- **Three-step upload.** (1) `POST /gallery/upload-url` with `{content_type,size}`
+  returns a short-lived presigned **PUT** URL and a server-generated `object_key`
+  (`gallery/{user_id}/{uuid}`). (2) The client PUTs the raw bytes straight to that
+  URL. (3) `POST /gallery` with `{object_key,width,height,theme}` registers the
+  metadata. The server **re-verifies the real object** at step 3 (existence → 400
+  if never uploaded; size and content-type re-checked, the object deleted if it
+  violates), because a presigned PUT enforces none of those.
+- **Presigned URL lifetimes.** PUT (upload) **15 min**, GET (view) **60 min**
+  (both configurable). `GET /gallery` and `GET /gallery/{id}` attach a fresh
+  presigned GET URL (`url`) and its `url_expires_at`; clients refetch to refresh an
+  expired one. The image **body** is cached by the OS image loader on the client.
+- **Upload limits.** Max **10 MiB**; content-type in
+  `{image/jpeg,image/png,image/webp,image/heic}` (both configurable).
+- **Authorization is strict.** `object_key` must be in the caller's namespace
+  (`gallery/{user_id}/...`), else `404`; another user's image id is likewise a
+  `404`. Delete is a soft delete plus **asynchronous** object removal.
+- **Two storage endpoints.** Inside docker the server reaches MinIO at
+  `S3_ENDPOINT=minio:9000`, but presigned URLs must point at a host the **client**
+  can reach — `S3_PUBLIC_ENDPOINT=localhost:9000` (Android emulator:
+  `10.0.2.2:9000`). Presigning is pure HMAC (no network), so the server signs URLs
+  for the public host without ever calling it. If `S3_ENDPOINT` is unset the
+  gallery URL endpoints return `503` (the rest of the server still boots).
+- The flow mirrors the others: `internal/storage` (MinIO/S3) +
+  `internal/repository/gallery_repository.go` → `internal/service/gallery.go` →
+  `internal/handler/gallery.go`, tested in `internal/server/gallery_flow_test.go`.
+
 **Moon algorithm source.** Jean Meeus, *Astronomical Algorithms* (2nd ed.), ch. 49
 (phases of the Moon) and the mean synodic month `29.530588853` days; reference new
 moon epoch `JD 2451550.1` (2000-01-06). Implemented in
@@ -197,6 +241,17 @@ All configuration is read from environment variables (see `.env.example`).
 | `APPLE_CLIENT_IDS`     | (empty)                                                       | Accepted `aud` for Apple ID tokens (Bundle ID / Service ID, comma-separated). |
 | `GOOGLE_CLIENT_IDS`    | (empty)                                                       | Accepted `aud` for Google ID tokens (OAuth client IDs, comma-separated). |
 | `ADMIN_API_TOKEN`      | (empty)                                                       | Shared token for the `/admin/*` seed endpoints (`X-Admin-Token`). **Empty disables admin (403).** |
+| `S3_ENDPOINT`          | (empty)                                                       | Object-store host the **server** reaches (e.g. `minio:9000`). **Empty disables gallery URLs (503).** |
+| `S3_PUBLIC_ENDPOINT`   | (falls back to `S3_ENDPOINT`)                                 | Host baked into presigned URLs (client-reachable), e.g. `localhost:9000` / `10.0.2.2:9000`. |
+| `S3_REGION`            | `us-east-1`                                                   | SigV4 signing region (MinIO ignores it). |
+| `S3_BUCKET`            | `runa-gallery`                                               | Bucket gallery objects live in (ensured at boot). |
+| `S3_ACCESS_KEY`        | (empty)                                                       | Object-store access key. |
+| `S3_SECRET_KEY`        | (empty)                                                       | Object-store secret key. |
+| `S3_USE_SSL`           | `false`                                                       | Use https for real requests and presigned URLs. |
+| `GALLERY_UPLOAD_URL_TTL` | `15m`                                                     | Presigned PUT (upload) URL lifetime (Go duration). |
+| `GALLERY_VIEW_URL_TTL` | `60m`                                                        | Presigned GET (view) URL lifetime (Go duration). |
+| `GALLERY_MAX_UPLOAD_BYTES` | `10485760`                                              | Max upload size in bytes (10 MiB). |
+| `GALLERY_ALLOWED_CONTENT_TYPES` | `image/jpeg,image/png,image/webp,image/heic`       | Comma-separated image MIME allowlist. |
 
 Getting the provider audiences:
 
@@ -223,6 +278,7 @@ internal/server            chi router + middleware chain (RequestID, RealIP,
 internal/handler           HTTP transport: request/response <-> service. No logic.
 internal/service           Application/business logic. Health service lives here.
 internal/repository        Data access. Owns the pgx pool; repositories are stubs.
+internal/storage           Object-storage seam (ObjectStore) + MinIO/S3 impl.
 migrations                 golang-migrate SQL files (applied at startup).
 api/openapi.yaml           The growing API contract.
 ```
@@ -250,7 +306,10 @@ the `refresh_tokens` table. `0003_diary` adds `diary_entries` (body/mood/client_
 + timestamps + soft-delete `deleted_at`), with a unique `(user_id, client_id)`
 index for idempotent upsert and indexes for keyset paging and delta sync.
 `0004_today` adds `daily_quotes` and `daily_songs` (one curated row per `date`,
-`UNIQUE`) plus an append-only `song_history` play log.
+`UNIQUE`) plus an append-only `song_history` play log. `0005_gallery` adds
+`gallery_images` (object_key/width/height/theme + soft-delete), with a unique
+`object_key` index (the registration idempotency key) and a partial keyset index
+for paging live rows.
 
 ## Tests
 
@@ -270,15 +329,20 @@ time-zone boundary (`Asia/Tokyo` vs UTC), per-user scoping, and `year/month/tz`
 validation. Today tests cover the service (exact-date lookup,
 archive paging, unknown-song `404`) and a full `admin seed → /today → archive
 paging → played` flow, plus the admin `403` gate
-(`internal/server/today_flow_test.go`). CI has no Postgres, so the tests use the
-in-memory `internal/repository/memauth`, `memdiary` and `memtoday` stores; the
-pgx-backed repositories are exercised by running the server against
-`docker compose`.
+(`internal/server/today_flow_test.go`). Gallery tests cover the full
+`upload-url → (simulated direct upload) → register → list → get → delete` flow
+with a fake object store, plus object_key namespace authorization, upload
+validation, and per-user scoping (`internal/server/gallery_flow_test.go`); the
+two-endpoint presign is unit-tested offline in `internal/storage`. CI has no
+Postgres, so the tests use the in-memory `internal/repository/memauth`, `memdiary`,
+`memtoday` and `memgallery` stores; the pgx-backed repositories and the real MinIO
+presign path are exercised by running the server against `docker compose`.
 
 ## Versions
 
 Pinned starting point (may need local alignment):
 
-- Go 1.23
+- Go 1.25
 - Postgres 16
-- chi v5, pgx v5, golang-migrate v4
+- MinIO (S3-compatible object storage; any S3 endpoint works in prod)
+- chi v5, pgx v5, golang-migrate v4, minio-go v7

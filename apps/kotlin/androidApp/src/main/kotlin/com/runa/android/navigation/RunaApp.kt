@@ -30,7 +30,9 @@ import com.runa.android.ui.screens.diary.DiaryDetailScreen
 import com.runa.android.ui.screens.diary.DiaryEditorScreen
 import com.runa.android.ui.screens.diary.DiaryListScreen
 import com.runa.android.ui.screens.insight.InsightScreen
+import com.runa.android.ui.screens.AccountScreen
 import com.runa.android.ui.screens.SettingsScreen
+import com.runa.android.ui.screens.ThemeScreen
 import com.runa.android.ui.screens.SongArchiveScreen
 import com.runa.android.ui.screens.SplashScreen
 import com.runa.android.ui.screens.TodaysSongScreen
@@ -55,6 +57,8 @@ object Routes {
     const val TODAYS_MOON = "todays_moon"
     const val GALLERY = "gallery"
     const val SETTINGS = "settings"
+    const val THEME = "settings/theme"
+    const val ACCOUNT = "settings/account"
 }
 
 /** Route builders for the diary sub-screens (clientId is a UUID, path-safe). */
@@ -224,6 +228,16 @@ fun RunaTabs(
             composable(Routes.GALLERY) { GalleryScreen() }
             composable(Routes.SETTINGS) {
                 SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenTheme = { navController.navigate(Routes.THEME) },
+                    onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
+                )
+            }
+            composable(Routes.THEME) {
+                ThemeScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.ACCOUNT) {
+                AccountScreen(
                     onBack = { navController.popBackStack() },
                     onSignOut = onSignOut,
                 )

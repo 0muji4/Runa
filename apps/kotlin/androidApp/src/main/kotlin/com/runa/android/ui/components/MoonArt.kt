@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.runa.android.ui.theme.RunaColors
 
 /**
  * Runa moon motif, drawn with the Canvas — NO emoji, NO text glyphs. Every screen
@@ -25,10 +24,16 @@ import com.runa.android.ui.theme.RunaColors
  * consistent across the app and identical in spirit to the iOS MoonArt.
  */
 
-private val MoonLit = Color(0xFFF7F2E4)     // bright limb
-private val MoonCream = RunaColors.SubAccent // #E8E2D0
-private val MoonDark = Color(0xFF34343E)      // unlit disc, a touch above the surface
+// The moon is a FIXED cross-theme motif (design decision): it never recolors with
+// the app theme, so it holds its own dark-motif constants rather than reading the
+// theme tokens. Values match the original dark palette.
+private val MoonLit = Color(0xFFF7F2E4)         // bright limb
+private val MoonCream = Color(0xFFE8E2D0)        // sub-accent cream
+private val MoonDark = Color(0xFF34343E)         // unlit disc, a touch above the surface
 private val MoonRing = Color(0xFF3E3E48)
+private val MoonMuted = Color(0xFF9A9AA5)        // subtle
+private val MoonAccent = Color(0xFFF4A9C0)       // moonlight accent
+private val MoonBackground = Color(0xFF0E0E12)   // background
 
 /** Soft radial glow used behind the bright moons. */
 private fun DrawScope.drawGlow(center: Offset, radius: Float, tint: Color, alpha: Float) {
@@ -51,7 +56,7 @@ private fun DrawScope.drawGlow(center: Offset, radius: Float, tint: Color, alpha
 fun GlowingMoon(
     modifier: Modifier = Modifier,
     diameter: Dp = 132.dp,
-    haloTint: Color = RunaColors.SubAccent,
+    haloTint: Color = MoonCream,
 ) {
     Canvas(modifier.size(diameter)) {
         val c = center
@@ -113,7 +118,7 @@ fun NewMoonEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     Canvas(modifier.size(diameter)) {
         val c = center
         val r = size.minDimension * 0.32f
-        drawGlow(c, size.minDimension * 0.46f, RunaColors.SubAccent, 0.10f)
+        drawGlow(c, size.minDimension * 0.46f, MoonCream, 0.10f)
         drawCircle(MoonRing, r * 1.32f, c, style = Stroke(width = 1.4f))
         drawCircle(
             brush = Brush.radialGradient(
@@ -143,7 +148,7 @@ fun CloudedMoon(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
             center = c,
         )
         drawLine(
-            color = RunaColors.Subtle,
+            color = MoonMuted,
             start = Offset(c.x - r * 1.15f, c.y + r * 0.8f),
             end = Offset(c.x + r * 1.15f, c.y - r * 0.8f),
             strokeWidth = 2f,
@@ -158,7 +163,7 @@ fun StumbleEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     Canvas(modifier.size(diameter)) {
         val c = center
         val r = size.minDimension * 0.30f
-        drawGlow(c, size.minDimension * 0.44f, RunaColors.Subtle, 0.12f)
+        drawGlow(c, size.minDimension * 0.44f, MoonMuted, 0.12f)
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(Color(0xFFB9B4AC), Color(0xFF8F8B84)),
@@ -171,8 +176,8 @@ fun StumbleEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
         // ! mark, drawn (no glyph): a stem and a dot in the background colour.
         val stemTop = Offset(c.x, c.y - r * 0.42f)
         val stemBottom = Offset(c.x, c.y + r * 0.10f)
-        drawLine(RunaColors.Background, stemTop, stemBottom, strokeWidth = r * 0.16f, cap = StrokeCap.Round)
-        drawCircle(RunaColors.Background, r * 0.09f, Offset(c.x, c.y + r * 0.40f))
+        drawLine(MoonBackground, stemTop, stemBottom, strokeWidth = r * 0.16f, cap = StrokeCap.Round)
+        drawCircle(MoonBackground, r * 0.09f, Offset(c.x, c.y + r * 0.40f))
     }
 }
 
@@ -185,7 +190,7 @@ fun NotificationMoon(modifier: Modifier = Modifier, diameter: Dp = 132.dp) {
     Canvas(modifier.size(diameter)) {
         val c = center
         val moonR = size.minDimension * 0.28f
-        drawGlow(c, size.minDimension * 0.5f, RunaColors.SubAccent, 0.20f)
+        drawGlow(c, size.minDimension * 0.5f, MoonCream, 0.20f)
         drawGlow(c, moonR * 1.7f, MoonLit, 0.28f)
         drawCircle(
             brush = Brush.radialGradient(
@@ -199,9 +204,9 @@ fun NotificationMoon(modifier: Modifier = Modifier, diameter: Dp = 132.dp) {
         // Pink badge up and to the right of the moon.
         val badgeC = Offset(c.x + moonR * 0.95f, c.y - moonR * 0.95f)
         val badgeR = moonR * 0.6f
-        drawGlow(badgeC, badgeR * 2.1f, RunaColors.Accent, 0.35f)
-        drawCircle(RunaColors.Accent, badgeR, badgeC)
-        drawBell(badgeC, badgeR * 0.92f, RunaColors.Background)
+        drawGlow(badgeC, badgeR * 2.1f, MoonAccent, 0.35f)
+        drawCircle(MoonAccent, badgeR, badgeC)
+        drawBell(badgeC, badgeR * 0.92f, MoonBackground)
     }
 }
 

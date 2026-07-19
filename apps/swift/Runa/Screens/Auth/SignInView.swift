@@ -5,6 +5,7 @@ import SwiftUI
 /// wordmark and a poetic line, then Apple / Google / メール with いまはスキップ below.
 /// "メールでつづける" opens a second, still email step rather than crowding the hero.
 struct SignInView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let isBusy: Bool
     let errorMessage: String?
     let onApple: (_ idToken: String, _ displayName: String?) -> Void
@@ -17,7 +18,7 @@ struct SignInView: View {
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
             if showEmail {
                 emailStep
             } else {
@@ -36,11 +37,11 @@ struct SignInView: View {
                 Text("LUNA")
                     .font(RunaFonts.logo(44))
                     .tracking(14)
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
                 Text("あなたの夜を、はじめましょう。")
                     .font(RunaFonts.heading(22))
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.sm)
 
@@ -57,13 +58,13 @@ struct SignInView: View {
                 surfacePill(title: "Googleでつづける", action: onGoogle).padding(.top, 14)
                 surfacePill(title: "メールでつづける", action: { showEmail = true }).padding(.top, 14)
 
-                if isBusy { ProgressView().tint(RunaColors.accent).padding(.top, RunaSpacing.md) }
+                if isBusy { ProgressView().tint(runaTheme.accent).padding(.top, RunaSpacing.md) }
                 if let errorMessage { errorLine(errorMessage) }
 
                 Text("いまはスキップ")
                     .font(RunaFonts.body(13))
                     .tracking(4)
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .padding(12)
                     .padding(.top, RunaSpacing.md)
                     .onTapGesture { if !isBusy { onSkip() } }
@@ -88,13 +89,13 @@ struct SignInView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("‹ メールでつづける")
                     .font(RunaFonts.body(14))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .padding(.vertical, 8)
                     .onTapGesture { if !isBusy { showEmail = false } }
 
                 Text("メールではじめる")
                     .font(RunaFonts.heading(26))
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
 
                 quietField("メールアドレス", text: $email, keyboard: .emailAddress).padding(.top, RunaSpacing.md)
@@ -118,12 +119,12 @@ struct SignInView: View {
 
                 Text(isSignup ? "すでにアカウントをお持ちの方はこちら" : "アカウントをお持ちでない方はこちら")
                     .font(RunaFonts.body(13))
-                    .foregroundStyle(RunaColors.subAccent)
+                    .foregroundStyle(runaTheme.subAccent)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, RunaSpacing.sm)
                     .onTapGesture { if !isBusy { isSignup.toggle() } }
 
-                if isBusy { ProgressView().tint(RunaColors.accent).frame(maxWidth: .infinity).padding(.top, RunaSpacing.sm) }
+                if isBusy { ProgressView().tint(runaTheme.accent).frame(maxWidth: .infinity).padding(.top, RunaSpacing.sm) }
                 if let errorMessage { errorLine(errorMessage) }
             }
             .padding(.horizontal, 36)
@@ -157,8 +158,8 @@ struct SignInView: View {
                 .font(RunaFonts.body(16))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(enabled ? RunaColors.heading : RunaColors.surface)
-                .foregroundStyle(enabled ? RunaColors.background : RunaColors.subtle)
+                .background(enabled ? runaTheme.heading : runaTheme.surface)
+                .foregroundStyle(enabled ? runaTheme.background : runaTheme.subtle)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .disabled(!enabled)
@@ -170,36 +171,36 @@ struct SignInView: View {
                 .font(RunaFonts.body(16))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(RunaColors.surface)
-                .foregroundStyle(RunaColors.heading)
+                .background(runaTheme.surface)
+                .foregroundStyle(runaTheme.heading)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(RunaColors.subtle.opacity(0.18), lineWidth: 1)
+                        .stroke(runaTheme.subtle.opacity(0.18), lineWidth: 1)
                 )
         }
         .disabled(isBusy)
     }
 
     private func quietField(_ label: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {
-        TextField("", text: text, prompt: Text(label).foregroundColor(RunaColors.subtle))
+        TextField("", text: text, prompt: Text(label).foregroundColor(runaTheme.subtle))
             .keyboardType(keyboard)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .foregroundStyle(RunaColors.heading)
+            .foregroundStyle(runaTheme.heading)
             .padding(.horizontal, RunaSpacing.sm)
             .frame(height: 52)
-            .background(RunaColors.surface)
+            .background(runaTheme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .disabled(isBusy)
     }
 
     private func quietSecureField(_ label: String, text: Binding<String>) -> some View {
-        SecureField("", text: text, prompt: Text(label).foregroundColor(RunaColors.subtle))
-            .foregroundStyle(RunaColors.heading)
+        SecureField("", text: text, prompt: Text(label).foregroundColor(runaTheme.subtle))
+            .foregroundStyle(runaTheme.heading)
             .padding(.horizontal, RunaSpacing.sm)
             .frame(height: 52)
-            .background(RunaColors.surface)
+            .background(runaTheme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .disabled(isBusy)
     }
@@ -207,7 +208,7 @@ struct SignInView: View {
     private func errorLine(_ message: String) -> some View {
         Text(message)
             .font(RunaFonts.body(13))
-            .foregroundStyle(RunaColors.accent)
+            .foregroundStyle(runaTheme.accent)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.top, RunaSpacing.sm)

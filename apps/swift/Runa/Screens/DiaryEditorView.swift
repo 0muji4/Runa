@@ -7,6 +7,7 @@ import Shared
 /// flushes and leaves. A quiet mood chip row sits under the prompt — one gentle word
 /// for the night, feeding the insight read-back; leaving it unset is natural.
 struct DiaryEditorView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model: DiaryEditorObservable
     @Environment(\.dismiss) private var dismiss
 
@@ -45,16 +46,16 @@ struct DiaryEditorView: View {
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(DiaryDate.day(dayMs))　\(DiaryDate.weekday(dayMs))")
                     .font(RunaFonts.body(13))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
 
                 Text("きょう、心にのこったこと。")
                     .font(RunaFonts.heading(20, relativeTo: .body))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.md)
                     .padding(.bottom, RunaSpacing.sm)
 
@@ -63,16 +64,16 @@ struct DiaryEditorView: View {
 
                 TextEditor(text: bodyBinding)
                     .font(RunaFonts.heading(18, relativeTo: .body))
-                    .foregroundColor(RunaColors.body)
+                    .foregroundColor(runaTheme.body)
                     .lineSpacing(8)
                     .scrollContentBackground(.hidden)
-                    .background(RunaColors.background)
+                    .background(runaTheme.background)
                     .frame(maxHeight: .infinity)
 
                 HStack(alignment: .center) {
                     Text(saveLabel(model.state?.save))
                         .font(RunaFonts.body(13))
-                        .foregroundStyle(RunaColors.subtle)
+                        .foregroundStyle(runaTheme.subtle)
                     Spacer()
                     Button {
                         model.saveNow()
@@ -80,12 +81,12 @@ struct DiaryEditorView: View {
                     } label: {
                         Text("とじる")
                             .font(RunaFonts.body(16))
-                            .foregroundStyle(RunaColors.accent)
+                            .foregroundStyle(runaTheme.accent)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 24)
-                                    .stroke(RunaColors.accent.opacity(0.7), lineWidth: 1)
+                                    .stroke(runaTheme.accent.opacity(0.7), lineWidth: 1)
                             )
                     }
                 }
@@ -112,16 +113,16 @@ struct DiaryEditorView: View {
                     let isSelected = value == selected
                     Text(diaryMoodLabelJa(mood: mood))
                         .font(RunaFonts.body(13))
-                        .foregroundStyle(isSelected ? RunaColors.accent : RunaColors.subtle)
+                        .foregroundStyle(isSelected ? runaTheme.accent : runaTheme.subtle)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(isSelected ? RunaColors.accent.opacity(0.10) : Color.clear)
+                                .fill(isSelected ? runaTheme.accent.opacity(0.10) : Color.clear)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(isSelected ? RunaColors.accent.opacity(0.7) : RunaColors.subtle.opacity(0.3), lineWidth: 1)
+                                .stroke(isSelected ? runaTheme.accent.opacity(0.7) : runaTheme.subtle.opacity(0.3), lineWidth: 1)
                         )
                         .onTapGesture { model.onMoodChange(isSelected ? nil : value) }
                 }

@@ -5,6 +5,7 @@ import Shared
 /// phase · weekday) over the body in #C8C6CE 明朝 for calm legibility, with quiet
 /// edit/delete affordances. The entry is read from the (shared) list model's cache.
 struct DiaryDetailView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let clientId: String
     @ObservedObject var model: DiaryListObservable
     @Binding var path: NavigationPath
@@ -13,7 +14,7 @@ struct DiaryDetailView: View {
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -25,17 +26,17 @@ struct DiaryDetailView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(DiaryDate.day(entry.createdAtEpochMs))
                                     .font(RunaFonts.heading(26))
-                                    .foregroundStyle(RunaColors.heading)
+                                    .foregroundStyle(runaTheme.heading)
                                 Text("\(moon.name)　・　\(DiaryDate.weekday(entry.createdAtEpochMs))")
                                     .font(RunaFonts.body(13))
-                                    .foregroundStyle(RunaColors.subtle)
+                                    .foregroundStyle(runaTheme.subtle)
                             }
                         }
                         .padding(.top, RunaSpacing.md)
 
                         Text(entry.bodyText)
                             .font(RunaFonts.heading(18, relativeTo: .body))
-                            .foregroundStyle(RunaColors.body)
+                            .foregroundStyle(runaTheme.body)
                             .lineSpacing(8)
                             .padding(.top, RunaSpacing.lg)
                     }
@@ -61,17 +62,17 @@ struct DiaryDetailView: View {
         HStack(alignment: .center) {
             Text("‹ 記録")
                 .font(RunaFonts.body(16))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .onTapGesture { if !path.isEmpty { path.removeLast() } }
             Spacer()
             Text("編集")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .padding(8)
                 .onTapGesture { path.append(DiaryRoute.editor(clientId: clientId)) }
             Text("削除")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.accent)
+                .foregroundStyle(runaTheme.accent)
                 .padding(8)
                 .onTapGesture { confirmDelete = true }
         }

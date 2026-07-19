@@ -5,6 +5,7 @@ import SwiftUI
 /// sign-out. [displayName] comes from the shared /me lookup; [onSignOut] flips
 /// the shared auth state back to unauthenticated.
 struct ContentView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let displayName: String
     let onSignOut: () -> Void
 
@@ -30,7 +31,7 @@ struct ContentView: View {
                     Label("ギャラリー", systemImage: "photo.on.rectangle")
                 }
         }
-        .tint(RunaColors.accent)
+        .tint(runaTheme.accent)
     }
 }
 

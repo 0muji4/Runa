@@ -32,6 +32,7 @@ final class SongPlayerObservable: ObservableObject {
 /// shared `HomeViewModel`); once a song is playing (today's or one chosen from the
 /// archive) it reflects the shared `SongPlayerViewModel`'s live state.
 struct TodaysSongView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var player = SongPlayerObservable()
     @StateObject private var home = HomeObservable()
     @State private var scrubbing: Double?
@@ -41,12 +42,12 @@ struct TodaysSongView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RunaColors.background.ignoresSafeArea()
+                runaTheme.background.ignoresSafeArea()
                 if let song {
                     playerBody(song)
                 } else {
                     Text("今日の一曲は、まだ選ばれていません。")
-                        .font(RunaFonts.body(16)).foregroundStyle(RunaColors.subtle)
+                        .font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
                 }
             }
             .navigationTitle("きょうの一曲")
@@ -54,7 +55,7 @@ struct TodaysSongView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: SongArchiveView()) {
-                        Text("これまでの一曲").foregroundStyle(RunaColors.accent)
+                        Text("これまでの一曲").foregroundStyle(runaTheme.accent)
                     }
                 }
             }
@@ -71,14 +72,14 @@ struct TodaysSongView: View {
             AsyncImage(url: URL(string: song.artworkUrl)) { image in
                 image.resizable().aspectRatio(1, contentMode: .fit)
             } placeholder: {
-                RunaColors.surface
+                runaTheme.surface
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            Text(song.title).font(RunaFonts.heading(26)).foregroundStyle(RunaColors.heading)
-            Text(song.artist).font(RunaFonts.body(16)).foregroundStyle(RunaColors.subtle)
+            Text(song.title).font(RunaFonts.heading(26)).foregroundStyle(runaTheme.heading)
+            Text(song.artist).font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
 
             if duration > 0 {
                 Slider(
@@ -88,11 +89,11 @@ struct TodaysSongView: View {
                         if !editing, let s = scrubbing { player.seek(Int64(s)); scrubbing = nil }
                     }
                 )
-                .tint(RunaColors.accent)
+                .tint(runaTheme.accent)
                 HStack {
-                    Text(timeLabel(Int64(position))).font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                    Text(timeLabel(Int64(position))).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     Spacer()
-                    Text(timeLabel(ps?.durationMs ?? 0)).font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                    Text(timeLabel(ps?.durationMs ?? 0)).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                 }
             }
 
@@ -101,7 +102,7 @@ struct TodaysSongView: View {
             } label: {
                 Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(RunaColors.accent)
+                    .foregroundStyle(runaTheme.accent)
             }
             .accessibilityLabel(isPlaying ? "一時停止" : "再生")
         }

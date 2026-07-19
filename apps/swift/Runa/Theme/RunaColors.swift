@@ -1,24 +1,74 @@
 import SwiftUI
 
-/// Runa design-system color tokens. Dark theme ONLY.
-///
-/// These hex values are the shared contract and MUST stay identical to the
-/// Android theme. Do not tweak per-platform.
-enum RunaColors {
-    /// #0E0E12 — app background.
-    static let background = Color(hex: 0x0E0E12)
-    /// #16161C — cards / surfaces.
-    static let surface = Color(hex: 0x16161C)
-    /// #F5F3EF — headings.
-    static let heading = Color(hex: 0xF5F3EF)
-    /// #C8C6CE — body text.
-    static let body = Color(hex: 0xC8C6CE)
-    /// #9A9AA5 — subtle / secondary text.
-    static let subtle = Color(hex: 0x9A9AA5)
-    /// #F4A9C0 — accent (moonlight).
-    static let accent = Color(hex: 0xF4A9C0)
-    /// #E8E2D0 — sub accent.
-    static let subAccent = Color(hex: 0xE8E2D0)
+/// The app-wide color palette (the seven semantic tokens). A theme change swaps the
+/// whole `RunaTheme`; screens read it from the environment as `@Environment(\.runaTheme)`
+/// so a switch recolors them in place (nav state preserved, live preview on the
+/// theme screen). Hex values are IDENTICAL to Android and the README canonical table.
+struct RunaTheme {
+    let background: Color
+    let surface: Color
+    let heading: Color
+    let body: Color
+    let subtle: Color
+    let accent: Color
+    let subAccent: Color
+
+    /// 夜（ダーク・既定）.
+    static let dark = RunaTheme(
+        background: Color(hex: 0x0E0E12),
+        surface: Color(hex: 0x16161C),
+        heading: Color(hex: 0xF5F3EF),
+        body: Color(hex: 0xC8C6CE),
+        subtle: Color(hex: 0x9A9AA5),
+        accent: Color(hex: 0xF4A9C0),
+        subAccent: Color(hex: 0xE8E2D0)
+    )
+
+    /// あさ（ライト）. Values beyond the cream background are derived from the design
+    /// swatch + spec (pending sign-off).
+    static let light = RunaTheme(
+        background: Color(hex: 0xFAF7F5),
+        surface: Color(hex: 0xFFFFFF),
+        heading: Color(hex: 0x2A2620),
+        body: Color(hex: 0x4E483F),
+        subtle: Color(hex: 0x8C8579),
+        accent: Color(hex: 0xE79CB6),
+        subAccent: Color(hex: 0xC9B8A0)
+    )
+
+    /// ピンク×ピンク. Dark base with the accent pushed further (derived, pending sign-off).
+    static let pink = RunaTheme(
+        background: Color(hex: 0x141017),
+        surface: Color(hex: 0x1E1622),
+        heading: Color(hex: 0xF6EEF2),
+        body: Color(hex: 0xD6C4CE),
+        subtle: Color(hex: 0xA08E99),
+        accent: Color(hex: 0xF4A9C0),
+        subAccent: Color(hex: 0xE8B7C8)
+    )
+
+    /// Maps the shared `AppTheme.id` string to its palette. Using the id keeps this
+    /// free of the bridged Kotlin enum's case names.
+    static func forId(_ id: String) -> RunaTheme {
+        switch id {
+        case "light": return .light
+        case "pink": return .pink
+        default: return .dark
+        }
+    }
+}
+
+private struct RunaThemeKey: EnvironmentKey {
+    static let defaultValue: RunaTheme = .dark
+}
+
+extension EnvironmentValues {
+    /// The active app palette. Injected once at the root (see `ThemedRoot`); read by
+    /// every screen as `@Environment(\.runaTheme) private var runaTheme`.
+    var runaTheme: RunaTheme {
+        get { self[RunaThemeKey.self] }
+        set { self[RunaThemeKey.self] = newValue }
+    }
 }
 
 /// Generous, minimal spacing scale (moon motif — lots of breathing room).

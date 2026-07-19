@@ -6,17 +6,18 @@ import Shared
 /// Reached from the home screen's moon. Fully offline — every value is computed on
 /// device by the shared moon calculator.
 struct TodaysMoonView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = TodayMoonObservable()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
             content
             VStack {
                 HStack {
                     Button { dismiss() } label: {
-                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     }
                     Spacer()
                 }
@@ -32,7 +33,7 @@ struct TodaysMoonView: View {
         if let state = model.state, case .content(let c) = onEnum(of: state) {
             moonView(c.moon)
         } else {
-            ProgressView().tint(RunaColors.accent)
+            ProgressView().tint(runaTheme.accent)
         }
     }
 
@@ -41,7 +42,7 @@ struct TodaysMoonView: View {
             Spacer()
             Text("今日の月")
                 .font(RunaFonts.heading(15))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
             Spacer().frame(height: 36)
 
             MoonPhaseDisc(
@@ -53,23 +54,23 @@ struct TodaysMoonView: View {
             Spacer().frame(height: 40)
             Text(moonPhaseNameJa(key: moon.phaseKey))
                 .font(RunaFonts.heading(34))
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
             Spacer().frame(height: 10)
             Text("月齢 \(String(format: "%.1f", moon.ageDays)) ・ \(moon.dateLabel)")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
 
             Spacer().frame(height: 36)
             Text(moon.phrase)
                 .font(RunaFonts.heading(20))
-                .foregroundStyle(RunaColors.body)
+                .foregroundStyle(runaTheme.body)
                 .multilineTextAlignment(.center)
                 .lineSpacing(8)
 
             Spacer()
             Text("next ▸ \(moon.nextPhaseDateLabel)　\(moonPhaseNameJa(key: moon.nextPhaseKey))")
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .padding(.bottom, 40)
         }
         .padding(.horizontal, 32)

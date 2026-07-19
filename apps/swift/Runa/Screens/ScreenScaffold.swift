@@ -3,6 +3,7 @@ import SwiftUI
 /// Shared empty-shell layout: a heading + a placeholder line on the Runa
 /// background. Feature screens will replace `content` with real UI later.
 struct ScreenScaffold<Content: View>: View {
+    @Environment(\.runaTheme) private var runaTheme
     let title: String
     let placeholder: String
     @ViewBuilder var content: () -> Content
@@ -19,16 +20,16 @@ struct ScreenScaffold<Content: View>: View {
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: RunaSpacing.md) {
                 Text(title)
                     .font(RunaFonts.heading(28))
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
 
                 Text(placeholder)
                     .font(RunaFonts.body(16))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
 
                 content()
 

@@ -23,11 +23,12 @@ struct RunaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // RootView is the auth gate: splash while restoring, the sign-in flow
-            // when unauthenticated, the tab body when authenticated. It applies
-            // the dark color scheme itself (belt-and-suspenders with Info.plist's
-            // UIUserInterfaceStyle=Dark).
-            RootView()
+            // ThemedRoot injects the selected app theme (dark/light/pink) into the
+            // environment and drives the color scheme, so every screen recolors on a
+            // theme change. RootView is the auth gate below it.
+            ThemedRoot {
+                RootView()
+            }
         }
     }
 }

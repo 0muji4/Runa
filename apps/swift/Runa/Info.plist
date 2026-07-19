@@ -44,9 +44,8 @@
 		<true/>
 	</dict>
 
-	<!-- Dark theme only (matches the Runa design system). -->
-	<key>UIUserInterfaceStyle</key>
-	<string>Dark</string>
+	<!-- Appearance follows the in-app theme (dark/light/pink), applied by
+	     ThemedRoot via preferredColorScheme. No app-wide UIUserInterfaceStyle lock. -->
 
 	<key>UILaunchScreen</key>
 	<dict/>

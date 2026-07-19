@@ -7,16 +7,17 @@ import Shared
 /// A minimal 週/月 toggle and ‹ › period nav sit above. Everything renders from the
 /// local diary — no network. Matches the Android InsightScreen so both OSes agree.
 struct InsightView: View {
+    @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = InsightObservable()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack(alignment: .top) {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Button { dismiss() } label: {
-                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     }
                     .padding(.top, 14)
                     .padding(.vertical, 6)
@@ -66,16 +67,16 @@ struct InsightView: View {
 
             HStack {
                 Button { model.showPrevious() } label: {
-                    Text("‹").font(RunaFonts.logo(34)).foregroundStyle(RunaColors.subtle)
+                    Text("‹").font(RunaFonts.logo(34)).foregroundStyle(runaTheme.subtle)
                 }
                 Spacer()
                 Button { model.showCurrent() } label: {
-                    Text(label).font(RunaFonts.heading(15)).foregroundStyle(RunaColors.subtle)
+                    Text(label).font(RunaFonts.heading(15)).foregroundStyle(runaTheme.subtle)
                 }
                 .buttonStyle(.plain)
                 Spacer()
                 Button { model.showNext() } label: {
-                    Text("›").font(RunaFonts.logo(34)).foregroundStyle(RunaColors.subtle)
+                    Text("›").font(RunaFonts.logo(34)).foregroundStyle(runaTheme.subtle)
                 }
             }
             .padding(.top, 20)
@@ -86,13 +87,13 @@ struct InsightView: View {
         Button(action: action) {
             Text(label)
                 .font(RunaFonts.heading(15))
-                .foregroundStyle(selected ? RunaColors.accent : RunaColors.subtle)
+                .foregroundStyle(selected ? runaTheme.accent : runaTheme.subtle)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 7)
                 .overlay {
                     if selected {
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(RunaColors.accent.opacity(0.7), lineWidth: 1)
+                            .stroke(runaTheme.accent.opacity(0.7), lineWidth: 1)
                     }
                 }
         }
@@ -112,12 +113,12 @@ struct InsightView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("あなたへの、手紙")
                 .font(RunaFonts.heading(32))
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
                 .padding(.top, 16)
 
             Text(insight.narrative.body)
                 .font(RunaFonts.heading(18))
-                .foregroundStyle(RunaColors.body)
+                .foregroundStyle(runaTheme.body)
                 .lineSpacing(10)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 28)
@@ -131,12 +132,12 @@ struct InsightView: View {
             if let footnote = insight.narrative.footnote {
                 Text(footnote)
                     .font(RunaFonts.heading(17))
-                    .foregroundStyle(RunaColors.body)
+                    .foregroundStyle(runaTheme.body)
                     .lineSpacing(9)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(26)
-                    .background(RunaColors.surface)
+                    .background(runaTheme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 40)
             }
@@ -155,7 +156,7 @@ struct InsightView: View {
                 ForEach(Array(buckets.enumerated()), id: \.offset) { index, bucket in
                     let fraction = maxCount > 0 ? Double(bucket.count) / Double(maxCount) : 0
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(peakIndex == index ? RunaColors.accent : RunaColors.subtle.opacity(0.28))
+                        .fill(peakIndex == index ? runaTheme.accent : runaTheme.subtle.opacity(0.28))
                         .frame(maxWidth: .infinity)
                         .frame(height: max(120 * fraction, 8))
                 }
@@ -163,11 +164,11 @@ struct InsightView: View {
             .frame(height: 120, alignment: .bottom)
 
             HStack {
-                Text("新月").font(RunaFonts.body(12)).foregroundStyle(RunaColors.subtle)
+                Text("新月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
                 Spacer()
-                Text("満月").font(RunaFonts.body(12)).foregroundStyle(RunaColors.subtle)
+                Text("満月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
                 Spacer()
-                Text("新月").font(RunaFonts.body(12)).foregroundStyle(RunaColors.subtle)
+                Text("新月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
             }
         }
     }
@@ -180,17 +181,17 @@ struct InsightView: View {
                 HStack(spacing: 6) {
                     Text(diaryMoodLabelJa(mood: moodCount.mood))
                         .font(RunaFonts.heading(14))
-                        .foregroundStyle(RunaColors.body)
+                        .foregroundStyle(runaTheme.body)
                         .frame(width: 64, alignment: .leading)
                     ForEach(0 ..< min(Int(moodCount.count), 12), id: \.self) { _ in
-                        Circle().fill(RunaColors.subAccent).frame(width: 7, height: 7)
+                        Circle().fill(runaTheme.subAccent).frame(width: 7, height: 7)
                     }
                 }
             }
             if unmooded > 0 {
                 Text("しるしのない夜も、\(unmooded)。")
                     .font(RunaFonts.heading(13))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -203,12 +204,12 @@ struct InsightView: View {
             NewMoonEmblem(diameter: 116)
             Text("まだ、しるした夜がありません。")
                 .font(RunaFonts.heading(22))
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
                 .padding(.top, 28)
             Text("この期間は、静かなままです。")
                 .font(RunaFonts.body(14))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
                 .padding(.top, 14)
         }
@@ -220,7 +221,7 @@ struct InsightView: View {
         VStack {
             Text("同期に、少しつまずいています。")
                 .font(RunaFonts.body(14))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -231,7 +232,7 @@ struct InsightView: View {
         if let text = bannerText(banner) {
             Text(text)
                 .font(RunaFonts.body(13))
-                .foregroundStyle(RunaColors.subtle)
+                .foregroundStyle(runaTheme.subtle)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 24)
         }

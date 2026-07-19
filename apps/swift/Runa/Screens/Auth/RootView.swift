@@ -31,6 +31,7 @@ struct RootView: View {
                 SplashView()
             }
         }
-        .preferredColorScheme(.dark)
+        // The color scheme now follows the selected theme, applied by ThemedRoot at
+        // the app root (see RunaApp).
     }
 }

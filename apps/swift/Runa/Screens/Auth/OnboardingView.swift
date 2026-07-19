@@ -4,12 +4,13 @@ import SwiftUI
 /// softly glowing moon, one large left-aligned 明朝 line, and a quiet "すすむ" to
 /// advance — no filled buttons, no body paragraph.
 struct OnboardingView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let title: String
     let onNext: () -> Void
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
                 GlowingMoon(diameter: 116)
@@ -18,12 +19,12 @@ struct OnboardingView: View {
                 Text(title)
                     .font(RunaFonts.heading(32))
                     .lineSpacing(14)
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
                 Spacer()
                 Text("すすむ")
                     .font(RunaFonts.body(13))
                     .tracking(6)
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .frame(maxWidth: .infinity)
                     .padding(16)
                     .contentShape(Rectangle())
@@ -38,24 +39,25 @@ struct OnboardingView: View {
 /// Notification permission (④). A quiet night-time request: the moon with a small
 /// moonlight-pink bell badge, a poetic 明朝 line, and a gentle ask.
 struct NotificationPermissionView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let onContinue: () -> Void
     let onSkip: () -> Void
 
     var body: some View {
         ZStack {
-            RunaColors.background.ignoresSafeArea()
+            runaTheme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
                 NotificationMoon(diameter: 156)
                 Text("夜のとばりに、\nそっとお知らせ。")
                     .font(RunaFonts.heading(26))
-                    .foregroundStyle(RunaColors.heading)
+                    .foregroundStyle(runaTheme.heading)
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.lg)
                 Text("やさしい時刻に、今日をふりかえる合図を。\n設定はあとからでも変えられます。")
                     .font(RunaFonts.body(15))
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.sm)
 
@@ -64,8 +66,8 @@ struct NotificationPermissionView: View {
                         .font(RunaFonts.body(16))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(RunaColors.accent)
-                        .foregroundStyle(RunaColors.background)
+                        .background(runaTheme.accent)
+                        .foregroundStyle(runaTheme.background)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .padding(.top, RunaSpacing.lg)
@@ -73,7 +75,7 @@ struct NotificationPermissionView: View {
                 Text("いまはしない")
                     .font(RunaFonts.body(13))
                     .tracking(4)
-                    .foregroundStyle(RunaColors.subtle)
+                    .foregroundStyle(runaTheme.subtle)
                     .padding(12)
                     .padding(.top, RunaSpacing.xs)
                     .onTapGesture(perform: onSkip)

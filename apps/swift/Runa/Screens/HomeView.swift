@@ -40,6 +40,7 @@ final class HomeObservable: ObservableObject {
 /// whitespace, with the day's moon phase + date above it. The quote and moon still
 /// render when offline (the moon is always computed on-device).
 struct HomeView: View {
+    @Environment(\.runaTheme) private var runaTheme
     let displayName: String
     let onSignOut: () -> Void
 
@@ -48,13 +49,13 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RunaColors.background.ignoresSafeArea()
+                runaTheme.background.ignoresSafeArea()
                 content
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: SettingsView(onSignOut: onSignOut)) {
-                        Image(systemName: "gearshape").foregroundStyle(RunaColors.subAccent)
+                        Image(systemName: "gearshape").foregroundStyle(runaTheme.subAccent)
                     }
                     .accessibilityLabel("設定")
                 }
@@ -70,12 +71,12 @@ struct HomeView: View {
             case .offline(let o): todayView(o.today, offline: true)
             case .error:
                 Text("今日をよみこめませんでした。")
-                    .font(RunaFonts.body(16)).foregroundStyle(RunaColors.subtle)
+                    .font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
             case .loading:
-                ProgressView().tint(RunaColors.accent)
+                ProgressView().tint(runaTheme.accent)
             }
         } else {
-            ProgressView().tint(RunaColors.accent)
+            ProgressView().tint(runaTheme.accent)
         }
     }
 
@@ -90,22 +91,22 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             Text("\(today.dateLabel) · \(moonPhaseNameJa(key: today.moon.phaseKey))")
-                .font(RunaFonts.heading(22)).foregroundStyle(RunaColors.heading)
+                .font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
             Text("照度 \(Int((today.moon.illumination * 100).rounded()))%")
-                .font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
 
             Spacer().frame(height: RunaSpacing.lg)
 
             Text(today.quote?.bodyText ?? "今日の言葉は、まだ紡がれていません。")
                 .font(RunaFonts.heading(26))
-                .foregroundStyle(RunaColors.heading)
+                .foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, RunaSpacing.md)
 
             if offline {
                 Spacer().frame(height: RunaSpacing.md)
                 Text("オフライン表示中（月あかりは端末で算出しています）")
-                    .font(RunaFonts.body(13)).foregroundStyle(RunaColors.subtle)
+                    .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
             }
         }

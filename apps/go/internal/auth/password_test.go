@@ -1,45 +1,105 @@
 package auth
 
-import "testing"
+import (
+	"strings"
+	"testing"
 
-func TestHashPasswordRoundTrip(t *testing.T) {
-	const password = "correct horse battery staple"
-	encoded, err := HashPassword(password, DefaultArgon2Params())
-	if err != nil {
-		t.Fatalf("HashPassword: %v", err)
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestHashPassword(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "パスフレーズをハッシュ化できる",
+			password: "correct horse battery staple",
+		},
+		{
+			name:     "空パスワードでもハッシュ化できる",
+			password: "",
+		},
+		{
+			name:     "Unicodeパスワードをハッシュ化できる",
+			password: "パスワード🔑",
+		},
 	}
 
-	ok, err := VerifyPassword(password, encoded)
-	if err != nil {
-		t.Fatalf("VerifyPassword: %v", err)
-	}
-	if !ok {
-		t.Fatal("VerifyPassword = false for the correct password, want true")
-	}
-}
-
-func TestHashPasswordProducesUniqueSalt(t *testing.T) {
 	p := DefaultArgon2Params()
-	a, _ := HashPassword("same", p)
-	b, _ := HashPassword("same", p)
-	if a == b {
-		t.Fatal("two hashes of the same password are identical; salt is not random")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			first, err := HashPassword(tt.password, p)
+			require.NoError(t, err)
+			assert.True(t, strings.HasPrefix(first, "$argon2id$v="))
+
+			second, err := HashPassword(tt.password, p)
+			require.NoError(t, err)
+			assert.NotEqual(t, first, second)
+		})
 	}
 }
 
-func TestVerifyPasswordWrong(t *testing.T) {
-	encoded, _ := HashPassword("right", DefaultArgon2Params())
-	ok, err := VerifyPassword("wrong", encoded)
-	if err != nil {
-		t.Fatalf("VerifyPassword: %v", err)
-	}
-	if ok {
-		t.Fatal("VerifyPassword = true for the wrong password, want false")
-	}
-}
+func TestVerifyPassword(t *testing.T) {
+	t.Parallel()
 
-func TestVerifyPasswordMalformed(t *testing.T) {
-	if _, err := VerifyPassword("x", "not-a-phc-string"); err == nil {
-		t.Fatal("expected an error for a malformed hash, got nil")
+	p := DefaultArgon2Params()
+	encoded, err := HashPassword("right", p)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		input   string
+		encoded string
+		wantOK  bool
+		wantErr error
+	}{
+		{
+			name:    "正しいパスワードは一致する",
+			input:   "right",
+			encoded: encoded,
+			wantOK:  true,
+			wantErr: nil,
+		},
+		{
+			name:    "誤ったパスワードは不一致",
+			input:   "wrong",
+			encoded: encoded,
+			wantOK:  false,
+			wantErr: nil,
+		},
+		{
+			name:    "壊れたエンコードはErrInvalidHash",
+			input:   "x",
+			encoded: "not-a-phc-string",
+			wantOK:  false,
+			wantErr: ErrInvalidHash,
+		},
+		{
+			name:    "非互換のargon2バージョンはErrIncompatibleVersion",
+			input:   "x",
+			encoded: "$argon2id$v=18$m=19456,t=2,p=1$c2FsdA$aGFzaA",
+			wantOK:  false,
+			wantErr: ErrIncompatibleVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ok, err := VerifyPassword(tt.input, tt.encoded)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantOK, ok)
+		})
 	}
 }

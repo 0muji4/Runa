@@ -4,25 +4,22 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testKID = "test-key-1"
 
-// signedIDToken mints an RS256 token with the given claims, signed by priv and
-// tagged with testKID, mimicking an Apple/Google ID token.
 func signedIDToken(t *testing.T, priv *rsa.PrivateKey, claims jwt.MapClaims) string {
 	t.Helper()
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	tok.Header["kid"] = testKID
 	signed, err := tok.SignedString(priv)
-	if err != nil {
-		t.Fatalf("sign id token: %v", err)
-	}
+	require.NoError(t, err)
 	return signed
 }
 
@@ -44,67 +41,93 @@ func baseClaims(now time.Time) jwt.MapClaims {
 	}
 }
 
-func TestOIDCVerifierSuccess(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	v := newVerifier(t, priv, GoogleIssuers, []string{"client-123"})
-
-	id, err := v.Verify(context.Background(), signedIDToken(t, priv, baseClaims(time.Now())))
-	if err != nil {
-		t.Fatalf("Verify: %v", err)
-	}
-	if id.Subject != "google-sub-1" || id.Email != "user@example.com" || !id.EmailVerified {
-		t.Fatalf("identity = %+v, unexpected", id)
-	}
+func appleClaims(now time.Time) jwt.MapClaims {
+	c := baseClaims(now)
+	c["iss"] = "https://appleid.apple.com"
+	c["aud"] = "com.runa.app"
+	// Apple encodes email_verified as the JSON string "true", not a boolean.
+	c["email_verified"] = "true"
+	return c
 }
 
-func TestOIDCVerifierAppleStringEmailVerified(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	v := newVerifier(t, priv, AppleIssuers, []string{"com.runa.app"})
-	claims := baseClaims(time.Now())
-	claims["iss"] = "https://appleid.apple.com"
-	claims["aud"] = "com.runa.app"
-	claims["email_verified"] = "true" // Apple sends a string
+func TestOIDCVerifier_Verify(t *testing.T) {
+	t.Parallel()
 
-	id, err := v.Verify(context.Background(), signedIDToken(t, priv, claims))
-	if err != nil {
-		t.Fatalf("Verify: %v", err)
-	}
-	if !id.EmailVerified {
-		t.Fatal("EmailVerified = false for Apple's string \"true\", want true")
-	}
-}
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	other, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	now := time.Now()
 
-func TestOIDCVerifierRejectsWrongAudience(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	v := newVerifier(t, priv, GoogleIssuers, []string{"someone-else"})
-	if _, err := v.Verify(context.Background(), signedIDToken(t, priv, baseClaims(time.Now()))); !errors.Is(err, ErrProviderVerification) {
-		t.Fatalf("Verify error = %v, want ErrProviderVerification", err)
+	wantIdentity := OIDCIdentity{
+		Subject:       "google-sub-1",
+		Email:         "user@example.com",
+		EmailVerified: true,
+		Name:          "Test User",
 	}
-}
 
-func TestOIDCVerifierRejectsWrongIssuer(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	v := newVerifier(t, priv, AppleIssuers, []string{"client-123"}) // token iss is Google
-	if _, err := v.Verify(context.Background(), signedIDToken(t, priv, baseClaims(time.Now()))); !errors.Is(err, ErrProviderVerification) {
-		t.Fatalf("Verify error = %v, want ErrProviderVerification", err)
+	tests := []struct {
+		name         string
+		verifier     *OIDCVerifier
+		token        string
+		wantErr      error
+		wantIdentity OIDCIdentity
+	}{
+		{
+			name:         "有効なGoogleトークンはidentityを返す",
+			verifier:     newVerifier(t, priv, GoogleIssuers, []string{"client-123"}),
+			token:        signedIDToken(t, priv, baseClaims(now)),
+			wantErr:      nil,
+			wantIdentity: wantIdentity,
+		},
+		{
+			name:         "AppleのemailVerifiedは文字列trueでも真",
+			verifier:     newVerifier(t, priv, AppleIssuers, []string{"com.runa.app"}),
+			token:        signedIDToken(t, priv, appleClaims(now)),
+			wantErr:      nil,
+			wantIdentity: wantIdentity,
+		},
+		{
+			name:         "aud不一致は拒否される",
+			verifier:     newVerifier(t, priv, GoogleIssuers, []string{"someone-else"}),
+			token:        signedIDToken(t, priv, baseClaims(now)),
+			wantErr:      ErrProviderVerification,
+			wantIdentity: OIDCIdentity{},
+		},
+		{
+			name:         "iss不一致は拒否される",
+			verifier:     newVerifier(t, priv, AppleIssuers, []string{"client-123"}),
+			token:        signedIDToken(t, priv, baseClaims(now)),
+			wantErr:      ErrProviderVerification,
+			wantIdentity: OIDCIdentity{},
+		},
+		{
+			name:         "期限切れトークンは拒否される",
+			verifier:     newVerifier(t, priv, GoogleIssuers, []string{"client-123"}),
+			token:        signedIDToken(t, priv, baseClaims(now.Add(-2*time.Hour))),
+			wantErr:      ErrProviderVerification,
+			wantIdentity: OIDCIdentity{},
+		},
+		{
+			name:         "未知の署名鍵は拒否される",
+			verifier:     NewOIDCVerifier(GoogleIssuers, []string{"client-123"}, StaticKeySource{testKID: &other.PublicKey}),
+			token:        signedIDToken(t, priv, baseClaims(now)),
+			wantErr:      ErrProviderVerification,
+			wantIdentity: OIDCIdentity{},
+		},
 	}
-}
 
-func TestOIDCVerifierRejectsExpired(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	v := newVerifier(t, priv, GoogleIssuers, []string{"client-123"})
-	claims := baseClaims(time.Now().Add(-2 * time.Hour)) // exp one hour in the past
-	if _, err := v.Verify(context.Background(), signedIDToken(t, priv, claims)); !errors.Is(err, ErrProviderVerification) {
-		t.Fatalf("Verify error = %v, want ErrProviderVerification", err)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-func TestOIDCVerifierRejectsUnknownKey(t *testing.T) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	other, _ := rsa.GenerateKey(rand.Reader, 2048)
-	// Verifier trusts `other`, but the token is signed by `priv`.
-	v := NewOIDCVerifier(GoogleIssuers, []string{"client-123"}, StaticKeySource{testKID: &other.PublicKey})
-	if _, err := v.Verify(context.Background(), signedIDToken(t, priv, baseClaims(time.Now()))); !errors.Is(err, ErrProviderVerification) {
-		t.Fatalf("Verify error = %v, want ErrProviderVerification", err)
+			id, err := tt.verifier.Verify(context.Background(), tt.token)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantIdentity, id)
+		})
 	}
 }

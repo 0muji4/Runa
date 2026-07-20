@@ -1,138 +1,175 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/0muji4/Runa/apps/go/internal/auth"
-	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
-	"github.com/0muji4/Runa/apps/go/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func newAuthHandler() *Auth {
-	svc := service.NewAuthService(service.AuthConfig{
-		Store:          memauth.New(),
-		Issuer:         auth.NewTokenIssuer("test-secret", time.Minute),
-		PasswordParams: auth.DefaultArgon2Params(),
-		RefreshTTL:     time.Hour,
-	})
-	return NewAuth(svc, slog.New(slog.NewJSONHandler(io.Discard, nil)))
+func TestAuth_Signup(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, h *Auth)
+		body  string
+
+		wantStatus  int
+		wantCode    ErrorCode
+		wantDetails int
+
+		// check と wantCode/wantDetails は排他: どちらもボディを消費するため片方だけを設定する。
+		check func(t *testing.T, res *http.Response)
+	}{
+		{
+			name:        "有効なメールとパスワードでアカウントを作成する",
+			setup:       nil,
+			body:        `{"email":"a@b.com","password":"password123","display_name":"Runa"}`,
+			wantStatus:  http.StatusCreated,
+			wantCode:    "",
+			wantDetails: -1,
+			check: func(t *testing.T, res *http.Response) {
+				got := decodeJSON[authTokensResponse](t, res)
+				assert.NotEmpty(t, got.AccessToken)
+				assert.NotEmpty(t, got.RefreshToken)
+				assert.Equal(t, "Bearer", got.TokenType)
+				require.NotNil(t, got.User)
+				require.NotNil(t, got.User.Email)
+				assert.Equal(t, "a@b.com", *got.User.Email)
+			},
+		},
+		{
+			name:        "不正なメールと短いパスワードは検証エラー",
+			setup:       nil,
+			body:        `{"email":"not-an-email","password":"short"}`,
+			wantStatus:  http.StatusBadRequest,
+			wantCode:    CodeValidation,
+			wantDetails: 2,
+			check:       nil,
+		},
+		{
+			name: "重複メールは409",
+			setup: func(t *testing.T, h *Auth) {
+				res := postJSON(t, h.Signup, `{"email":"dup@b.com","password":"password123"}`)
+				res.Body.Close()
+			},
+			body:        `{"email":"dup@b.com","password":"password123"}`,
+			wantStatus:  http.StatusConflict,
+			wantCode:    CodeEmailTaken,
+			wantDetails: -1,
+			check:       nil,
+		},
+		{
+			name:        "未知のフィールドは拒否する",
+			setup:       nil,
+			body:        `{"email":"a@b.com","password":"password123","role":"admin"}`,
+			wantStatus:  http.StatusBadRequest,
+			wantCode:    CodeValidation,
+			wantDetails: -1,
+			check:       nil,
+		},
+		{
+			name:        "空白のみの表示名はメールのローカル部から補完する",
+			setup:       nil,
+			body:        `{"email":"trim@b.com","password":"password123","display_name":"` + strings.Repeat(" ", 3) + `"}`,
+			wantStatus:  http.StatusCreated,
+			wantCode:    "",
+			wantDetails: -1,
+			check: func(t *testing.T, res *http.Response) {
+				got := decodeJSON[authTokensResponse](t, res)
+				require.NotNil(t, got.User)
+				assert.Equal(t, "trim", got.User.DisplayName)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newAuthHandler()
+			if tt.setup != nil {
+				tt.setup(t, h)
+			}
+
+			res := postJSON(t, h.Signup, tt.body)
+			defer res.Body.Close()
+
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
+			if tt.wantCode != "" || tt.wantDetails >= 0 {
+				env := decodeError(t, res)
+				if tt.wantCode != "" {
+					assert.Equal(t, tt.wantCode, env.Error.Code)
+				}
+				if tt.wantDetails >= 0 {
+					assert.Len(t, env.Error.Details, tt.wantDetails)
+				}
+			}
+			if tt.check != nil {
+				tt.check(t, res)
+			}
+		})
+	}
 }
 
-func postJSON(t *testing.T, h http.HandlerFunc, body string) *http.Response {
-	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
-	rec := httptest.NewRecorder()
-	h(rec, req)
-	return rec.Result()
-}
+func TestAuth_Login(t *testing.T) {
+	t.Parallel()
 
-func TestSignupSuccess(t *testing.T) {
-	h := newAuthHandler()
-	res := postJSON(t, h.Signup, `{"email":"a@b.com","password":"password123","display_name":"Runa"}`)
-	defer res.Body.Close()
+	const email = "c@b.com"
 
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("status = %d, want 201", res.StatusCode)
-	}
-	if ct := res.Header.Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", ct)
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+		wantCode   ErrorCode
+		check      func(t *testing.T, res *http.Response)
+	}{
+		{
+			name:       "正しい資格情報でトークンを返す",
+			body:       `{"email":"c@b.com","password":"password123"}`,
+			wantStatus: http.StatusOK,
+			wantCode:   "",
+			check: func(t *testing.T, res *http.Response) {
+				got := decodeJSON[authTokensResponse](t, res)
+				assert.NotEmpty(t, got.AccessToken)
+				assert.NotEmpty(t, got.RefreshToken)
+				assert.Equal(t, "Bearer", got.TokenType)
+				require.NotNil(t, got.User)
+				require.NotNil(t, got.User.Email)
+				assert.Equal(t, email, *got.User.Email)
+			},
+		},
+		{
+			name:       "誤ったパスワードは拒否する",
+			body:       `{"email":"c@b.com","password":"wrongpass"}`,
+			wantStatus: http.StatusUnauthorized,
+			wantCode:   CodeInvalidCredentials,
+			check:      nil,
+		},
 	}
 
-	var got authTokensResponse
-	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if got.AccessToken == "" || got.RefreshToken == "" {
-		t.Error("expected non-empty access and refresh tokens")
-	}
-	if got.TokenType != "Bearer" {
-		t.Errorf("token_type = %q, want Bearer", got.TokenType)
-	}
-	if got.User == nil || got.User.Email == nil || *got.User.Email != "a@b.com" {
-		t.Errorf("user = %+v, want email a@b.com", got.User)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-func TestSignupValidation(t *testing.T) {
-	h := newAuthHandler()
-	res := postJSON(t, h.Signup, `{"email":"not-an-email","password":"short"}`)
-	defer res.Body.Close()
+			h := newAuthHandler()
+			signup := postJSON(t, h.Signup, `{"email":"c@b.com","password":"password123"}`)
+			signup.Body.Close()
 
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", res.StatusCode)
-	}
-	var env errorEnvelope
-	if err := json.NewDecoder(res.Body).Decode(&env); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if env.Error.Code != CodeValidation {
-		t.Errorf("code = %q, want %q", env.Error.Code, CodeValidation)
-	}
-	if len(env.Error.Details) != 2 {
-		t.Errorf("details = %v, want 2 field errors (email + password)", env.Error.Details)
-	}
-}
+			res := postJSON(t, h.Login, tt.body)
+			defer res.Body.Close()
 
-func TestSignupDuplicateEmailConflict(t *testing.T) {
-	h := newAuthHandler()
-	body := `{"email":"dup@b.com","password":"password123"}`
-	first := postJSON(t, h.Signup, body)
-	first.Body.Close()
-
-	res := postJSON(t, h.Signup, body)
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusConflict {
-		t.Fatalf("status = %d, want 409", res.StatusCode)
-	}
-	var env errorEnvelope
-	_ = json.NewDecoder(res.Body).Decode(&env)
-	if env.Error.Code != CodeEmailTaken {
-		t.Errorf("code = %q, want %q", env.Error.Code, CodeEmailTaken)
-	}
-}
-
-func TestLoginInvalidCredentials(t *testing.T) {
-	h := newAuthHandler()
-	signup := postJSON(t, h.Signup, `{"email":"c@b.com","password":"password123"}`)
-	signup.Body.Close()
-
-	res := postJSON(t, h.Login, `{"email":"c@b.com","password":"wrongpass"}`)
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", res.StatusCode)
-	}
-	var env errorEnvelope
-	_ = json.NewDecoder(res.Body).Decode(&env)
-	if env.Error.Code != CodeInvalidCredentials {
-		t.Errorf("code = %q, want %q", env.Error.Code, CodeInvalidCredentials)
-	}
-}
-
-func TestSignupRejectsUnknownFields(t *testing.T) {
-	h := newAuthHandler()
-	res := postJSON(t, h.Signup, `{"email":"a@b.com","password":"password123","role":"admin"}`)
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400 for unknown field", res.StatusCode)
-	}
-}
-
-// Guard against accidental whitespace-only display names sneaking through.
-func TestSignupTrimsDisplayName(t *testing.T) {
-	h := newAuthHandler()
-	res := postJSON(t, h.Signup, `{"email":"trim@b.com","password":"password123","display_name":"`+strings.Repeat(" ", 3)+`"}`)
-	defer res.Body.Close()
-	var got authTokensResponse
-	_ = json.NewDecoder(res.Body).Decode(&got)
-	if got.User != nil && got.User.DisplayName != "trim" {
-		t.Errorf("display_name = %q, want derived %q", got.User.DisplayName, "trim")
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			}
+			if tt.check != nil {
+				tt.check(t, res)
+			}
+		})
 	}
 }

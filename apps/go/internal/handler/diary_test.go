@@ -1,175 +1,345 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"log/slog"
+	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
-
-	"github.com/0muji4/Runa/apps/go/internal/auth"
-	"github.com/0muji4/Runa/apps/go/internal/repository/memdiary"
-	"github.com/0muji4/Runa/apps/go/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const testUser = "11111111-1111-4111-8111-111111111111"
+const (
+	knownClientID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	unknownID     = "99999999-9999-4999-8999-999999999999"
+)
 
-// stubAccessVerifier makes RequireAuth resolve every Bearer token to a fixed
-// user id, so the diary handlers run behind the real middleware (which also
-// populates chi URL params) without minting JWTs.
-type stubAccessVerifier struct{ userID string }
+func TestDiary_Create(t *testing.T) {
+	t.Parallel()
 
-func (s stubAccessVerifier) Verify(string) (string, error) { return s.userID, nil }
+	validCreate := fmt.Sprintf(`{"body_text":"月を見た","client_id":%q}`, knownClientID)
 
-// newDiaryRouter mounts the diary routes behind stub auth over an in-memory store.
-func newDiaryRouter() http.Handler {
-	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	h := NewDiary(service.NewDiaryService(memdiary.New(), nil), logger)
-
-	onUnauthorized := func(w http.ResponseWriter, _ *http.Request, _ error) {
-		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "authentication required", nil, logger)
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, r http.Handler)
+		body        string
+		wantStatus  int
+		wantCode    ErrorCode
+		wantDetails int
+	}{
+		{
+			name:        "新規エントリを作成する",
+			setup:       nil,
+			body:        validCreate,
+			wantStatus:  http.StatusCreated,
+			wantCode:    "",
+			wantDetails: -1,
+		},
+		{
+			name:        "同一client_idはupsertで200",
+			setup:       func(t *testing.T, r http.Handler) { createDiaryEntry(t, r, knownClientID, "月を見た") },
+			body:        validCreate,
+			wantStatus:  http.StatusOK,
+			wantCode:    "",
+			wantDetails: -1,
+		},
+		{
+			name:        "空の本文と非UUIDのclient_idは検証エラー",
+			setup:       nil,
+			body:        `{"body_text":"  ","client_id":"nope"}`,
+			wantStatus:  http.StatusBadRequest,
+			wantCode:    CodeValidation,
+			wantDetails: 2,
+		},
 	}
 
-	r := chi.NewRouter()
-	r.Group(func(pr chi.Router) {
-		pr.Use(auth.RequireAuth(stubAccessVerifier{testUser}, onUnauthorized))
-		pr.Get("/diary", h.List)
-		pr.Post("/diary", h.Create)
-		pr.Get("/diary/sync", h.Sync)
-		pr.Get("/diary/{id}", h.Get)
-		pr.Patch("/diary/{id}", h.Update)
-		pr.Delete("/diary/{id}", h.Delete)
-	})
-	return r
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-func doDiary(t *testing.T, r http.Handler, method, path, body string) *http.Response {
-	t.Helper()
-	var reader io.Reader
-	if body != "" {
-		reader = bytes.NewBufferString(body)
-	}
-	req := httptest.NewRequest(method, path, reader)
-	req.Header.Set("Authorization", "Bearer test") // stub verifier ignores the value
-	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
-	return rec.Result()
-}
+			r := newDiaryRouter()
+			if tt.setup != nil {
+				tt.setup(t, r)
+			}
 
-// errBody decodes the shared error envelope for code assertions.
-type errBody struct {
-	Error struct {
-		Code    string `json:"code"`
-		Details []struct {
-			Field string `json:"field"`
-		} `json:"details"`
-	} `json:"error"`
-}
+			res := doDiary(t, r, http.MethodPost, "/diary", tt.body)
+			defer res.Body.Close()
 
-func decodeErr(t *testing.T, res *http.Response) errBody {
-	t.Helper()
-	var e errBody
-	if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
-		t.Fatalf("decode error envelope: %v", err)
-	}
-	return e
-}
-
-func TestDiaryCreateValidation(t *testing.T) {
-	r := newDiaryRouter()
-
-	// Empty body_text and a non-UUID client_id both fail validation.
-	res := doDiary(t, r, http.MethodPost, "/diary", `{"body_text":"  ","client_id":"nope"}`)
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", res.StatusCode)
-	}
-	body := decodeErr(t, res)
-	if body.Error.Code != string(CodeValidation) {
-		t.Errorf("code = %q, want validation_error", body.Error.Code)
-	}
-	if len(body.Error.Details) != 2 {
-		t.Errorf("details len = %d, want 2 (body_text + client_id)", len(body.Error.Details))
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" || tt.wantDetails >= 0 {
+				env := decodeError(t, res)
+				if tt.wantCode != "" {
+					assert.Equal(t, tt.wantCode, env.Error.Code)
+				}
+				if tt.wantDetails >= 0 {
+					assert.Len(t, env.Error.Details, tt.wantDetails)
+				}
+			}
+		})
 	}
 }
 
-func TestDiaryCreateIdempotentStatus(t *testing.T) {
-	r := newDiaryRouter()
-	payload := `{"body_text":"月を見た","client_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}`
+func TestDiary_Get(t *testing.T) {
+	t.Parallel()
 
-	first := doDiary(t, r, http.MethodPost, "/diary", payload)
-	defer first.Body.Close()
-	if first.StatusCode != http.StatusCreated {
-		t.Fatalf("first POST status = %d, want 201", first.StatusCode)
+	tests := []struct {
+		name       string
+		path       func(t *testing.T, r http.Handler) string
+		wantStatus int
+		wantCode   ErrorCode
+		wantBody   string
+	}{
+		{
+			name: "既存エントリは200",
+			path: func(t *testing.T, r http.Handler) string {
+				return "/diary/" + createDiaryEntry(t, r, knownClientID, "月を見た").ID
+			},
+			wantStatus: http.StatusOK,
+			wantCode:   "",
+			wantBody:   "月を見た",
+		},
+		{
+			name:       "未知のidは404",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/" + unknownID },
+			wantStatus: http.StatusNotFound,
+			wantCode:   CodeNotFound,
+			wantBody:   "",
+		},
+		{
+			name:       "不正な形式のidは404",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/not-a-uuid" },
+			wantStatus: http.StatusNotFound,
+			wantCode:   CodeNotFound,
+			wantBody:   "",
+		},
 	}
 
-	second := doDiary(t, r, http.MethodPost, "/diary", payload)
-	defer second.Body.Close()
-	if second.StatusCode != http.StatusOK {
-		t.Fatalf("repeat POST status = %d, want 200 (idempotent)", second.StatusCode)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newDiaryRouter()
+			res := doDiary(t, r, http.MethodGet, tt.path(t, r), "")
+			defer res.Body.Close()
+
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			}
+			if tt.wantBody != "" {
+				assert.Equal(t, tt.wantBody, decodeJSON[diaryEntryResponse](t, res).BodyText)
+			}
+		})
 	}
 }
 
-func TestDiaryGetNotFound(t *testing.T) {
-	r := newDiaryRouter()
+func TestDiary_Update(t *testing.T) {
+	t.Parallel()
 
-	// Well-formed but unknown id → 404 not_found.
-	res := doDiary(t, r, http.MethodGet, "/diary/99999999-9999-4999-8999-999999999999", "")
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusNotFound {
-		t.Fatalf("unknown id status = %d, want 404", res.StatusCode)
-	}
-	if code := decodeErr(t, res).Error.Code; code != string(CodeNotFound) {
-		t.Errorf("code = %q, want not_found", code)
+	tests := []struct {
+		name       string
+		path       func(t *testing.T, r http.Handler) string
+		body       string
+		wantStatus int
+		wantCode   ErrorCode
+		wantBody   string
+	}{
+		{
+			name:       "body_text欠落は拒否する",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/" + unknownID },
+			body:       `{"mood":"calm"}`,
+			wantStatus: http.StatusBadRequest,
+			wantCode:   CodeValidation,
+			wantBody:   "",
+		},
+		{
+			name:       "空白のみのbody_textは拒否する",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/" + unknownID },
+			body:       `{"body_text":"   "}`,
+			wantStatus: http.StatusBadRequest,
+			wantCode:   CodeValidation,
+			wantBody:   "",
+		},
+		{
+			name: "正常な更新は200",
+			path: func(t *testing.T, r http.Handler) string {
+				return "/diary/" + createDiaryEntry(t, r, knownClientID, "月を見た").ID
+			},
+			body:       `{"body_text":"更新後","mood":"calm"}`,
+			wantStatus: http.StatusOK,
+			wantCode:   "",
+			wantBody:   "更新後",
+		},
 	}
 
-	// Malformed id also 404 (rejected before hitting the store).
-	bad := doDiary(t, r, http.MethodGet, "/diary/not-a-uuid", "")
-	defer bad.Body.Close()
-	if bad.StatusCode != http.StatusNotFound {
-		t.Errorf("malformed id status = %d, want 404", bad.StatusCode)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newDiaryRouter()
+			res := doDiary(t, r, http.MethodPatch, tt.path(t, r), tt.body)
+			defer res.Body.Close()
+
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			}
+			if tt.wantBody != "" {
+				assert.Equal(t, tt.wantBody, decodeJSON[diaryEntryResponse](t, res).BodyText)
+			}
+		})
 	}
 }
 
-func TestDiaryListShape(t *testing.T) {
-	r := newDiaryRouter()
-	doDiary(t, r, http.MethodPost, "/diary", `{"body_text":"一件目","client_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}`).Body.Close()
+func TestDiary_Delete(t *testing.T) {
+	t.Parallel()
 
-	res := doDiary(t, r, http.MethodGet, "/diary", "")
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d, want 200", res.StatusCode)
+	tests := []struct {
+		name       string
+		path       func(t *testing.T, r http.Handler) string
+		wantStatus int
+		wantCode   ErrorCode
+	}{
+		{
+			name: "自分のエントリを削除する",
+			path: func(t *testing.T, r http.Handler) string {
+				return "/diary/" + createDiaryEntry(t, r, knownClientID, "月を見た").ID
+			},
+			wantStatus: http.StatusNoContent,
+			wantCode:   "",
+		},
+		{
+			name: "削除は冪等で繰り返し204",
+			path: func(t *testing.T, r http.Handler) string {
+				id := createDiaryEntry(t, r, knownClientID, "月を見た").ID
+				first := doDiary(t, r, http.MethodDelete, "/diary/"+id, "")
+				first.Body.Close()
+				require.Equal(t, http.StatusNoContent, first.StatusCode)
+				return "/diary/" + id
+			},
+			wantStatus: http.StatusNoContent,
+			wantCode:   "",
+		},
+		{
+			name:       "未知のidは404",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/" + unknownID },
+			wantStatus: http.StatusNotFound,
+			wantCode:   CodeNotFound,
+		},
+		{
+			name:       "不正な形式のidは404",
+			path:       func(t *testing.T, r http.Handler) string { return "/diary/not-a-uuid" },
+			wantStatus: http.StatusNotFound,
+			wantCode:   CodeNotFound,
+		},
 	}
-	var got diaryListResponse
-	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if len(got.Entries) != 1 {
-		t.Fatalf("entries len = %d, want 1", len(got.Entries))
-	}
-	if got.NextCursor != nil {
-		t.Errorf("next_cursor = %v, want null on a single-page result", *got.NextCursor)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newDiaryRouter()
+			res := doDiary(t, r, http.MethodDelete, tt.path(t, r), "")
+			defer res.Body.Close()
+
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			}
+		})
 	}
 }
 
-func TestDiaryUpdateRequiresBody(t *testing.T) {
-	r := newDiaryRouter()
-	res := doDiary(t, r, http.MethodPatch, "/diary/99999999-9999-4999-8999-999999999999", `{"mood":"calm"}`)
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400 (body_text required)", res.StatusCode)
+func TestDiary_List(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, r http.Handler)
+		wantEntries int
+	}{
+		{
+			name:        "空ストアはエントリなし",
+			setup:       nil,
+			wantEntries: 0,
+		},
+		{
+			name:        "1件のみのストアは1件返す",
+			setup:       func(t *testing.T, r http.Handler) { createDiaryEntry(t, r, knownClientID, "一件目") },
+			wantEntries: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newDiaryRouter()
+			if tt.setup != nil {
+				tt.setup(t, r)
+			}
+
+			res := doDiary(t, r, http.MethodGet, "/diary", "")
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			got := decodeJSON[diaryListResponse](t, res)
+			assert.Len(t, got.Entries, tt.wantEntries)
+			assert.Nil(t, got.NextCursor)
+		})
 	}
 }
 
-func TestDiarySyncRejectsBadSince(t *testing.T) {
-	r := newDiaryRouter()
-	res := doDiary(t, r, http.MethodGet, "/diary/sync?since=not-a-time", "")
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", res.StatusCode)
+func TestDiary_Sync(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, r http.Handler)
+		query       string
+		wantStatus  int
+		wantCode    ErrorCode
+		wantEntries int
+	}{
+		{
+			name:        "不正な形式のsinceは拒否する",
+			setup:       nil,
+			query:       "?since=not-a-time",
+			wantStatus:  http.StatusBadRequest,
+			wantCode:    CodeValidation,
+			wantEntries: -1,
+		},
+		{
+			name:        "変更エントリとserver_timeを返す",
+			setup:       func(t *testing.T, r http.Handler) { createDiaryEntry(t, r, knownClientID, "月を見た") },
+			query:       "",
+			wantStatus:  http.StatusOK,
+			wantCode:    "",
+			wantEntries: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newDiaryRouter()
+			if tt.setup != nil {
+				tt.setup(t, r)
+			}
+
+			res := doDiary(t, r, http.MethodGet, "/diary/sync"+tt.query, "")
+			defer res.Body.Close()
+
+			require.Equal(t, tt.wantStatus, res.StatusCode)
+			if tt.wantCode != "" {
+				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			}
+			if tt.wantEntries >= 0 {
+				got := decodeJSON[diarySyncResponse](t, res)
+				assert.Len(t, got.Entries, tt.wantEntries)
+				assert.NotEmpty(t, got.ServerTime)
+			}
+		})
 	}
 }

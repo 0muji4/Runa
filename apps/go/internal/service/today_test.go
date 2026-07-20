@@ -2,20 +2,14 @@ package service_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
-	"github.com/0muji4/Runa/apps/go/internal/repository/memtoday"
 	"github.com/0muji4/Runa/apps/go/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-const todayUser = "11111111-1111-4111-8111-111111111111"
-
-func newTodayService() *service.TodayService {
-	return service.NewTodayService(memtoday.New(), nil)
-}
 
 func day(s string) time.Time {
 	d, err := time.Parse("2006-01-02", s)
@@ -25,86 +19,195 @@ func day(s string) time.Time {
 	return d
 }
 
-// TestTodayMissingContentIsNotAnError verifies an unseeded day yields nil quote
-// and song (not an error) so the home screen still renders.
-func TestTodayMissingContentIsNotAnError(t *testing.T) {
-	svc := newTodayService()
-	content, err := svc.Today(context.Background(), day("2026-07-11"))
-	if err != nil {
-		t.Fatalf("Today on empty store: %v", err)
-	}
-	if content.Quote != nil || content.Song != nil {
-		t.Fatalf("content = %+v, want nil quote and song", content)
-	}
-}
-
-// TestTodayReturnsSeededContent verifies the exact-date lookup returns what was
-// curated for that day.
-func TestTodayReturnsSeededContent(t *testing.T) {
-	svc := newTodayService()
-	ctx := context.Background()
-	if _, err := svc.CreateQuote(ctx, day("2026-07-11"), "月あかり"); err != nil {
-		t.Fatalf("CreateQuote: %v", err)
-	}
-	if _, err := svc.CreateSong(ctx, repository.InsertSongParams{
-		Date: day("2026-07-11"), Title: "夜想曲", Artist: "月詠",
+func seedSong(t *testing.T, svc *service.TodayService, ctx context.Context, date, title string) repository.Song {
+	t.Helper()
+	song, err := svc.CreateSong(ctx, repository.InsertSongParams{
+		Date: day(date), Title: title, Artist: "月詠",
 		ArtworkURL: "https://x/a.jpg", AudioURL: "https://x/a.mp3",
-	}); err != nil {
-		t.Fatalf("CreateSong: %v", err)
+	})
+	require.NoError(t, err)
+	return song
+}
+
+func TestTodayService_Today(t *testing.T) {
+	t.Parallel()
+
+	const d = "2026-07-11"
+	tests := []struct {
+		name      string
+		seedQuote bool
+		seedSong  bool
+		wantQuote *string
+		wantSong  *string
+	}{
+		{
+			name:      "未登録の日はquoteもsongもnilを返す",
+			seedQuote: false,
+			seedSong:  false,
+			wantQuote: nil,
+			wantSong:  nil,
+		},
+		{
+			name:      "登録済みの日はquoteとsongを返す",
+			seedQuote: true,
+			seedSong:  true,
+			wantQuote: ptr("月あかり"),
+			wantSong:  ptr("夜想曲"),
+		},
+		{
+			name:      "quoteのみの日はsongがnil",
+			seedQuote: true,
+			seedSong:  false,
+			wantQuote: ptr("月あかり"),
+			wantSong:  nil,
+		},
+		{
+			name:      "songのみの日はquoteがnil",
+			seedQuote: false,
+			seedSong:  true,
+			wantQuote: nil,
+			wantSong:  ptr("夜想曲"),
+		},
 	}
 
-	content, err := svc.Today(ctx, day("2026-07-11"))
-	if err != nil {
-		t.Fatalf("Today: %v", err)
-	}
-	if content.Quote == nil || content.Quote.BodyText != "月あかり" {
-		t.Fatalf("quote = %+v, want the seeded quote", content.Quote)
-	}
-	if content.Song == nil || content.Song.Title != "夜想曲" {
-		t.Fatalf("song = %+v, want the seeded song", content.Song)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newTodayService()
+			ctx := context.Background()
+			if tt.seedQuote {
+				_, err := svc.CreateQuote(ctx, day(d), "月あかり")
+				require.NoError(t, err)
+			}
+			if tt.seedSong {
+				seedSong(t, svc, ctx, d, "夜想曲")
+			}
+
+			content, err := svc.Today(ctx, day(d))
+			require.NoError(t, err)
+
+			if tt.wantQuote == nil {
+				assert.Nil(t, content.Quote)
+			} else {
+				require.NotNil(t, content.Quote)
+				assert.Equal(t, *tt.wantQuote, content.Quote.BodyText)
+			}
+			if tt.wantSong == nil {
+				assert.Nil(t, content.Song)
+			} else {
+				require.NotNil(t, content.Song)
+				assert.Equal(t, *tt.wantSong, content.Song.Title)
+			}
+		})
 	}
 }
 
-// TestArchivePagingBoundary verifies the archive clamps the page to the limit,
-// emits a next cursor only when more rows remain, and orders newest first.
-func TestArchivePagingBoundary(t *testing.T) {
-	svc := newTodayService()
-	ctx := context.Background()
-	for _, d := range []string{"2026-07-09", "2026-07-10", "2026-07-11"} {
-		if _, err := svc.CreateSong(ctx, repository.InsertSongParams{
-			Date: day(d), Title: d, Artist: "月詠",
-			ArtworkURL: "https://x/a.jpg", AudioURL: "https://x/a.mp3",
-		}); err != nil {
-			t.Fatalf("CreateSong %s: %v", d, err)
-		}
+func TestTodayService_Archive(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		seedDates       []string
+		limit           int
+		wantPage1Len    int
+		wantPage1Cursor bool
+		wantPage2Len    int
+		wantPage2Cursor bool
+	}{
+		{
+			name:            "空アーカイブは何も返さない",
+			seedDates:       nil,
+			limit:           2,
+			wantPage1Len:    0,
+			wantPage1Cursor: false,
+			wantPage2Len:    0,
+			wantPage2Cursor: false,
+		},
+		{
+			name:            "アーカイブは新しい順にページングする",
+			seedDates:       []string{"2026-07-09", "2026-07-10", "2026-07-11"},
+			limit:           2,
+			wantPage1Len:    2,
+			wantPage1Cursor: true,
+			wantPage2Len:    1,
+			wantPage2Cursor: false,
+		},
 	}
 
-	page1, err := svc.Archive(ctx, 2, nil)
-	if err != nil {
-		t.Fatalf("Archive page1: %v", err)
-	}
-	if len(page1.Songs) != 2 || page1.NextCursor == nil {
-		t.Fatalf("page1 = %d songs, cursor=%v; want 2 and a cursor", len(page1.Songs), page1.NextCursor)
-	}
-	if page1.Songs[0].Date.Before(page1.Songs[1].Date) {
-		t.Fatalf("page1 not newest-first: %v then %v", page1.Songs[0].Date, page1.Songs[1].Date)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	page2, err := svc.Archive(ctx, 2, page1.NextCursor)
-	if err != nil {
-		t.Fatalf("Archive page2: %v", err)
-	}
-	if len(page2.Songs) != 1 || page2.NextCursor != nil {
-		t.Fatalf("page2 = %d songs, cursor=%v; want 1 and no cursor", len(page2.Songs), page2.NextCursor)
+			svc := newTodayService()
+			ctx := context.Background()
+			for _, d := range tt.seedDates {
+				seedSong(t, svc, ctx, d, d)
+			}
+
+			page1, err := svc.Archive(ctx, tt.limit, nil)
+			require.NoError(t, err)
+			assert.Len(t, page1.Songs, tt.wantPage1Len)
+			assert.Equal(t, tt.wantPage1Cursor, page1.NextCursor != nil)
+			for i := 1; i < len(page1.Songs); i++ {
+				assert.False(t, page1.Songs[i-1].Date.Before(page1.Songs[i].Date), "page1 not newest-first at index %d", i)
+			}
+			if !tt.wantPage1Cursor {
+				return
+			}
+
+			page2, err := svc.Archive(ctx, tt.limit, page1.NextCursor)
+			require.NoError(t, err)
+			assert.Len(t, page2.Songs, tt.wantPage2Len)
+			assert.Equal(t, tt.wantPage2Cursor, page2.NextCursor != nil)
+			if len(page2.Songs) > 0 {
+				assert.True(t, page2.Songs[0].Date.Before(page1.Songs[len(page1.Songs)-1].Date), "pages overlap across the cursor boundary")
+			}
+		})
 	}
 }
 
-// TestMarkPlayedUnknownSong verifies a play against an unknown song id maps to
-// ErrSongNotFound (a 404 at the handler).
-func TestMarkPlayedUnknownSong(t *testing.T) {
-	svc := newTodayService()
-	err := svc.MarkPlayed(context.Background(), todayUser, "no-such-song", time.Time{})
-	if !errors.Is(err, service.ErrSongNotFound) {
-		t.Fatalf("MarkPlayed unknown song err = %v, want ErrSongNotFound", err)
+func TestTodayService_MarkPlayed(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		seedSong bool
+		songID   string
+		wantErr  error
+	}{
+		{
+			name:     "未知のsongはErrSongNotFound",
+			seedSong: false,
+			songID:   "no-such-song",
+			wantErr:  service.ErrSongNotFound,
+		},
+		{
+			name:     "既知のsongは再生を記録する",
+			seedSong: true,
+			songID:   "",
+			wantErr:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newTodayService()
+			ctx := context.Background()
+			songID := tt.songID
+			if tt.seedSong {
+				songID = seedSong(t, svc, ctx, "2026-07-11", "夜想曲").ID
+			}
+
+			// A zero playedAt exercises the default-to-server-clock branch.
+			err := svc.MarkPlayed(ctx, userA, songID, time.Time{})
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+		})
 	}
 }

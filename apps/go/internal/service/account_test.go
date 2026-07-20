@@ -2,10 +2,8 @@ package service_test
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
@@ -13,37 +11,10 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository/memgallery"
 	"github.com/0muji4/Runa/apps/go/internal/service"
 	"github.com/0muji4/Runa/apps/go/internal/storage"
+	"github.com/0muji4/Runa/apps/go/internal/storage/memobject"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-// fakeObjects is a minimal storage.ObjectStore for the account service tests. It
-// signs deterministic URLs and records removed keys.
-type fakeObjects struct {
-	removed []string
-}
-
-func (f *fakeObjects) EnsureBucket(context.Context) error { return nil }
-func (f *fakeObjects) PresignPut(_ context.Context, key string, _ time.Duration) (string, error) {
-	return "put:" + key, nil
-}
-func (f *fakeObjects) PresignGet(_ context.Context, key string, _ time.Duration) (string, error) {
-	return "get:" + key, nil
-}
-func (f *fakeObjects) Stat(context.Context, string) (storage.ObjectInfo, error) {
-	return storage.ObjectInfo{}, nil
-}
-func (f *fakeObjects) Remove(_ context.Context, key string) error {
-	f.removed = append(f.removed, key)
-	return nil
-}
-
-func newAccountService(objects storage.ObjectStore) (*service.AccountService, *memauth.Store, *memdiary.Store, *memgallery.Store) {
-	users := memauth.New()
-	diaries := memdiary.New()
-	gallery := memgallery.New()
-	svc := service.NewAccountService(users, diaries, gallery, objects, service.AccountConfig{ExportURLTTL: time.Hour}, nil,
-		service.WithAccountBackgroundRunner(func(f func()) { f() }))
-	return svc, users, diaries, gallery
-}
 
 func createTestUser(t *testing.T, users *memauth.Store) repository.User {
 	t.Helper()
@@ -51,109 +22,224 @@ func createTestUser(t *testing.T, users *memauth.Store) repository.User {
 	u, err := users.CreateUser(context.Background(), repository.CreateUserParams{
 		Email: &email, AuthProvider: "email", DisplayName: "U",
 	})
-	if err != nil {
-		t.Fatalf("create user: %v", err)
-	}
+	require.NoError(t, err)
 	return u
 }
 
-func TestAccountUpdateDisplayNameValidation(t *testing.T) {
-	svc, users, _, _ := newAccountService(nil)
-	u := createTestUser(t, users)
-	ctx := context.Background()
+func TestAccountService_UpdateDisplayName(t *testing.T) {
+	t.Parallel()
 
-	got, err := svc.UpdateDisplayName(ctx, u.ID, "  月子  ")
-	if err != nil {
-		t.Fatalf("update: %v", err)
-	}
-	if got.DisplayName != "月子" {
-		t.Errorf("display_name = %q, want 月子 (trimmed)", got.DisplayName)
+	tests := []struct {
+		name       string
+		createUser bool
+		userID     string
+		input      string
+		wantErr    error
+		wantName   string
+	}{
+		{
+			name:       "有効な表示名は前後空白を除いて保存する",
+			createUser: true,
+			userID:     "",
+			input:      "  月子  ",
+			wantErr:    nil,
+			wantName:   "月子",
+		},
+		{
+			name:       "空の表示名はErrDisplayNameRequired",
+			createUser: true,
+			userID:     "",
+			input:      "   ",
+			wantErr:    service.ErrDisplayNameRequired,
+			wantName:   "",
+		},
+		{
+			name:       "長すぎる表示名はErrDisplayNameTooLong",
+			createUser: true,
+			userID:     "",
+			input:      strings.Repeat("あ", service.MaxDisplayNameLength+1),
+			wantErr:    service.ErrDisplayNameTooLong,
+			wantName:   "",
+		},
+		{
+			name:       "存在しないユーザーはErrUserNotFound",
+			createUser: false,
+			userID:     "missing",
+			input:      "x",
+			wantErr:    service.ErrUserNotFound,
+			wantName:   "",
+		},
 	}
 
-	if _, err := svc.UpdateDisplayName(ctx, u.ID, "   "); !errors.Is(err, service.ErrDisplayNameRequired) {
-		t.Errorf("empty name err = %v, want ErrDisplayNameRequired", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	long := strings.Repeat("あ", service.MaxDisplayNameLength+1)
-	if _, err := svc.UpdateDisplayName(ctx, u.ID, long); !errors.Is(err, service.ErrDisplayNameTooLong) {
-		t.Errorf("long name err = %v, want ErrDisplayNameTooLong", err)
-	}
+			svc, users, _, _ := newAccountService(nil)
+			ctx := context.Background()
+			userID := tt.userID
+			if tt.createUser {
+				userID = createTestUser(t, users).ID
+			}
 
-	if _, err := svc.UpdateDisplayName(ctx, "missing", "x"); !errors.Is(err, service.ErrUserNotFound) {
-		t.Errorf("missing user err = %v, want ErrUserNotFound", err)
+			got, err := svc.UpdateDisplayName(ctx, userID, tt.input)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantName, got.DisplayName)
+		})
 	}
 }
 
-func TestAccountExportExcludesTombstones(t *testing.T) {
-	svc, users, diaries, gallery := newAccountService(&fakeObjects{})
-	u := createTestUser(t, users)
-	ctx := context.Background()
+func TestAccountService_Export(t *testing.T) {
+	t.Parallel()
 
-	if _, _, err := diaries.UpsertEntry(ctx, repository.UpsertDiaryParams{
-		UserID: u.ID, ClientID: "c1", BodyText: "live", CreatedAt: time.Now().UTC(),
-	}); err != nil {
-		t.Fatalf("seed live entry: %v", err)
-	}
-	dead, _, err := diaries.UpsertEntry(ctx, repository.UpsertDiaryParams{
-		UserID: u.ID, ClientID: "c2", BodyText: "dead", CreatedAt: time.Now().UTC(),
-	})
-	if err != nil {
-		t.Fatalf("seed dead entry: %v", err)
-	}
-	if err := diaries.SoftDeleteEntry(ctx, u.ID, dead.ID); err != nil {
-		t.Fatalf("soft delete: %v", err)
-	}
-	if _, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
-		UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1, Theme: "pink",
-	}); err != nil {
-		t.Fatalf("seed image: %v", err)
+	tests := []struct {
+		name            string
+		objects         storage.ObjectStore
+		seed            func(t *testing.T, ctx context.Context, users *memauth.Store, diaries *memdiary.Store, gallery *memgallery.Store) string
+		wantErr         error
+		wantDiaries     int
+		wantDiaryBody   string
+		wantImages      int
+		wantURLNonEmpty bool
+	}{
+		{
+			name:    "論理削除済み日記を除外し画像URLを付与する",
+			objects: memobject.New(),
+			seed: func(t *testing.T, ctx context.Context, users *memauth.Store, diaries *memdiary.Store, gallery *memgallery.Store) string {
+				u := createTestUser(t, users)
+				_, _, err := diaries.UpsertEntry(ctx, repository.UpsertDiaryParams{
+					UserID: u.ID, ClientID: "c1", BodyText: "live", CreatedAt: testNow,
+				})
+				require.NoError(t, err)
+				dead, _, err := diaries.UpsertEntry(ctx, repository.UpsertDiaryParams{
+					UserID: u.ID, ClientID: "c2", BodyText: "dead", CreatedAt: testNow,
+				})
+				require.NoError(t, err)
+				require.NoError(t, diaries.SoftDeleteEntry(ctx, u.ID, dead.ID))
+				_, err = gallery.InsertImage(ctx, repository.InsertGalleryParams{
+					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1, Theme: "pink",
+				})
+				require.NoError(t, err)
+				return u.ID
+			},
+			wantErr:         nil,
+			wantDiaries:     1,
+			wantDiaryBody:   "live",
+			wantImages:      1,
+			wantURLNonEmpty: true,
+		},
+		{
+			name:    "オブジェクトストレージ未設定なら画像はメタデータのみ",
+			objects: nil,
+			seed: func(t *testing.T, ctx context.Context, users *memauth.Store, diaries *memdiary.Store, gallery *memgallery.Store) string {
+				u := createTestUser(t, users)
+				_, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
+					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1, Theme: "pink",
+				})
+				require.NoError(t, err)
+				return u.ID
+			},
+			wantErr:         nil,
+			wantDiaries:     0,
+			wantDiaryBody:   "",
+			wantImages:      1,
+			wantURLNonEmpty: false,
+		},
+		{
+			name:    "存在しないユーザーはErrUserNotFound",
+			objects: memobject.New(),
+			seed: func(_ *testing.T, _ context.Context, _ *memauth.Store, _ *memdiary.Store, _ *memgallery.Store) string {
+				return "missing"
+			},
+			wantErr:         service.ErrUserNotFound,
+			wantDiaries:     0,
+			wantDiaryBody:   "",
+			wantImages:      0,
+			wantURLNonEmpty: false,
+		},
 	}
 
-	export, err := svc.Export(ctx, u.ID)
-	if err != nil {
-		t.Fatalf("export: %v", err)
-	}
-	if len(export.Diaries) != 1 || export.Diaries[0].BodyText != "live" {
-		t.Errorf("diaries = %+v, want only the live entry", export.Diaries)
-	}
-	if len(export.Images) != 1 || export.Images[0].URL == "" {
-		t.Errorf("images = %+v, want one image with a URL", export.Images)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc, users, diaries, gallery := newAccountService(tt.objects)
+			ctx := context.Background()
+			userID := tt.seed(t, ctx, users, diaries, gallery)
+
+			export, err := svc.Export(ctx, userID)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, export.Diaries, tt.wantDiaries)
+			if tt.wantDiaries > 0 {
+				assert.Equal(t, tt.wantDiaryBody, export.Diaries[0].BodyText)
+			}
+			assert.Len(t, export.Images, tt.wantImages)
+			if tt.wantImages > 0 {
+				assert.Equal(t, tt.wantURLNonEmpty, export.Images[0].URL != "")
+			}
+			assert.True(t, export.ExportedAt.Equal(testNow.UTC()))
+		})
 	}
 }
 
-func TestAccountDeletePurgesObjectsAndUser(t *testing.T) {
-	objects := &fakeObjects{}
-	svc, users, _, gallery := newAccountService(objects)
-	u := createTestUser(t, users)
-	ctx := context.Background()
+func TestAccountService_DeleteAccount(t *testing.T) {
+	t.Parallel()
 
-	key := "gallery/" + u.ID + "/k1"
-	if _, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
-		UserID: u.ID, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
-	}); err != nil {
-		t.Fatalf("seed image: %v", err)
+	tests := []struct {
+		name        string
+		withStorage bool
+	}{
+		{
+			name:        "オブジェクトを削除しユーザーを消す",
+			withStorage: true,
+		},
+		{
+			name:        "ストレージ未設定でも成功する",
+			withStorage: false,
+		},
 	}
 
-	if err := svc.DeleteAccount(ctx, u.ID); err != nil {
-		t.Fatalf("delete: %v", err)
-	}
-	if _, err := users.GetUserByID(ctx, u.ID); !errors.Is(err, repository.ErrNotFound) {
-		t.Errorf("user lookup after delete err = %v, want ErrNotFound", err)
-	}
-	if len(objects.removed) != 1 || objects.removed[0] != key {
-		t.Errorf("removed = %v, want [%s]", objects.removed, key)
-	}
-	if err := svc.DeleteAccount(ctx, u.ID); !errors.Is(err, service.ErrUserNotFound) {
-		t.Errorf("re-delete err = %v, want ErrUserNotFound", err)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-// TestAccountDeleteWithoutStorage confirms deletion still succeeds when object
-// storage is unconfigured (nil ObjectStore): the row goes, there is nothing to purge.
-func TestAccountDeleteWithoutStorage(t *testing.T) {
-	svc, users, _, _ := newAccountService(nil)
-	u := createTestUser(t, users)
-	if err := svc.DeleteAccount(context.Background(), u.ID); err != nil {
-		t.Fatalf("delete without storage: %v", err)
+			var objects *memobject.Store
+			var store storage.ObjectStore
+			if tt.withStorage {
+				objects = memobject.New()
+				store = objects
+			}
+			svc, users, _, gallery := newAccountService(store)
+			ctx := context.Background()
+			u := createTestUser(t, users)
+
+			var key string
+			if tt.withStorage {
+				key = "gallery/" + u.ID + "/k1"
+				_, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
+					UserID: u.ID, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
+				})
+				require.NoError(t, err)
+			}
+
+			require.NoError(t, svc.DeleteAccount(ctx, u.ID))
+
+			_, err := users.GetUserByID(ctx, u.ID)
+			assert.ErrorIs(t, err, repository.ErrNotFound)
+			if tt.withStorage {
+				assert.Equal(t, []string{key}, objects.RemovedKeys())
+			}
+
+			// The row is gone, so a re-delete is not-found.
+			assert.ErrorIs(t, svc.DeleteAccount(ctx, u.ID), service.ErrUserNotFound)
+		})
 	}
 }

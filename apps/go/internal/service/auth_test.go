@@ -2,17 +2,15 @@ package service_test
 
 import (
 	"context"
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
-	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
 	"github.com/0muji4/Runa/apps/go/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// stubVerifier is a canned IDTokenVerifier for the social sign-in paths.
 type stubVerifier struct {
 	id  auth.OIDCIdentity
 	err error
@@ -22,157 +20,354 @@ func (s stubVerifier) Verify(context.Context, string) (auth.OIDCIdentity, error)
 	return s.id, s.err
 }
 
-func newService(t *testing.T, store repository.AuthStore, apple, google auth.IDTokenVerifier) *service.AuthService {
-	t.Helper()
-	return service.NewAuthService(service.AuthConfig{
-		Store:          store,
-		Issuer:         auth.NewTokenIssuer("test-secret", time.Minute),
-		Apple:          apple,
-		Google:         google,
-		PasswordParams: auth.DefaultArgon2Params(),
-		RefreshTTL:     time.Hour,
-	})
-}
+func TestAuthService_SignupEmail(t *testing.T) {
+	t.Parallel()
 
-func TestSignupAndLoginEmail(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	ctx := context.Background()
-
-	res, err := svc.SignupEmail(ctx, "User@Example.com", "password123", "Runa")
-	if err != nil {
-		t.Fatalf("SignupEmail: %v", err)
-	}
-	if res.Tokens.AccessToken == "" || res.Tokens.RefreshToken == "" {
-		t.Fatal("expected non-empty tokens after signup")
-	}
-	if res.User.Email == nil || *res.User.Email != "user@example.com" {
-		t.Fatalf("email = %v, want normalized user@example.com", res.User.Email)
-	}
-	if res.User.AuthProvider != "email" {
-		t.Errorf("auth_provider = %q, want email", res.User.AuthProvider)
-	}
-
-	if _, err := svc.LoginEmail(ctx, "user@example.com", "password123"); err != nil {
-		t.Fatalf("LoginEmail with correct password: %v", err)
-	}
-	if _, err := svc.LoginEmail(ctx, "user@example.com", "wrong"); !errors.Is(err, service.ErrInvalidCredentials) {
-		t.Fatalf("LoginEmail wrong password error = %v, want ErrInvalidCredentials", err)
-	}
-	if _, err := svc.LoginEmail(ctx, "missing@example.com", "whatever"); !errors.Is(err, service.ErrInvalidCredentials) {
-		t.Fatalf("LoginEmail unknown user error = %v, want ErrInvalidCredentials", err)
-	}
-}
-
-func TestSignupDuplicateEmail(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	ctx := context.Background()
-	if _, err := svc.SignupEmail(ctx, "dup@example.com", "password123", ""); err != nil {
-		t.Fatalf("first signup: %v", err)
-	}
-	if _, err := svc.SignupEmail(ctx, "dup@example.com", "password123", ""); !errors.Is(err, service.ErrEmailTaken) {
-		t.Fatalf("duplicate signup error = %v, want ErrEmailTaken", err)
-	}
-}
-
-func TestSignupDerivesDisplayNameFromEmail(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	res, err := svc.SignupEmail(context.Background(), "moon@example.com", "password123", "")
-	if err != nil {
-		t.Fatalf("SignupEmail: %v", err)
-	}
-	if res.User.DisplayName != "moon" {
-		t.Errorf("display_name = %q, want derived %q", res.User.DisplayName, "moon")
-	}
-}
-
-func TestRefreshRotation(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	ctx := context.Background()
-
-	res, err := svc.SignupEmail(ctx, "rot@example.com", "password123", "")
-	if err != nil {
-		t.Fatalf("SignupEmail: %v", err)
-	}
-	first := res.Tokens.RefreshToken
-
-	rotated, err := svc.Refresh(ctx, first)
-	if err != nil {
-		t.Fatalf("Refresh: %v", err)
-	}
-	if rotated.RefreshToken == first {
-		t.Fatal("refresh token was not rotated")
+	tests := []struct {
+		name            string
+		seedEmail       string
+		email           string
+		password        string
+		displayName     string
+		wantErr         error
+		wantEmail       string
+		wantProvider    string
+		wantDisplayName string
+	}{
+		{
+			name:            "メールを正規化しトークンを返す",
+			seedEmail:       "",
+			email:           "User@Example.com",
+			password:        "password123",
+			displayName:     "Runa",
+			wantErr:         nil,
+			wantEmail:       "user@example.com",
+			wantProvider:    "email",
+			wantDisplayName: "Runa",
+		},
+		{
+			name:            "表示名が空ならメールのローカル部から補う",
+			seedEmail:       "",
+			email:           "moon@example.com",
+			password:        "password123",
+			displayName:     "",
+			wantErr:         nil,
+			wantEmail:       "moon@example.com",
+			wantProvider:    "email",
+			wantDisplayName: "moon",
+		},
+		{
+			name:            "重複メールはErrEmailTaken",
+			seedEmail:       "dup@example.com",
+			email:           "dup@example.com",
+			password:        "password123",
+			displayName:     "",
+			wantErr:         service.ErrEmailTaken,
+			wantEmail:       "",
+			wantProvider:    "",
+			wantDisplayName: "",
+		},
 	}
 
-	// The old token is single-use and must now be rejected.
-	if _, err := svc.Refresh(ctx, first); !errors.Is(err, service.ErrInvalidRefreshToken) {
-		t.Fatalf("reusing rotated token error = %v, want ErrInvalidRefreshToken", err)
-	}
-	// The new token works.
-	if _, err := svc.Refresh(ctx, rotated.RefreshToken); err != nil {
-		t.Fatalf("Refresh with rotated token: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newAuthService(memauth.New(), nil, nil)
+			ctx := context.Background()
+
+			if tt.seedEmail != "" {
+				_, err := svc.SignupEmail(ctx, tt.seedEmail, "password123", "")
+				require.NoError(t, err)
+			}
+
+			res, err := svc.SignupEmail(ctx, tt.email, tt.password, tt.displayName)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, res.Tokens.AccessToken)
+			assert.NotEmpty(t, res.Tokens.RefreshToken)
+			require.NotNil(t, res.User.Email)
+			assert.Equal(t, tt.wantEmail, *res.User.Email)
+			assert.Equal(t, tt.wantProvider, res.User.AuthProvider)
+			assert.Equal(t, tt.wantDisplayName, res.User.DisplayName)
+		})
 	}
 }
 
-func TestLogoutRevokesRefreshToken(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	ctx := context.Background()
+func TestAuthService_LoginEmail(t *testing.T) {
+	t.Parallel()
 
-	res, _ := svc.SignupEmail(ctx, "out@example.com", "password123", "")
-	if err := svc.Logout(ctx, res.Tokens.RefreshToken); err != nil {
-		t.Fatalf("Logout: %v", err)
+	tests := []struct {
+		name     string
+		email    string
+		password string
+		wantErr  error
+	}{
+		{
+			name:     "正しい資格情報でログインできる",
+			email:    "user@example.com",
+			password: "password123",
+			wantErr:  nil,
+		},
+		{
+			name:     "誤ったパスワードはErrInvalidCredentials",
+			email:    "user@example.com",
+			password: "wrong",
+			wantErr:  service.ErrInvalidCredentials,
+		},
+		{
+			name:     "未登録ユーザーはErrInvalidCredentials",
+			email:    "missing@example.com",
+			password: "whatever",
+			wantErr:  service.ErrInvalidCredentials,
+		},
 	}
-	if _, err := svc.Refresh(ctx, res.Tokens.RefreshToken); !errors.Is(err, service.ErrInvalidRefreshToken) {
-		t.Fatalf("Refresh after logout error = %v, want ErrInvalidRefreshToken", err)
-	}
-	// Logout is idempotent.
-	if err := svc.Logout(ctx, res.Tokens.RefreshToken); err != nil {
-		t.Fatalf("second Logout: %v", err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newAuthService(memauth.New(), nil, nil)
+			ctx := context.Background()
+			_, err := svc.SignupEmail(ctx, "user@example.com", "password123", "")
+			require.NoError(t, err)
+
+			res, err := svc.LoginEmail(ctx, tt.email, tt.password)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, res.Tokens.AccessToken)
+			assert.NotEmpty(t, res.Tokens.RefreshToken)
+		})
 	}
 }
 
-func TestMe(t *testing.T) {
-	svc := newService(t, memauth.New(), nil, nil)
-	ctx := context.Background()
+func TestAuthService_Refresh(t *testing.T) {
+	t.Parallel()
 
-	res, _ := svc.SignupEmail(ctx, "me@example.com", "password123", "")
-	got, err := svc.Me(ctx, res.User.ID)
-	if err != nil {
-		t.Fatalf("Me: %v", err)
+	// setup signs up, rotates once and returns (first token, rotated token); the
+	// rotation itself is asserted here so every case inherits it.
+	setup := func(t *testing.T) (svc *service.AuthService, ctx context.Context, first, rotated string) {
+		t.Helper()
+		svc = newAuthService(memauth.New(), nil, nil)
+		ctx = context.Background()
+		res, err := svc.SignupEmail(ctx, "rot@example.com", "password123", "")
+		require.NoError(t, err)
+		first = res.Tokens.RefreshToken
+		next, err := svc.Refresh(ctx, first)
+		require.NoError(t, err)
+		require.NotEqual(t, first, next.RefreshToken)
+		return svc, ctx, first, next.RefreshToken
 	}
-	if got.ID != res.User.ID {
-		t.Errorf("id = %q, want %q", got.ID, res.User.ID)
+
+	tests := []struct {
+		name    string
+		token   func(first, rotated string) string
+		wantErr error
+	}{
+		{
+			name:    "ローテーション後のトークンは有効",
+			token:   func(_, rotated string) string { return rotated },
+			wantErr: nil,
+		},
+		{
+			name:    "使用済みの旧トークンはErrInvalidRefreshToken",
+			token:   func(first, _ string) string { return first },
+			wantErr: service.ErrInvalidRefreshToken,
+		},
+		{
+			name:    "未知のトークンはErrInvalidRefreshToken",
+			token:   func(_, _ string) string { return "unknown-token" },
+			wantErr: service.ErrInvalidRefreshToken,
+		},
 	}
-	if _, err := svc.Me(ctx, "does-not-exist"); !errors.Is(err, service.ErrUserNotFound) {
-		t.Fatalf("Me unknown error = %v, want ErrUserNotFound", err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc, ctx, first, rotated := setup(t)
+
+			_, err := svc.Refresh(ctx, tt.token(first, rotated))
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
 	}
 }
 
-func TestLoginAppleCreatesThenReuses(t *testing.T) {
-	apple := stubVerifier{id: auth.OIDCIdentity{Subject: "apple-sub-9", Email: "a@example.com", Name: "Apple User"}}
-	svc := newService(t, memauth.New(), apple, nil)
-	ctx := context.Background()
+func TestAuthService_Logout(t *testing.T) {
+	t.Parallel()
 
-	first, err := svc.LoginApple(ctx, "id-token", "")
-	if err != nil {
-		t.Fatalf("first LoginApple: %v", err)
-	}
-	if first.User.AuthProvider != "apple" || first.User.AppleSub == nil {
-		t.Fatalf("user = %+v, want apple provider with apple_sub", first.User)
+	tests := []struct {
+		name           string
+		logoutCount    int
+		wantRefreshErr error
+	}{
+		{
+			name:           "リフレッシュトークンを失効させる",
+			logoutCount:    1,
+			wantRefreshErr: service.ErrInvalidRefreshToken,
+		},
+		{
+			name:           "二重ログアウトは冪等",
+			logoutCount:    2,
+			wantRefreshErr: service.ErrInvalidRefreshToken,
+		},
 	}
 
-	second, err := svc.LoginApple(ctx, "id-token", "")
-	if err != nil {
-		t.Fatalf("second LoginApple: %v", err)
-	}
-	if second.User.ID != first.User.ID {
-		t.Errorf("second sign-in created a new user (%q != %q)", second.User.ID, first.User.ID)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newAuthService(memauth.New(), nil, nil)
+			ctx := context.Background()
+			res, err := svc.SignupEmail(ctx, "out@example.com", "password123", "")
+			require.NoError(t, err)
+			token := res.Tokens.RefreshToken
+
+			for i := 0; i < tt.logoutCount; i++ {
+				assert.NoError(t, svc.Logout(ctx, token))
+			}
+
+			_, err = svc.Refresh(ctx, token)
+			assert.ErrorIs(t, err, tt.wantRefreshErr)
+		})
 	}
 }
 
-func TestLoginGoogleVerificationError(t *testing.T) {
-	google := stubVerifier{err: auth.ErrProviderVerification}
-	svc := newService(t, memauth.New(), nil, google)
-	if _, err := svc.LoginGoogle(context.Background(), "bad-token"); !errors.Is(err, auth.ErrProviderVerification) {
-		t.Fatalf("LoginGoogle error = %v, want ErrProviderVerification", err)
+func TestAuthService_Me(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		useRealID bool
+		wantErr   error
+	}{
+		{
+			name:      "認証済みユーザーを返す",
+			useRealID: true,
+			wantErr:   nil,
+		},
+		{
+			name:      "存在しないユーザーはErrUserNotFound",
+			useRealID: false,
+			wantErr:   service.ErrUserNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newAuthService(memauth.New(), nil, nil)
+			ctx := context.Background()
+			res, err := svc.SignupEmail(ctx, "me@example.com", "password123", "")
+			require.NoError(t, err)
+
+			userID := res.User.ID
+			if !tt.useRealID {
+				userID = "does-not-exist"
+			}
+
+			got, err := svc.Me(ctx, userID)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, userID, got.ID)
+		})
+	}
+}
+
+func TestAuthService_LoginApple(t *testing.T) {
+	t.Parallel()
+
+	newAppleService := func() *service.AuthService {
+		apple := stubVerifier{id: auth.OIDCIdentity{Subject: "apple-sub-9", Email: "a@example.com", Name: "Apple User"}}
+		return newAuthService(memauth.New(), apple, nil)
+	}
+
+	tests := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "初回サインインでappleユーザーを作成する",
+			run: func(t *testing.T) {
+				svc := newAppleService()
+
+				res, err := svc.LoginApple(context.Background(), "id-token", "")
+				require.NoError(t, err)
+				assert.Equal(t, "apple", res.User.AuthProvider)
+				assert.NotNil(t, res.User.AppleSub)
+			},
+		},
+		{
+			name: "再サインインは同じユーザーを再利用する",
+			run: func(t *testing.T) {
+				svc := newAppleService()
+				ctx := context.Background()
+
+				first, err := svc.LoginApple(ctx, "id-token", "")
+				require.NoError(t, err)
+				second, err := svc.LoginApple(ctx, "id-token", "")
+				require.NoError(t, err)
+				assert.Equal(t, first.User.ID, second.User.ID)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.run(t)
+		})
+	}
+}
+
+func TestAuthService_LoginGoogle(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		verifier stubVerifier
+		wantErr  error
+	}{
+		{
+			name:     "検証エラーはそのまま伝播する",
+			verifier: stubVerifier{err: auth.ErrProviderVerification},
+			wantErr:  auth.ErrProviderVerification,
+		},
+		{
+			name:     "有効なトークンでサインインできる",
+			verifier: stubVerifier{id: auth.OIDCIdentity{Subject: "g-sub-1", Email: "g@example.com"}},
+			wantErr:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := newAuthService(memauth.New(), nil, tt.verifier)
+
+			res, err := svc.LoginGoogle(context.Background(), "token")
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, "google", res.User.AuthProvider)
+			assert.NotNil(t, res.User.GoogleSub)
+		})
 	}
 }

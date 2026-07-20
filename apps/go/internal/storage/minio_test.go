@@ -2,65 +2,167 @@ package storage
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestNewMinioObjectStoreDisabled confirms an empty endpoint disables storage so
-// the server can boot with the gallery URL endpoints returning 503.
-func TestNewMinioObjectStoreDisabled(t *testing.T) {
-	store, err := NewMinioObjectStore(Config{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if store != nil {
-		t.Fatalf("store = %v, want nil when endpoint is empty", store)
-	}
-}
-
-// TestPresignUsesPublicEndpoint proves presigning is offline (no network) and that
-// URLs are built with the client-reachable PUBLIC endpoint, not the internal one.
-// This is the crux of the two-endpoint scheme: the server signs URLs for a host
-// it may not itself be able to reach.
-func TestPresignUsesPublicEndpoint(t *testing.T) {
-	store, err := NewMinioObjectStore(Config{
-		Endpoint:       "minio:9000",     // internal (unreachable from tests)
-		PublicEndpoint: "localhost:9000", // client-reachable
+// baseConfig is the two-endpoint docker setup: the server reaches the store on
+// Endpoint (unreachable from tests) while presigned URLs must target the
+// client-reachable PublicEndpoint.
+func baseConfig() Config {
+	return Config{
+		Endpoint:       "minio:9000",
+		PublicEndpoint: "localhost:9000",
 		Region:         "us-east-1",
 		Bucket:         "runa-gallery",
 		AccessKey:      "runa",
 		SecretKey:      "runa-secret",
 		UseSSL:         false,
-	})
-	if err != nil {
-		t.Fatalf("construct store: %v", err)
+	}
+}
+
+func assertURL(t *testing.T, got string, wantContains, wantAbsent []string) {
+	t.Helper()
+	for _, want := range wantContains {
+		assert.Contains(t, got, want)
+	}
+	for _, absent := range wantAbsent {
+		assert.NotContains(t, got, absent)
+	}
+}
+
+func TestNewMinioObjectStore(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		cfg        Config
+		wantNil    bool
+		wantBucket string
+	}{
+		{
+			name:       "空のエンドポイントはストレージ無効",
+			cfg:        Config{},
+			wantNil:    true,
+			wantBucket: "",
+		},
+		{
+			name:       "エンドポイント指定でストアを構築する",
+			cfg:        baseConfig(),
+			wantNil:    false,
+			wantBucket: "runa-gallery",
+		},
 	}
 
-	const key = "gallery/user-1/abc"
-	ctx := context.Background()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	putURL, err := store.PresignPut(ctx, key, 15*time.Minute)
-	if err != nil {
-		t.Fatalf("presign put: %v", err)
+			store, err := NewMinioObjectStore(tt.cfg)
+			require.NoError(t, err)
+			if tt.wantNil {
+				assert.Nil(t, store)
+				return
+			}
+			require.NotNil(t, store)
+			assert.Equal(t, tt.wantBucket, store.bucket)
+		})
 	}
-	getURL, err := store.PresignGet(ctx, key, time.Hour)
-	if err != nil {
-		t.Fatalf("presign get: %v", err)
+}
+
+func TestMinioObjectStore_PresignPut(t *testing.T) {
+	t.Parallel()
+
+	fallback := baseConfig()
+	fallback.PublicEndpoint = "" // must fall back to Endpoint
+
+	tests := []struct {
+		name         string
+		cfg          Config
+		key          string
+		ttl          time.Duration
+		wantContains []string
+		wantAbsent   []string
+	}{
+		{
+			name:         "内部でなく公開エンドポイントを使う",
+			cfg:          baseConfig(),
+			key:          "gallery/user-1/abc",
+			ttl:          15 * time.Minute,
+			wantContains: []string{"localhost:9000", "runa-gallery", "gallery/user-1/abc", "X-Amz-Signature="},
+			wantAbsent:   []string{"minio:9000"},
+		},
+		{
+			name:         "公開エンドポイント未指定は内部にフォールバックする",
+			cfg:          fallback,
+			key:          "gallery/user-1/abc",
+			ttl:          15 * time.Minute,
+			wantContains: []string{"minio:9000", "runa-gallery", "gallery/user-1/abc", "X-Amz-Signature="},
+			wantAbsent:   nil,
+		},
 	}
 
-	for name, u := range map[string]string{"put": putURL, "get": getURL} {
-		if !strings.Contains(u, "localhost:9000") {
-			t.Errorf("%s URL %q does not use the public endpoint", name, u)
-		}
-		if strings.Contains(u, "minio:9000") {
-			t.Errorf("%s URL %q leaked the internal endpoint", name, u)
-		}
-		if !strings.Contains(u, "runa-gallery") || !strings.Contains(u, "gallery/user-1/abc") {
-			t.Errorf("%s URL %q missing bucket/key", name, u)
-		}
-		if !strings.Contains(u, "X-Amz-Signature=") {
-			t.Errorf("%s URL %q is not a signed URL", name, u)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store, err := NewMinioObjectStore(tt.cfg)
+			require.NoError(t, err)
+			require.NotNil(t, store)
+
+			got, err := store.PresignPut(context.Background(), tt.key, tt.ttl)
+			require.NoError(t, err)
+			assertURL(t, got, tt.wantContains, tt.wantAbsent)
+		})
+	}
+}
+
+func TestMinioObjectStore_PresignGet(t *testing.T) {
+	t.Parallel()
+
+	fallback := baseConfig()
+	fallback.PublicEndpoint = "" // must fall back to Endpoint
+
+	tests := []struct {
+		name         string
+		cfg          Config
+		key          string
+		ttl          time.Duration
+		wantContains []string
+		wantAbsent   []string
+	}{
+		{
+			name:         "内部でなく公開エンドポイントを使う",
+			cfg:          baseConfig(),
+			key:          "gallery/user-1/abc",
+			ttl:          time.Hour,
+			wantContains: []string{"localhost:9000", "runa-gallery", "gallery/user-1/abc", "X-Amz-Signature="},
+			wantAbsent:   []string{"minio:9000"},
+		},
+		{
+			name:         "公開エンドポイント未指定は内部にフォールバックする",
+			cfg:          fallback,
+			key:          "gallery/user-1/abc",
+			ttl:          time.Hour,
+			wantContains: []string{"minio:9000", "runa-gallery", "gallery/user-1/abc", "X-Amz-Signature="},
+			wantAbsent:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			store, err := NewMinioObjectStore(tt.cfg)
+			require.NoError(t, err)
+			require.NotNil(t, store)
+
+			got, err := store.PresignGet(context.Background(), tt.key, tt.ttl)
+			require.NoError(t, err)
+			assertURL(t, got, tt.wantContains, tt.wantAbsent)
+		})
 	}
 }

@@ -56,6 +56,10 @@ kotlin {
             implementation(libs.androidx.security.crypto)
             // ExoPlayer backs the AudioPlayer actual on Android.
             implementation(libs.androidx.media3.exoplayer)
+            // Nightly-reminder notification (NotificationCompat) + biometric gate
+            // (BiometricPrompt), both in shared androidMain actuals.
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.biometric)
         }
 
         iosMain.dependencies {

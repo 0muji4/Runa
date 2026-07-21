@@ -12,6 +12,10 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.feature.lock.AndroidBiometricAuthenticator
+import com.runa.shared.feature.lock.BiometricAuthenticator
+import com.runa.shared.feature.notification.AndroidLocalNotificationScheduler
+import com.runa.shared.feature.notification.LocalNotificationScheduler
 import com.runa.shared.feature.today.player.AudioPlayer
 import com.runa.shared.feature.today.player.ExoAudioPlayer
 import com.runa.shared.network.NetworkMonitor
@@ -45,6 +49,10 @@ actual fun platformModule(): Module = module {
     single<SqlDriver> { AndroidSqliteDriver(RunaDatabase.Schema, androidContext(), "runa.db") }
     single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
     single<AudioPlayer> { ExoAudioPlayer(androidContext()) }
+    // Nightly-reminder scheduling (AlarmManager + notification channel) and the
+    // biometric gate (androidx.biometric BiometricPrompt). Both need a Context.
+    single<LocalNotificationScheduler> { AndroidLocalNotificationScheduler(androidContext()) }
+    single<BiometricAuthenticator> { AndroidBiometricAuthenticator(androidContext()) }
 }
 
 /**
@@ -112,9 +120,3 @@ actual class PushTokenProvider {
 
 /** TODO: back with Google Play Billing. Placeholder for now. */
 actual class BillingClient
-
-/** TODO: back with androidx.biometric BiometricPrompt. */
-actual class BiometricAuthenticator {
-    actual suspend fun authenticate(): Boolean =
-        TODO("BiometricAuthenticator.authenticate not implemented")
-}

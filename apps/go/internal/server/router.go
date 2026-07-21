@@ -27,6 +27,7 @@ type Deps struct {
 	Today    *handler.Today
 	Insights *handler.Insights
 	Gallery  *handler.Gallery
+	Devices  *handler.Devices
 	// RequireAuth guards Bearer-protected routes (verifies the access token).
 	RequireAuth func(http.Handler) http.Handler
 	// AuthRateLimit throttles the credential endpoints (signup/login).
@@ -130,6 +131,15 @@ func New(deps Deps) *chi.Mux {
 			pr.Post("/gallery", deps.Gallery.Create)
 			pr.Get("/gallery/{id}", deps.Gallery.Get)
 			pr.Delete("/gallery/{id}", deps.Gallery.Delete)
+
+			// Devices: register a push token + reminder preference for FUTURE
+			// server-initiated notifications. This slice's nightly reminder is a
+			// local, on-device notification, so nothing here sends a push yet.
+			// Guarded like Account so a test router that omits it never registers a
+			// nil handler (chi would panic).
+			if deps.Devices != nil {
+				pr.Put("/devices", deps.Devices.Register)
+			}
 		})
 
 		// Admin seed endpoints: curated content injection, gated by the shared

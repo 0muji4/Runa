@@ -124,6 +124,14 @@ func main() {
 	}, nil)
 	accountHandler := handler.NewAccount(accountService, logger)
 
+	// Devices wiring: registers a client's push token + reminder preference for a
+	// future server-initiated notification path. Same nil-pool tolerance as the
+	// other features. This slice's nightly reminder is a local, on-device
+	// notification, so no push is sent here yet.
+	deviceRepo := repository.NewDeviceRepository(pool)
+	deviceService := service.NewDeviceService(deviceRepo, nil)
+	deviceHandler := handler.NewDevices(deviceService, logger)
+
 	router := server.New(server.Deps{
 		Health:         healthHandler,
 		Auth:           authHandler,
@@ -132,6 +140,7 @@ func main() {
 		Today:          todayHandler,
 		Insights:       insightsHandler,
 		Gallery:        galleryHandler,
+		Devices:        deviceHandler,
 		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
 		RequireAdmin:   auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),

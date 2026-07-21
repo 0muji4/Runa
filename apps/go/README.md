@@ -57,12 +57,13 @@ append `/api/v1/...` themselves.
 | POST   | `/api/v1/gallery`       | `201 GalleryImage` — register metadata after upload (idempotent by `object_key`) |
 | GET    | `/api/v1/gallery/{id}`  | `200 GalleryImage` (`404` if not the caller's)       |
 | DELETE | `/api/v1/gallery/{id}`  | `204` — soft delete + async object removal (idempotent) |
+| PUT    | `/api/v1/devices`       | `200 Device` — register a push token + reminder pref (idempotent by `user, push_token`) |
 | POST   | `/api/v1/admin/quotes`  | `201 Quote` — upsert a day's quote (**admin**, `X-Admin-Token`) |
 | POST   | `/api/v1/admin/songs`   | `201 Song` — upsert a day's song (**admin**, `X-Admin-Token`) |
 
-All `/api/v1/diary*`, `/api/v1/today`, `/api/v1/songs*` and `/api/v1/gallery*`
-routes **require `Authorization: Bearer`** and only ever touch the caller's own
-data. The `/api/v1/admin/*` seed routes use a separate shared **admin token**, not
+All `/api/v1/diary*`, `/api/v1/today`, `/api/v1/songs*`, `/api/v1/gallery*` and
+`/api/v1/devices` routes **require `Authorization: Bearer`** and only ever touch
+the caller's own data. The `/api/v1/admin/*` seed routes use a separate shared **admin token**, not
 a user session. The full contract lives in
 [`api/openapi.yaml`](api/openapi.yaml) and grows with each new endpoint.
 
@@ -224,6 +225,23 @@ curl -X POST http://localhost:8080/api/v1/admin/songs \
   -d '{"date":"2026-07-11","title":"夜想曲","artist":"月詠","artwork_url":"https://…","audio_url":"https://…"}'
 ```
 
+### Devices design (push-token registration — future server push)
+
+The eighth slice's nightly reminder is a **local, on-device** notification
+scheduled in the client (`AlarmManager` on Android, `UNCalendarNotificationTrigger`
+on iOS), so it needs no backend. `PUT /api/v1/devices` is the optional, minimal
+registration **口** for a FUTURE server-initiated notification path (FCM/APNs):
+the client registers its `push_token`, `platform` (`ios`|`android`), the user's
+local `notify_time` (`HH:MM`) and `enabled` flag, so a later server-side sender
+knows where / when / whether to push. Nothing here sends a push yet. The write is
+an idempotent upsert keyed by `(user_id, push_token)` — a re-registration of the
+same token updates the row in place. The endpoint is Bearer-protected and
+user-scoped; `devices.user_id` has `ON DELETE CASCADE`, so account deletion purges
+a user's devices automatically. `notify_time` is validated against `HH:MM`
+(24-hour) and `platform` against the enum. This slice does not wire the shared
+client → `/devices` call (there is no real push token yet); that lands with the
+FCM/APNs integration.
+
 ## Configuration
 
 All configuration is read from environment variables (see `.env.example`).
@@ -309,7 +327,9 @@ index for idempotent upsert and indexes for keyset paging and delta sync.
 `UNIQUE`) plus an append-only `song_history` play log. `0005_gallery` adds
 `gallery_images` (object_key/width/height/theme + soft-delete), with a unique
 `object_key` index (the registration idempotency key) and a partial keyset index
-for paging live rows.
+for paging live rows. `0006_devices` adds `devices` (push_token/platform/
+notify_time/enabled + timestamps) with a unique `(user_id, push_token)` index for
+the idempotent `PUT /devices` upsert and a `platform IN ('ios','android')` check.
 
 ## Tests
 
@@ -333,10 +353,14 @@ paging → played` flow, plus the admin `403` gate
 `upload-url → (simulated direct upload) → register → list → get → delete` flow
 with a fake object store, plus object_key namespace authorization, upload
 validation, and per-user scoping (`internal/server/gallery_flow_test.go`); the
-two-endpoint presign is unit-tested offline in `internal/storage`. CI has no
-Postgres, so the tests use the in-memory `internal/repository/memauth`, `memdiary`,
-`memtoday` and `memgallery` stores; the pgx-backed repositories and the real MinIO
-presign path are exercised by running the server against `docker compose`.
+two-endpoint presign is unit-tested offline in `internal/storage`. Devices tests
+cover the handler (validation of `platform`/`notify_time`, unknown-field and `401`
+cases) and a full `PUT /devices` flow with a real Bearer token (create → idempotent
+re-`PUT` update → per-user scoping, `internal/server/devices_flow_test.go`). CI has
+no Postgres, so the tests use the in-memory `internal/repository/memauth`,
+`memdiary`, `memtoday`, `memgallery` and `memdevices` stores; the pgx-backed
+repositories and the real MinIO presign path are exercised by running the server
+against `docker compose`.
 
 ## Versions
 

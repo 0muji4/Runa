@@ -15,6 +15,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
+	"github.com/0muji4/Runa/apps/go/internal/repository/memdevices"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdiary"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memgallery"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memtoday"
@@ -32,6 +33,7 @@ type testEnv struct {
 	diaries *memdiary.Store
 	gallery *memgallery.Store
 	today   *memtoday.Store
+	devices *memdevices.Store
 }
 
 func newRouter(t *testing.T) *testEnv {
@@ -43,6 +45,7 @@ func newRouter(t *testing.T) *testEnv {
 	diaries := memdiary.New()
 	gallery := memgallery.New()
 	todayStore := memtoday.New()
+	devices := memdevices.New()
 	objects := memobject.New()
 
 	authSvc := service.NewAuthService(service.AuthConfig{
@@ -71,6 +74,8 @@ func newRouter(t *testing.T) *testEnv {
 	}, nil, service.WithAccountBackgroundRunner(func(f func()) { f() }))
 	acc := handler.NewAccount(accountSvc, logger)
 
+	dvh := handler.NewDevices(service.NewDeviceService(devices, nil), logger)
+
 	r := server.New(server.Deps{
 		Health:         handler.NewHealth(service.NewHealth(), logger),
 		Auth:           ah,
@@ -79,6 +84,7 @@ func newRouter(t *testing.T) *testEnv {
 		Today:          th,
 		Insights:       ih,
 		Gallery:        gh,
+		Devices:        dvh,
 		RequireAuth:    auth.RequireAuth(issuer, ah.Unauthorized),
 		AuthRateLimit:  auth.NewRateLimiter(100, time.Minute).Middleware(ah.RateLimited),
 		RequireAdmin:   auth.RequireAdmin(adminToken, th.Forbidden),
@@ -93,6 +99,7 @@ func newRouter(t *testing.T) *testEnv {
 		diaries: diaries,
 		gallery: gallery,
 		today:   todayStore,
+		devices: devices,
 	}
 }
 
@@ -264,4 +271,14 @@ type todayResp struct {
 type songsResp struct {
 	Songs      []songResp `json:"songs"`
 	NextCursor *string    `json:"next_cursor"`
+}
+
+type deviceResp struct {
+	ID         string `json:"id"`
+	PushToken  string `json:"push_token"`
+	Platform   string `json:"platform"`
+	NotifyTime string `json:"notify_time"`
+	Enabled    bool   `json:"enabled"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
 }

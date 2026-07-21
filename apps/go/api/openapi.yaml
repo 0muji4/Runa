@@ -6,7 +6,7 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.6.0
+  version: 0.7.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
@@ -865,6 +865,37 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/devices:
+    put:
+      operationId: registerDevice
+      summary: Register a push token + reminder preference (protected)
+      description: |
+        Registers the caller's device push token (FCM/APNs) plus their nightly
+        reminder preference, for a FUTURE server-initiated notification path. This
+        slice's nightly reminder is a LOCAL, on-device notification, so nothing
+        here sends a push yet — this endpoint is the registration "口" only.
+        Idempotent (upsert) by (user, push_token): a repeated PUT for the same
+        token updates the row in place.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceRequest"
+      responses:
+        "200":
+          description: The registered device.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1607,3 +1638,56 @@ components:
           type: string
           nullable: true
           description: Opaque cursor for the next page; null on the last page.
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - push_token
+        - platform
+        - notify_time
+        - enabled
+      properties:
+        push_token:
+          type: string
+          description: The device's FCM/APNs push token.
+        platform:
+          type: string
+          enum: [ios, android]
+        notify_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: The user's local nightly-reminder time, 24-hour "HH:MM".
+        enabled:
+          type: boolean
+          description: Whether the nightly reminder is on.
+
+    Device:
+      type: object
+      required:
+        - id
+        - push_token
+        - platform
+        - notify_time
+        - enabled
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        push_token:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android]
+        notify_time:
+          type: string
+          description: The user's local nightly-reminder time, 24-hour "HH:MM".
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

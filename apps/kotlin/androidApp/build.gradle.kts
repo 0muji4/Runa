@@ -66,6 +66,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // FragmentActivity for MainActivity (BiometricPrompt requirement).
+    implementation(libs.androidx.fragment)
 
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

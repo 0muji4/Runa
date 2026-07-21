@@ -129,12 +129,40 @@
     <string name="todays_moon_age">月齢 %1$s ・ %2$s</string>
     <string name="todays_moon_next">next ▸ %1$s　%2$s</string>
 
-    <!-- Settings top (19). Notification / privacy-lock rows are 導線 only (next feature). -->
+    <!-- Settings top (19). Notification / privacy-lock rows are now live (slice 8). -->
     <string name="settings_title">設定</string>
     <string name="settings_row_theme">テーマ</string>
     <string name="settings_row_notifications">通知</string>
     <string name="settings_row_privacy_lock">プライバシー・ロック</string>
     <string name="settings_row_account">アカウント・データ</string>
+
+    <!-- Notification settings (21 通知設定 — 夜のリマインド). -->
+    <string name="notif_settings_eyebrow">NOTIFICATION</string>
+    <string name="notif_settings_title">夜のリマインド</string>
+    <string name="notif_settings_toggle">リマインドをうけとる</string>
+    <string name="notif_settings_time_caption">おやすみ前の、しずかな時刻</string>
+    <string name="notif_settings_footer">その時刻に、月がそっと\n今日をふりかえるひとことを。</string>
+    <string name="notif_settings_pick_time">じかんを選ぶ</string>
+    <string name="notif_value_off">オフ</string>
+
+    <!-- Privacy lock (22 プライバシー・ロック). -->
+    <string name="lock_settings_eyebrow">PRIVACY</string>
+    <string name="lock_settings_title">ロック</string>
+    <string name="lock_settings_caption">あなたの夜を、あなただけに。</string>
+    <string name="lock_settings_toggle">ロックする</string>
+    <string name="lock_settings_unavailable">この端末では、生体認証や画面ロックが設定されていません。端末の設定をご確認ください。</string>
+    <string name="lock_value_on">オン</string>
+    <string name="lock_value_off">オフ</string>
+
+    <!-- Privacy-lock gate (shown at app start / resume when the lock is on). -->
+    <string name="lock_gate_message">あなたの夜は、\n守られています。</string>
+    <string name="lock_gate_unlock">ひらく</string>
+    <string name="lock_gate_authenticating">確認しています…</string>
+    <string name="lock_gate_failed">もう一度、お試しください。</string>
+
+    <!-- Time picker dialog (21). -->
+    <string name="time_picker_confirm">決定</string>
+    <string name="time_picker_cancel">やめる</string>
     <string name="settings_premium_title">LUNA +</string>
     <string name="settings_premium_subtitle">プレミアムで、もっと深く</string>
     <string name="settings_version">LUNA version %1$s</string>

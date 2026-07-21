@@ -31,6 +31,8 @@ import com.runa.android.ui.screens.diary.DiaryEditorScreen
 import com.runa.android.ui.screens.diary.DiaryListScreen
 import com.runa.android.ui.screens.insight.InsightScreen
 import com.runa.android.ui.screens.AccountScreen
+import com.runa.android.ui.screens.NotificationSettingsScreen
+import com.runa.android.ui.screens.PrivacyLockScreen
 import com.runa.android.ui.screens.SettingsScreen
 import com.runa.android.ui.screens.ThemeScreen
 import com.runa.android.ui.screens.SongArchiveScreen
@@ -58,6 +60,8 @@ object Routes {
     const val GALLERY = "gallery"
     const val SETTINGS = "settings"
     const val THEME = "settings/theme"
+    const val NOTIFICATIONS = "settings/notifications"
+    const val PRIVACY_LOCK = "settings/privacy_lock"
     const val ACCOUNT = "settings/account"
 }
 
@@ -230,11 +234,19 @@ fun RunaTabs(
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenTheme = { navController.navigate(Routes.THEME) },
+                    onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                    onOpenPrivacyLock = { navController.navigate(Routes.PRIVACY_LOCK) },
                     onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 )
             }
             composable(Routes.THEME) {
                 ThemeScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.NOTIFICATIONS) {
+                NotificationSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.PRIVACY_LOCK) {
+                PrivacyLockScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.ACCOUNT) {
                 AccountScreen(

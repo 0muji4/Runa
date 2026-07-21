@@ -3,6 +3,10 @@ import Shared
 
 @main
 struct RunaApp: App {
+    // The privacy-lock gate is an app-lifetime observable driven by the scene phase
+    // (see LockGateView). It wraps the whole app, above the auth gate.
+    @StateObject private var lock = AppLockObservable()
+
     init() {
         // Give AsyncImage a real disk cache so gallery images fetched from their
         // presigned GET URLs survive going offline (the gallery delegates the image
@@ -27,7 +31,9 @@ struct RunaApp: App {
             // environment and drives the color scheme, so every screen recolors on a
             // theme change. RootView is the auth gate below it.
             ThemedRoot {
-                RootView()
+                LockGateView(lock: lock) {
+                    RootView()
+                }
             }
         }
     }

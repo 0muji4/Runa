@@ -149,6 +149,45 @@ struct StumbleEmblem: View {
     }
 }
 
+/// The privacy-lock emblem (22): a padlock inside a soft rounded square, stroked in
+/// cream — the quiet motif the lock screen and the settings screen share. Mirrors
+/// the Android `LockEmblem`.
+struct LockEmblem: View {
+    var diameter: CGFloat = 120
+    var body: some View {
+        Canvas { ctx, size in
+            let c = CGPoint(x: size.width / 2, y: size.height / 2)
+            let boxHalf = min(size.width, size.height) * 0.30
+            let corner = boxHalf * 0.5
+            drawGlow(&ctx, center: c, radius: min(size.width, size.height) * 0.5, tint: moonCream, alpha: 0.10)
+            let box = Path(
+                roundedRect: CGRect(x: c.x - boxHalf, y: c.y - boxHalf, width: boxHalf * 2, height: boxHalf * 2),
+                cornerRadius: corner
+            )
+            ctx.stroke(box, with: .color(moonRing), lineWidth: 2)
+
+            let bodyW = boxHalf * 0.9
+            let bodyH = boxHalf * 0.72
+            let bodyTop = c.y - bodyH * 0.1
+            let bodyRect = CGRect(x: c.x - bodyW / 2, y: bodyTop, width: bodyW, height: bodyH)
+            ctx.stroke(Path(roundedRect: bodyRect, cornerRadius: bodyW * 0.16), with: .color(moonCream), lineWidth: 2.4)
+
+            let shackleR = bodyW * 0.32
+            var shackle = Path()
+            shackle.move(to: CGPoint(x: c.x - shackleR, y: bodyTop))
+            shackle.addCurve(
+                to: CGPoint(x: c.x + shackleR, y: bodyTop),
+                control1: CGPoint(x: c.x - shackleR, y: bodyTop - shackleR * 1.6),
+                control2: CGPoint(x: c.x + shackleR, y: bodyTop - shackleR * 1.6)
+            )
+            ctx.stroke(shackle, with: .color(moonCream), lineWidth: 2.4)
+            ctx.fill(disc(CGPoint(x: c.x, y: bodyTop + bodyH * 0.5), bodyW * 0.09), with: .color(moonCream))
+        }
+        .frame(width: diameter, height: diameter)
+        .accessibilityHidden(true)
+    }
+}
+
 /// The notification mark (04): the glowing moon with a small moonlight-pink badge
 /// carrying a minimal drawn bell.
 struct NotificationMoon: View {

@@ -58,6 +58,11 @@ targets:
       # PhotosUI (PhotosPicker) for the gallery image picker. Used from Swift, so
       # it would auto-link, but listed for parity with the other explicit SDKs.
       - sdk: PhotosUI.framework
+      # Notification/lock slice: UserNotifications (IosLocalNotificationScheduler +
+      # the ④ permission request) and LocalAuthentication (IosBiometricAuthenticator)
+      # are referenced from Kotlin/Native, so the static framework must link them.
+      - sdk: UserNotifications.framework
+      - sdk: LocalAuthentication.framework
 
 # Shared scheme so `xcodebuild -scheme Runa` works and Xcode has a runnable target.
 schemes:

@@ -131,6 +131,33 @@ on-device and passes it to the shared repository (the backend verifies it):
   `.authenticated(AuthStateAuthenticated)` (`.user`) / `.error(AuthStateError)`
   (`.message`). Used in `RootView.swift` / `AuthFlowView.swift`.
 
+## Notification / privacy-lock slice (OS-native, slice 8)
+
+The nightly reminder and biometric lock use iOS system frameworks from Kotlin/Native
+(the actuals in `shared/iosMain`), so — because `Shared.xcframework` is **static** —
+`project.yml` links two more SDKs on the app target: **`UserNotifications.framework`**
+(`IosLocalNotificationScheduler` + the ④ permission request) and
+**`LocalAuthentication.framework`** (`IosBiometricAuthenticator`). Regenerate the
+project after pulling (`xcodegen generate`).
+
+- **Face ID**: `Info.plist` carries **`NSFaceIDUsageDescription`** (required for
+  `LAContext`). The lock uses `LAPolicyDeviceOwnerAuthentication`, so the device
+  passcode is the automatic fallback.
+- **Local notifications**: scheduled via a repeating `UNCalendarNotificationTrigger`
+  (OS-managed; survives relaunch/reboot with no receiver). The ④ onboarding screen
+  (`NotificationPermissionView`) and 通知設定 (21) call
+  `UNUserNotificationCenter.requestAuthorization`; a denial doesn't break the flow.
+- **Lock gate**: `LockGateView` wraps the whole app inside `RunaApp` (above the auth
+  gate) and drives the shared `AppLockViewModel` from `@Environment(\.scenePhase)`
+  (foreground on `.active` / at launch, background on `.background`). While locked it
+  does **not** build the content, so nothing private flashes behind the lock.
+- **SKIE symbols**: `resolveNotificationSettingsViewModel()` /
+  `resolveAppLockViewModel()` → global Swift funcs; `AppLockUiState` matched via
+  `onEnum(of:)` → `.unlocked` / `.locked` / `.authenticating` / `.unavailable`.
+  Observables (`NotificationSettingsObservable`, `AppLockObservable`) seed
+  synchronously from `currentState()` / `currentLockEnabled()` (no flash) and
+  republish the `SkieSwiftStateFlow`s.
+
 ## Fonts
 
 Custom fonts are not committed. See [`Runa/Fonts/README.md`](Runa/Fonts/README.md).

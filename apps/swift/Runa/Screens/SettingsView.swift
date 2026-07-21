@@ -9,6 +9,8 @@ struct SettingsView: View {
 
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var theme = ThemeObservable()
+    @StateObject private var notification = NotificationSettingsObservable()
+    @StateObject private var lock = AppLockObservable()
 
     var body: some View {
         ScrollView {
@@ -23,9 +25,21 @@ struct SettingsView: View {
                     SettingRow(glyph: "☾", label: "テーマ", value: themeName(theme.themeId))
                 }
                 divider
-                SettingRow(glyph: "◷", label: "通知", value: "準備中", enabled: false)
+                NavigationLink { NotificationSettingsView() } label: {
+                    SettingRow(
+                        glyph: "◷",
+                        label: "通知",
+                        value: notification.enabled ? notification.time.label : "オフ"
+                    )
+                }
                 divider
-                SettingRow(glyph: "⚿", label: "プライバシー・ロック", value: "準備中", enabled: false)
+                NavigationLink { PrivacyLockView() } label: {
+                    SettingRow(
+                        glyph: "⚿",
+                        label: "プライバシー・ロック",
+                        value: lock.lockEnabled ? "オン" : "オフ"
+                    )
+                }
                 divider
                 NavigationLink { AccountView(onSignOut: onSignOut) } label: {
                     SettingRow(glyph: "◍", label: "アカウント・データ")

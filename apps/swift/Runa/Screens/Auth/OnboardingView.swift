@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// Onboarding (①②). Whitespace-first and spare, exactly as the design intends: a
 /// softly glowing moon, one large left-aligned 明朝 line, and a quiet "すすむ" to
@@ -61,7 +62,7 @@ struct NotificationPermissionView: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.sm)
 
-                Button(action: onContinue) {
+                Button(action: requestAuthorization) {
                     Text("許可する")
                         .font(RunaFonts.body(16))
                         .frame(maxWidth: .infinity)
@@ -82,6 +83,14 @@ struct NotificationPermissionView: View {
                 Spacer()
             }
             .padding(.horizontal, RunaSpacing.lg)
+        }
+    }
+
+    /// Fire the real POST-notification authorization request, then advance whether
+    /// granted or denied — a denial must never break onboarding (DoD#3).
+    private func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+            DispatchQueue.main.async { onContinue() }
         }
     }
 }

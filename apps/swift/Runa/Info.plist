@@ -35,6 +35,11 @@
 	<key>GIDClientID</key>
 	<string>890729556064-v8tfjso2kh0tuvuhaas2ub2o3olvft8k.apps.googleusercontent.com</string>
 
+	<!-- Face ID usage: the privacy lock (22) authenticates with Face ID / Touch ID,
+	     falling back to the device passcode. Required for LocalAuthentication. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>アプリのロック解除に Face ID を使用します。</string>
+
 	<!-- Allow cleartext HTTP to the local dev backend over loopback/localhost.
 	     Targeted exception — does NOT disable ATS globally. Mirrors Android's
 	     android:usesCleartextTraffic for the dev backend. -->

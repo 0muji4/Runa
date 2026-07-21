@@ -241,6 +241,53 @@ private fun DrawScope.drawBell(c: Offset, s: Float, color: Color) {
     drawCircle(color, s * 0.12f, Offset(c.x, c.y + h * 0.5f))
 }
 
+/**
+ * The privacy-lock emblem (22): a padlock inside a soft rounded square, stroked in
+ * cream — the quiet motif the lock screen and the settings screen share. Drawn, no
+ * glyph.
+ */
+@Composable
+fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
+    Canvas(modifier.size(diameter)) {
+        val c = center
+        val boxHalf = size.minDimension * 0.30f
+        val corner = boxHalf * 0.5f
+        drawGlow(c, size.minDimension * 0.5f, MoonCream, 0.10f)
+        // Rounded-square container.
+        drawRoundRect(
+            color = MoonRing,
+            topLeft = Offset(c.x - boxHalf, c.y - boxHalf),
+            size = Size(boxHalf * 2, boxHalf * 2),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner),
+            style = Stroke(width = 2f),
+        )
+        // Padlock body.
+        val bodyW = boxHalf * 0.9f
+        val bodyH = boxHalf * 0.72f
+        val bodyTop = c.y - bodyH * 0.1f
+        drawRoundRect(
+            color = MoonCream,
+            topLeft = Offset(c.x - bodyW / 2f, bodyTop),
+            size = Size(bodyW, bodyH),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(bodyW * 0.16f, bodyW * 0.16f),
+            style = Stroke(width = 2.4f),
+        )
+        // Shackle arc above the body.
+        val shackleR = bodyW * 0.32f
+        val shacklePath = Path().apply {
+            moveTo(c.x - shackleR, bodyTop)
+            cubicTo(
+                c.x - shackleR, bodyTop - shackleR * 1.6f,
+                c.x + shackleR, bodyTop - shackleR * 1.6f,
+                c.x + shackleR, bodyTop,
+            )
+        }
+        drawPath(shacklePath, MoonCream, style = Stroke(width = 2.4f))
+        // Keyhole dot.
+        drawCircle(MoonCream, bodyW * 0.09f, Offset(c.x, bodyTop + bodyH * 0.5f))
+    }
+}
+
 private fun Path.addOvalCompat(center: Offset, radius: Float) {
     addOval(
         androidx.compose.ui.geometry.Rect(

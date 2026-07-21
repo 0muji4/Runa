@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.runa.android.BuildConfig
 import com.runa.android.R
 import com.runa.android.ui.theme.RunaColors
+import com.runa.shared.feature.lock.AppLockViewModel
+import com.runa.shared.feature.notification.NotificationSettingsViewModel
 import com.runa.shared.feature.settings.AppTheme
 import com.runa.shared.feature.settings.SettingsViewModel
 import org.koin.compose.koinInject
@@ -43,10 +45,16 @@ import org.koin.compose.koinInject
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenTheme: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenPrivacyLock: () -> Unit,
     onOpenAccount: () -> Unit,
     viewModel: SettingsViewModel = koinInject(),
+    notificationViewModel: NotificationSettingsViewModel = koinInject(),
+    appLockViewModel: AppLockViewModel = koinInject(),
 ) {
     val theme by viewModel.theme.collectAsState()
+    val notification by notificationViewModel.state.collectAsState()
+    val lockEnabled by appLockViewModel.lockEnabled.collectAsState()
 
     Column(
         modifier = Modifier
@@ -78,20 +86,21 @@ fun SettingsScreen(
             onClick = onOpenTheme,
         )
         SettingDivider()
-        // Notification + privacy-lock are entry-point placeholders for the next
-        // feature: shown for structure, not yet interactive.
         SettingRow(
             glyph = "◷",
             label = stringResource(R.string.settings_row_notifications),
-            value = stringResource(R.string.placeholder_coming_soon),
-            enabled = false,
+            value = if (notification.enabled) notification.time.label
+            else stringResource(R.string.notif_value_off),
+            onClick = onOpenNotifications,
         )
         SettingDivider()
         SettingRow(
             glyph = "⚿",
             label = stringResource(R.string.settings_row_privacy_lock),
-            value = stringResource(R.string.placeholder_coming_soon),
-            enabled = false,
+            value = stringResource(
+                if (lockEnabled) R.string.lock_value_on else R.string.lock_value_off,
+            ),
+            onClick = onOpenPrivacyLock,
         )
         SettingDivider()
         SettingRow(

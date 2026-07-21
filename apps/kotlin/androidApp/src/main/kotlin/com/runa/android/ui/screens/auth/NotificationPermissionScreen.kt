@@ -1,5 +1,9 @@
 package com.runa.android.ui.screens.auth
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,15 +30,28 @@ import com.runa.android.ui.components.NotificationMoon
 import com.runa.android.ui.theme.RunaColors
 
 /**
- * Notification permission shell (④). A quiet night-time request: the moon with a
- * small moonlight-pink bell badge, a poetic 明朝 line, and a gentle ask. The real
- * runtime permission request belongs to the notification slice; this advances.
+ * Notification permission (④). A quiet night-time request: the moon with a small
+ * moonlight-pink bell badge, a poetic 明朝 line, and a gentle ask. Tapping 許可する
+ * fires the real POST_NOTIFICATIONS request on API 33+; the flow advances whether
+ * granted or denied (a denial never breaks onboarding — DoD#3).
  */
 @Composable
 fun NotificationPermissionScreen(
     onContinue: () -> Unit,
     onSkip: () -> Unit,
 ) {
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { onContinue() }
+
+    val requestOrContinue = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            onContinue()
+        }
+    }
+
     Surface(color = RunaColors.Background) {
         Column(
             modifier = Modifier
@@ -64,7 +81,7 @@ fun NotificationPermissionScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .background(RunaColors.Accent, RoundedCornerShape(16.dp))
-                    .clickable(onClick = onContinue),
+                    .clickable(onClick = requestOrContinue),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

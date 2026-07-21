@@ -114,7 +114,7 @@ curl http://localhost:8080/api/v1/healthz
 
 ### 設定（テーマ切替 / アカウント・データ）
 
-「認証済み前提」の設定機能。アプリ全体の外観テーマ切替と、プロフィール編集・データエクスポート・アカウント削除を持つ。通知設定・プライバシーロックは導線（枠）のみで、次の機能で扱う。
+「認証済み前提」の設定機能。アプリ全体の外観テーマ切替と、プロフィール編集・データエクスポート・アカウント削除を持つ。通知設定・プライバシーロックは次の機能（下記「通知・プライバシーロック」）で実装済み。
 
 **3 テーマ（全クライアント共通のトークン）**
 
@@ -150,6 +150,17 @@ curl http://localhost:8080/api/v1/healthz
 - **backend**: `APPLE_CLIENT_IDS` / `GOOGLE_CLIENT_IDS` に許容 audience を設定（[apps/go/README.md](apps/go/README.md)）。
 - **Android**: Google は Credential Manager（Gradle property `RUNA_GOOGLE_SERVER_CLIENT_ID` に Google の**Web**クライアント ID）。Apple は Web フロー（`RUNA_APPLE_SERVICE_ID` / `RUNA_APPLE_REDIRECT_URI`）。詳細は [apps/kotlin/README.md](apps/kotlin/README.md)。
 - **iOS**: Apple はネイティブ（`Runa/Runa.entitlements` の Sign in with Apple、App ID にケイパビリティ付与）。Google は `Info.plist` の `GIDClientID`（iOS クライアント ID）。詳細は [apps/swift/README.md](apps/swift/README.md)。
+
+### 通知・プライバシーロック（夜のリマインド / 生体認証）
+
+「認証済み前提」。OS 固有機能が主役の回で、`shared` はインターフェイスと設定の保持・状態のみを持ち、通知スケジュールと生体認証の実処理は各ネイティブの actual が担う（04 通知許可 / 21 通知設定 / 22 プライバシー・ロック）。
+
+- **夜のリマインド（ローカル通知）**: 指定時刻に「静かに綴る時間」を知らせる日次ローカル通知。ON/OFF と時刻（プリセット 21:00 / 22:00 / 23:00＋自由指定、既定 22:00）を持つ。`shared` の `NotificationSettingsRepository` が multiplatform-settings に永続化し、`LocalNotificationScheduler`（expect 相当のインターフェイス、`platformModule()` で束縛）越しに各 OS のスケジューラを叩く。文面は世界観に沿う詩的コピー（`ReminderNotificationText`：「月が出ました」＋「今日を、そっと綴りませんか。」）を `shared` で共有。**プッシュ（サーバ起点）は必須にせず**、ローカル通知で完結。将来のサーバ起点告知用に BE の `PUT /api/v1/devices`（トークン登録口）だけ用意（下記）。
+- **プライバシー・ロック（生体認証）**: ON にすると起動/復帰時に生体認証（Face ID / BiometricPrompt）でアプリをロックし、成功でのみ中身が見える。失敗時は端末パスコードにフォールバック（Android: `BIOMETRIC_STRONG or DEVICE_CREDENTIAL`／iOS: `LAPolicyDeviceOwnerAuthentication`）。**認証（サインイン）とは別レイヤーのロック**で、`AppLockViewModel` が `Unlocked / Locked / Authenticating / Unavailable` を持ち、ロック中はコンテンツを構築しない（内容が背後に漏れない）。端末セキュリティ未設定（`Unavailable`）は恒久ロックアウトを避け、注意表示のうえ内容を通す。設定は単一の `lockEnabled`（確定デザインの パスコード/Face ID/すぐにロック 3 コントロールは単一 ON/OFF に簡素化、合意済み）。
+- **OS 別の権限・設定要件**:
+  - **Android**: `POST_NOTIFICATIONS`（API 33+、導入フロー ④ で実行時要求）、`RECEIVE_BOOT_COMPLETED`（再起動後の再スケジュール）を `shared` の androidMain マニフェストで宣言。日次通知は `AlarmManager.setAndAllowWhileIdle`（不正確・許可不要）＋ `BroadcastReceiver` で翌日を再スケジュール。生体は `androidx.biometric`、`MainActivity` は `FragmentActivity`。詳細は [apps/kotlin/README.md](apps/kotlin/README.md)。
+  - **iOS**: `Info.plist` に `NSFaceIDUsageDescription`、`project.yml` に `UserNotifications.framework` / `LocalAuthentication.framework`（静的 XCFramework のリンク要件）。日次通知は `UNCalendarNotificationTrigger`（repeats、OS 管理で再起動対応）。詳細は [apps/swift/README.md](apps/swift/README.md)。
+- **BE（任意・最小）**: `PUT /api/v1/devices`（`push_token` / `platform` / `notify_time` / `enabled`）は将来のサーバ起点通知（FCM/APNs）用のトークン登録口。今回のリマインドはローカル通知で完結するため必須ではなく、`shared` からの呼び出しも将来スライスで接続する。詳細は [apps/go/README.md](apps/go/README.md) / [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
 
 ### 動作確認
 

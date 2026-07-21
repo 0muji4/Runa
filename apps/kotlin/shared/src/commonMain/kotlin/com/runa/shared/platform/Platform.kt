@@ -10,7 +10,9 @@ import org.koin.core.module.Module
  * slice fills in secure storage and the HTTP engine; the diary slice adds the
  * SQLDelight [app.cash.sqldelight.db.SqlDriver] and
  * [com.runa.shared.network.NetworkMonitor]; the today slice adds the
- * [com.runa.shared.feature.today.player.AudioPlayer]. All are bound in [platformModule].
+ * [com.runa.shared.feature.today.player.AudioPlayer]; the notification/lock slice
+ * adds the [com.runa.shared.feature.notification.LocalNotificationScheduler] and
+ * [com.runa.shared.feature.lock.BiometricAuthenticator]. All are bound in [platformModule].
  */
 
 /** Ktor engine per platform: OkHttp on Android, Darwin on iOS. */
@@ -33,8 +35,3 @@ expect class PushTokenProvider {
 
 /** In-app billing entry point. Placeholder until monetization lands. */
 expect class BillingClient
-
-/** Biometric (Face ID / fingerprint) gate. */
-expect class BiometricAuthenticator {
-    suspend fun authenticate(): Boolean
-}

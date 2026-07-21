@@ -7,6 +7,10 @@ import com.russhwolf.settings.KeychainSettings
 import com.russhwolf.settings.NSUserDefaultsSettings
 import com.russhwolf.settings.Settings
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.feature.lock.BiometricAuthenticator
+import com.runa.shared.feature.lock.IosBiometricAuthenticator
+import com.runa.shared.feature.notification.IosLocalNotificationScheduler
+import com.runa.shared.feature.notification.LocalNotificationScheduler
 import com.runa.shared.feature.today.player.AudioPlayer
 import com.runa.shared.feature.today.player.AvAudioPlayer
 import com.runa.shared.network.NetworkMonitor
@@ -44,6 +48,10 @@ actual fun platformModule(): Module = module {
     single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
     single<NetworkMonitor> { IosNetworkMonitor() }
     single<AudioPlayer> { AvAudioPlayer() }
+    // Nightly-reminder scheduling (UNUserNotificationCenter) and the biometric gate
+    // (LocalAuthentication). No Context needed, but bound here to match the seam.
+    single<LocalNotificationScheduler> { IosLocalNotificationScheduler() }
+    single<BiometricAuthenticator> { IosBiometricAuthenticator() }
 }
 
 /**
@@ -95,9 +103,3 @@ actual class PushTokenProvider {
 
 /** TODO: back with StoreKit. Placeholder for now. */
 actual class BillingClient
-
-/** TODO: back with LocalAuthentication (Face ID / Touch ID). */
-actual class BiometricAuthenticator {
-    actual suspend fun authenticate(): Boolean =
-        TODO("BiometricAuthenticator.authenticate not implemented")
-}

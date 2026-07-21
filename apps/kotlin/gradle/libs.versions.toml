@@ -22,6 +22,9 @@ skie = "0.10.1"
 composeBom = "2024.10.01"
 activityCompose = "1.9.3"
 navigationCompose = "2.8.3"
+# FragmentActivity is required by androidx.biometric BiometricPrompt (MainActivity
+# extends it for the privacy-lock gate).
+fragment = "1.8.4"
 # lifecycle-viewmodel-compose is NOT part of the Compose BOM, so it is pinned
 # explicitly. Kept in the 2.8.x line to align with navigation-compose 2.8.3.
 lifecycle = "2.8.6"
@@ -37,6 +40,12 @@ browser = "1.8.0"
 media3 = "1.4.1"
 # Coil loads song artwork in Compose.
 coil = "2.7.0"
+
+# --- Notification / privacy-lock (slice 8, Android) ---
+# androidx.biometric backs the BiometricPrompt authenticator; androidx.core provides
+# NotificationCompat / NotificationManagerCompat for the nightly reminder.
+biometric = "1.1.0"
+androidxCore = "1.13.1"
 
 [libraries]
 # --- Ktor ---
@@ -73,6 +82,10 @@ sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", versi
 # --- Media3 (ExoPlayer) — shared androidMain audio actual ---
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 
+# --- Notification / privacy-lock — shared androidMain actuals ---
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+
 # --- Coil (Compose artwork loading) ---
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
@@ -86,6 +99,7 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 # --- AndroidX ---
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 # --- Auth (Android native sign-in + secure storage) ---

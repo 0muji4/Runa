@@ -20,6 +20,12 @@ import com.runa.shared.feature.health.HealthzViewModel
 import com.runa.shared.feature.insight.DefaultInsightRepository
 import com.runa.shared.feature.insight.InsightRepository
 import com.runa.shared.feature.insight.InsightViewModel
+import com.runa.shared.feature.lock.AppLockRepository
+import com.runa.shared.feature.lock.AppLockViewModel
+import com.runa.shared.feature.lock.DefaultAppLockRepository
+import com.runa.shared.feature.notification.DefaultNotificationSettingsRepository
+import com.runa.shared.feature.notification.NotificationSettingsRepository
+import com.runa.shared.feature.notification.NotificationSettingsViewModel
 import com.runa.shared.feature.settings.AccountViewModel
 import com.runa.shared.feature.settings.DefaultLocalDataCleaner
 import com.runa.shared.feature.settings.DefaultSettingsRepository
@@ -146,6 +152,15 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
+    // Notification (夜のリマインド) + privacy lock. Both are local preferences via the
+    // platform-provided Settings; the reminder repository also drives the platform
+    // LocalNotificationScheduler, and the lock uses the platform BiometricAuthenticator
+    // — both bound in platformModule().
+    single<NotificationSettingsRepository> {
+        DefaultNotificationSettingsRepository(settings = get(), scheduler = get())
+    }
+    single<AppLockRepository> { DefaultAppLockRepository(settings = get()) }
+
     // `single` (not `factory`): these view models own long-lived CoroutineScopes,
     // so one shared instance avoids leaking a scope per resolution.
     single { AuthViewModel(repository = get()) }
@@ -188,6 +203,12 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single { ThemeViewModel(repository = get()) }
     single { SettingsViewModel(themeRepository = get()) }
     single { AccountViewModel(repository = get()) }
+
+    // Notification settings (21) + privacy lock (22 + the app-start/resume gate).
+    // App-lifetime singles: the lock view model in particular must outlive any
+    // screen so the gate keeps its state across foreground/background.
+    single { NotificationSettingsViewModel(repository = get()) }
+    single { AppLockViewModel(repository = get(), authenticator = get()) }
 }
 
 /**
@@ -260,3 +281,11 @@ fun resolveSettingsViewModel(): SettingsViewModel = KoinPlatform.getKoin().get()
 
 /** Resolve the [AccountViewModel] for the account-data screen (iOS entry point). */
 fun resolveAccountViewModel(): AccountViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve the [NotificationSettingsViewModel] for 通知設定 (21) (iOS entry point). */
+fun resolveNotificationSettingsViewModel(): NotificationSettingsViewModel =
+    KoinPlatform.getKoin().get()
+
+/** Resolve the [AppLockViewModel] for the privacy-lock gate + 22 (iOS entry point).
+ *  App-lifetime single, so the gate state survives across foreground/background. */
+fun resolveAppLockViewModel(): AppLockViewModel = KoinPlatform.getKoin().get()

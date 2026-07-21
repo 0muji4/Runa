@@ -93,11 +93,14 @@ Each tab is an empty shell today. A feature slice adds, per feature:
   `ui/screens/*Screen.kt` with the real UI; add routes/args in
   `navigation/RunaApp.kt` if the slice needs sub-screens.
 
-The platform `expect` frames (`PushTokenProvider`, `BillingClient`,
-`BiometricAuthenticator`) are declared but their actuals are `TODO` stubs — fill
-them in when a slice first needs them. Secure storage is implemented by the auth
-slice, and the SQLDelight driver + audio player are bound in `platformModule()` by
-the today slice (see below).
+The remaining platform `expect` frames (`PushTokenProvider`, `BillingClient`) are
+declared but their actuals are `TODO` stubs — fill them in when a slice first needs
+them. Secure storage is implemented by the auth slice; the SQLDelight driver +
+audio player are bound in `platformModule()` by the today slice; and the
+notification/lock slice adds the `LocalNotificationScheduler` + `BiometricAuthenticator`
+platform bindings (see below). `BiometricAuthenticator` moved from an `expect class`
+stub to a `feature/lock/` common interface bound in `platformModule()` (it needs the
+current Activity on Android).
 
 ## Auth slice
 
@@ -165,6 +168,43 @@ calculator** — the reason this slice matters.
 - **Tests**: `commonTest` (moon reference dates) plus `androidUnitTest`
   (`TodayRepositoryTest`, `SongRepositoryTest`, `SongPlayerViewModelTest`) which use
   a JVM in-memory SQLite driver + Ktor `MockEngine`.
+
+## Notification / privacy-lock slice (OS-native, slice 8)
+
+The nightly reminder and biometric lock are OS-feature-heavy: `shared` holds the
+settings + state, and each platform's actual does the real scheduling / auth.
+
+- **Reminder settings** live in `feature/notification/`: `NotificationSettingsRepository`
+  (persist `reminderEnabled` / `reminderTime` via multiplatform-settings, observe as
+  `StateFlow`, and drive the `LocalNotificationScheduler`), `NotificationSettingsViewModel`,
+  and the shared poetic copy (`ReminderNotificationText`). Time is a pre-formatted
+  `ReminderTime` (`label` = "HH:MM") so the UI needs no kotlinx-datetime.
+- **Android reminder actual** (`shared/androidMain/.../feature/notification/`):
+  `AndroidLocalNotificationScheduler` arms `AlarmManager.setAndAllowWhileIdle`
+  (inexact, so **no `SCHEDULE_EXACT_ALARM`**); `ReminderReceiver` posts the
+  notification (`NotificationManagerCompat` + a channel, `androidx.core`) and re-arms
+  the next day; `BootReceiver` re-arms after reboot. Both receivers + the
+  `POST_NOTIFICATIONS` / `RECEIVE_BOOT_COMPLETED` permissions are declared in the
+  **shared androidMain `AndroidManifest.xml`** (merged into the app); the small icon
+  is `shared/androidMain/res/drawable/ic_reminder_moon.xml`. The runtime
+  `POST_NOTIFICATIONS` request (API 33+) happens in onboarding ④
+  (`NotificationPermissionScreen`) and when enabling in 通知設定 (21).
+- **Privacy lock** lives in `feature/lock/`: `AppLockRepository` (persist
+  `lockEnabled`) and `AppLockViewModel` (states `Unlocked/Locked/Authenticating/Unavailable`)
+  — a layer **separate from auth**. `BiometricAuthenticator` is a common interface
+  (not `expect class`) bound in `platformModule()`. **Android actual**:
+  `AndroidBiometricAuthenticator` uses `androidx.biometric` `BiometricPrompt` with
+  `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` (device-passcode fallback); it reads the
+  current Activity from `CurrentActivityHolder`, which `MainActivity` (now a
+  **`FragmentActivity`**, BiometricPrompt's requirement) registers from its
+  lifecycle. `MainActivity` also wraps the app in `AppLockGate` and drives
+  foreground/background from `onResume`/`onPause`.
+- **Deps added** (`androidMain` of `:shared`): `androidx.biometric`, `androidx.core`;
+  (`:androidApp`): `androidx.fragment`.
+- **Tests**: `commonTest` covers persistence + schedule instructions
+  (`NotificationSettingsRepositoryTest`, `AppLockRepositoryTest`) and the state
+  machine with a fake authenticator (`AppLockViewModelTest`,
+  `NotificationSettingsViewModelTest`).
 
 ## Fonts
 

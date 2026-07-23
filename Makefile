@@ -31,7 +31,11 @@ XCFRAMEWORK := $(KOTLIN_DIR)/shared/build/XCFrameworks/release/Shared.xcframewor
 # ---- 集約 -------------------------------------------------------------------
 
 .PHONY: verify
-verify: server-verify shared-test android-build ios-build ## 全レイヤーを検証（PR 前の総合チェック / iOS ビルド含むため重い）
+verify: check-theme server-verify shared-test android-build ios-build ## 全レイヤーを検証（PR 前の総合チェック / iOS ビルド含むため重い）
+
+.PHONY: check-theme
+check-theme: ## テーマトークンの整合を検証（README 正典 ⇔ Android/iOS/colors.xml の色定義。ビルド不要）
+	./hack/check-theme-tokens.sh
 
 # ---- Server (Go) ------------------------------------------------------------
 

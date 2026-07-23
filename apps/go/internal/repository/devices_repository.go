@@ -7,8 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// deviceColumns is the SELECT/RETURNING list shared by every device query, kept
-// in one place so the scan order stays in sync.
+// deviceColumns is the shared SELECT/RETURNING list; keep its order in sync with the Scan below.
 const deviceColumns = `id, user_id, push_token, platform, notify_time, enabled,
 	created_at, updated_at`
 
@@ -17,9 +16,8 @@ type DeviceRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewDeviceRepository wraps a pgx pool. As with the other repositories the pool
-// may be nil when the DB is unreachable at boot; every method then returns
-// ErrNoDatabase instead of panicking, so the process still serves liveness.
+// NewDeviceRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
+// every method return ErrNoDatabase instead of panicking, so liveness still serves.
 func NewDeviceRepository(pool *pgxpool.Pool) *DeviceRepository {
 	return &DeviceRepository{pool: pool}
 }
@@ -31,9 +29,8 @@ func (r *DeviceRepository) UpsertDevice(ctx context.Context, p UpsertDeviceParam
 		return Device{}, ErrNoDatabase
 	}
 
-	// ON CONFLICT upserts onto the (user_id, push_token) unique index, so a
-	// re-registration of the same token never duplicates. A conflicting row keeps
-	// its id/created_at and takes the latest platform/notify_time/enabled.
+	// ON CONFLICT on the (user_id, push_token) unique index makes a re-registration
+	// idempotent (keeps id/created_at, takes the latest platform/notify_time/enabled).
 	const q = `
 		INSERT INTO devices (user_id, push_token, platform, notify_time, enabled)
 		VALUES ($1, $2, $3, $4, $5)

@@ -115,9 +115,8 @@ func (s *Store) DeleteUser(_ context.Context, id string) error {
 		return repository.ErrNotFound
 	}
 	delete(s.users, id)
-	// Mirror the DB's ON DELETE CASCADE for refresh tokens so tests observe that a
-	// deleted user can no longer refresh. Diary/gallery rows live in their own
-	// stores; that cascade is a DB-level guarantee, exercised only against Postgres.
+	// Mirror the DB's ON DELETE CASCADE for refresh tokens so tests see a deleted user
+	// can't refresh. Diary/gallery cascades are DB-level, exercised only against Postgres.
 	for hash, t := range s.refresh {
 		if t.UserID == id {
 			delete(s.refresh, hash)

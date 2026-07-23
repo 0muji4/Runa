@@ -10,8 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// diaryColumns is the SELECT list shared by every diary query, kept in one place
-// so the scan order in scanDiaryEntry stays in sync.
+// diaryColumns is the shared SELECT list; keep its order in sync with scanDiaryEntry.
 const diaryColumns = `id, user_id, body_text, mood, client_id,
 	created_at, updated_at, deleted_at`
 
@@ -20,9 +19,8 @@ type DiaryRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewDiaryRepository wraps a pgx pool. As with AuthRepository the pool may be nil
-// when the DB is unreachable at boot; every method then returns ErrNoDatabase
-// instead of panicking, so the process still serves liveness traffic.
+// NewDiaryRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
+// every method return ErrNoDatabase instead of panicking, so liveness still serves.
 func NewDiaryRepository(pool *pgxpool.Pool) *DiaryRepository {
 	return &DiaryRepository{pool: pool}
 }
@@ -45,11 +43,9 @@ func (r *DiaryRepository) UpsertEntry(ctx context.Context, p UpsertDiaryParams) 
 		return DiaryEntry{}, false, ErrNoDatabase
 	}
 
-	// ON CONFLICT upserts onto the (user_id, client_id) unique index, so a retried
-	// offline create never duplicates. A conflicting row keeps its id/created_at
-	// and takes the latest body/mood (a create still queued locally may carry
-	// edits). (xmax = 0) is Postgres's idiom for "this row was inserted, not
-	// updated", which distinguishes 201 from 200.
+	// ON CONFLICT on (user_id, client_id) makes a retried offline create idempotent
+	// (keeps id/created_at, takes the latest body/mood). (xmax = 0) = inserted, not
+	// updated — so the handler answers 201 vs 200.
 	const q = `
 		INSERT INTO diary_entries (user_id, client_id, body_text, mood, created_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -76,9 +72,8 @@ func (r *DiaryRepository) ListEntries(ctx context.Context, p ListDiaryParams) ([
 		return nil, ErrNoDatabase
 	}
 
-	// Two query shapes: the first page has no cursor; later pages ride the keyset
-	// (created_at, id) < (cursor) predicate. Keyset (not OFFSET) so inserts between
-	// page fetches never shift rows and cause skips/dupes.
+	// Keyset ((created_at, id) < cursor), not OFFSET, so inserts between pages never
+	// skip/dupe rows. The first page has no cursor.
 	var (
 		rows pgx.Rows
 		err  error
@@ -150,10 +145,9 @@ func (r *DiaryRepository) SoftDeleteEntry(ctx context.Context, userID, id string
 	if r.pool == nil {
 		return ErrNoDatabase
 	}
-	// COALESCE keeps delete idempotent: an already-deleted row is matched (so no
-	// ErrNotFound) but its deleted_at/updated_at are left untouched. RowsAffected
-	// is 0 only when no such id belongs to the user → ErrNotFound (a 404 that does
-	// not reveal whether the id exists for someone else).
+	// COALESCE makes delete idempotent (already-deleted row still matched, timestamps
+	// kept). RowsAffected 0 ⇒ not the caller's id ⇒ ErrNotFound (404 that doesn't leak
+	// whether it exists for someone else).
 	const q = `
 		UPDATE diary_entries
 		SET deleted_at = COALESCE(deleted_at, now()),
@@ -193,9 +187,8 @@ func (r *DiaryRepository) CountByLocalDate(ctx context.Context, userID string, l
 	if r.pool == nil {
 		return nil, ErrNoDatabase
 	}
-	// Group by the local calendar date: shift created_at into the requested zone
-	// before truncating to a date, so grouping matches the client. The [lo, hi)
-	// instant bounds ride the (user_id, created_at) coverage of the keyset index.
+	// Group by local calendar date (shift created_at into loc before truncating) so it
+	// matches the client's grouping. [lo, hi) rides the (user_id, created_at) index.
 	const q = `
 		SELECT to_char((created_at AT TIME ZONE $4)::date, 'YYYY-MM-DD') AS local_date, count(*)
 		FROM diary_entries
@@ -223,9 +216,7 @@ func (r *DiaryRepository) CountByLocalDate(ctx context.Context, userID string, l
 	return counts, nil
 }
 
-// EntriesInRange returns a user's non-deleted entries created in [lo, hi), for the
-// insights aggregation. The [lo, hi) instant bounds ride the (user_id, created_at)
-// coverage of the keyset index.
+// EntriesInRange returns non-deleted entries created in [lo, hi), for insights.
 func (r *DiaryRepository) EntriesInRange(ctx context.Context, userID string, lo, hi time.Time) ([]DiaryEntry, error) {
 	if r.pool == nil {
 		return nil, ErrNoDatabase
@@ -243,8 +234,8 @@ func (r *DiaryRepository) EntriesInRange(ctx context.Context, userID string, lo,
 	return collectDiaryEntries(rows)
 }
 
-// collectDiaryEntries scans and closes a diary result set. It returns a non-nil
-// empty slice for zero rows so JSON encodes "[]" rather than "null".
+// collectDiaryEntries returns a non-nil empty slice for zero rows, so JSON encodes
+// "[]" rather than "null".
 func collectDiaryEntries(rows pgx.Rows) ([]DiaryEntry, error) {
 	defer rows.Close()
 	entries := make([]DiaryEntry, 0)

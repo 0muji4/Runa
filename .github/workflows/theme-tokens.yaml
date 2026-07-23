@@ -1,0 +1,22 @@
+name: Theme tokens
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/theme/Color.kt"
+      - "apps/kotlin/androidApp/src/main/res/values/colors.xml"
+      - "apps/swift/Runa/Theme/RunaColors.swift"
+      - "hack/check-theme-tokens.sh"
+      - ".github/workflows/theme-tokens.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check theme token parity
+        run: ./hack/check-theme-tokens.sh

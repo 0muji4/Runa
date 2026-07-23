@@ -13,8 +13,7 @@ import (
 // uniqueViolation is the PostgreSQL SQLSTATE for a unique-constraint violation.
 const uniqueViolation = "23505"
 
-// userColumns is the SELECT list shared by every user query, kept in one place
-// so the scan order in scanUser stays in sync.
+// userColumns is the shared SELECT list; keep its order in sync with scanUser.
 const userColumns = `id, email, auth_provider, apple_sub, google_sub,
 	display_name, password_hash, is_premium, premium_expires_at, created_at`
 
@@ -23,16 +22,15 @@ type AuthRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewAuthRepository wraps a pgx pool. The pool may be nil when the DB is
-// unreachable at boot; in that case every method returns ErrNoDatabase rather
-// than panicking, so the process still serves liveness traffic.
+// NewAuthRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
+// every method return ErrNoDatabase instead of panicking, so liveness still serves.
 func NewAuthRepository(pool *pgxpool.Pool) *AuthRepository {
 	return &AuthRepository{pool: pool}
 }
 
 var _ AuthStore = (*AuthRepository)(nil)
 
-// row is satisfied by both pgx.Row and pgx.Rows, so scanUser works for single
+// row is satisfied by both pgx.Row and pgx.Rows, so scan helpers work for single-
 // and multi-row queries.
 type row interface {
 	Scan(dest ...any) error
@@ -126,9 +124,9 @@ func (r *AuthRepository) DeleteUser(ctx context.Context, id string) error {
 	if r.pool == nil {
 		return ErrNoDatabase
 	}
-	// ON DELETE CASCADE (migrations 0002–0005) removes refresh_tokens,
-	// diary_entries, gallery_images and song_history for this user in the same
-	// statement. Object storage is not reachable from SQL and is purged separately.
+	// ON DELETE CASCADE (migrations 0002–0005) removes this user's refresh_tokens,
+	// diary_entries, gallery_images and song_history too. Object storage isn't
+	// reachable from SQL and is purged separately.
 	const q = `DELETE FROM users WHERE id = $1`
 	tag, err := r.pool.Exec(ctx, q, id)
 	if err != nil {

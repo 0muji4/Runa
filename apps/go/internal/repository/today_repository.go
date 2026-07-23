@@ -11,15 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// quoteColumns / songColumns are the SELECT lists shared by their queries, kept
-// in one place so the scan order below stays in sync.
+// quoteColumns / songColumns are the shared SELECT lists; keep their order in sync
+// with scanQuote / scanSong.
 const (
 	quoteColumns = `id, date, body_text`
 	songColumns  = `id, date, title, artist, artwork_url, audio_url`
 )
 
-// fkViolation is the Postgres SQLSTATE for a foreign-key violation, which a play
-// against an unknown song id raises; we map it to ErrNotFound.
+// fkViolation is the Postgres SQLSTATE for a FK violation (a play against an
+// unknown song id); mapped to ErrNotFound.
 const fkViolation = "23503"
 
 // TodayRepository is the pgx-backed implementation of TodayStore.
@@ -27,9 +27,8 @@ type TodayRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewTodayRepository wraps a pgx pool. As with the other repositories the pool
-// may be nil when the DB is unreachable at boot; every method then returns
-// ErrNoDatabase instead of panicking, so the process still serves liveness.
+// NewTodayRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
+// every method return ErrNoDatabase instead of panicking, so liveness still serves.
 func NewTodayRepository(pool *pgxpool.Pool) *TodayRepository {
 	return &TodayRepository{pool: pool}
 }
@@ -87,9 +86,8 @@ func (r *TodayRepository) ListSongs(ctx context.Context, p ListSongsParams) ([]S
 		return nil, ErrNoDatabase
 	}
 
-	// Two query shapes: the first page has no cursor; later pages ride the keyset
-	// (date, id) < (cursor) predicate. Keyset (not OFFSET) so inserts between page
-	// fetches never shift rows and cause skips/dupes.
+	// Keyset ((date, id) < cursor), not OFFSET, so inserts between pages never
+	// skip/dupe rows. The first page has no cursor.
 	var (
 		rows pgx.Rows
 		err  error
@@ -122,8 +120,7 @@ func (r *TodayRepository) RecordPlay(ctx context.Context, userID, songID string,
 	}
 	const q = `INSERT INTO song_history (user_id, song_id, played_at) VALUES ($1, $2, $3)`
 	if _, err := r.pool.Exec(ctx, q, userID, songID, playedAt); err != nil {
-		// An unknown song id fails the daily_songs FK; surface it as not-found so
-		// the handler answers 404 rather than 500.
+		// An unknown song id fails the daily_songs FK → ErrNotFound (404, not 500).
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == fkViolation {
 			return ErrNotFound
@@ -172,8 +169,8 @@ func (r *TodayRepository) InsertSong(ctx context.Context, p InsertSongParams) (S
 	return song, nil
 }
 
-// collectSongs scans and closes a song result set. It returns a non-nil empty
-// slice for zero rows so JSON encodes "[]" rather than "null".
+// collectSongs returns a non-nil empty slice for zero rows, so JSON encodes "[]"
+// rather than "null".
 func collectSongs(rows pgx.Rows) ([]Song, error) {
 	defer rows.Close()
 	songs := make([]Song, 0)

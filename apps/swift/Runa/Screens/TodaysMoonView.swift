@@ -30,10 +30,11 @@ struct TodaysMoonView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let state = model.state, case .content(let c) = onEnum(of: state) {
-            moonView(c.moon)
+        // Pure local computation: settles to Content synchronously.
+        if case .content(let moon) = model.ui {
+            moonView(moon)
         } else {
-            ProgressView().tint(runaTheme.accent)
+            RunaLoadingView()
         }
     }
 

@@ -4,20 +4,46 @@ import Shared
 /// ObservableObject bridge over the shared `GalleryViewModel` (13 ギャラリー). Mirrors
 /// the other observables: collect the SKIE-bridged `StateFlow` and republish on the
 /// main actor; the display-theme toggle and mutations forward to the shared VM.
+/// The gallery grid's page state, mapped from the shared `UiState<List<GalleryImage>>`
+/// into a native Swift enum so the view never touches SKIE generics. The display-theme
+/// toggle is a separate flow (grid chrome shown over both content and empty).
+enum GalleryUi {
+    case loading
+    case empty
+    case content(images: [GalleryImage], sync: SyncPhase)
+    case failure(AppError)
+}
+
+/// ObservableObject bridge over the shared `GalleryViewModel` (13 ギャラリー). Collects
+/// the SKIE-bridged `StateFlow<UiState<…>>` + the display-theme flow, mapping each grid
+/// emission to [GalleryUi], and republishes on the main actor; mutations forward to the
+/// shared VM.
 @MainActor
 final class GalleryObservable: ObservableObject {
-    @Published private(set) var state: GalleryUiState?
+    @Published private(set) var ui: GalleryUi = .loading
+    @Published private(set) var displayTheme: GalleryDisplayTheme = .pink
 
     private let viewModel: GalleryViewModel
     private var collectTask: Task<Void, Never>?
+    private var themeTask: Task<Void, Never>?
 
     init(viewModel: GalleryViewModel = resolveGalleryViewModel()) {
         self.viewModel = viewModel
         collectTask = Task { [weak self] in
             guard let self else { return }
-            let flow: SkieSwiftStateFlow<GalleryUiState> = self.viewModel.state
-            for await value in flow {
-                self.state = value
+            for await value in self.viewModel.state {
+                switch runaDecode(value, as: [GalleryImage].self) {
+                case .loading: self.ui = .loading
+                case .empty: self.ui = .empty
+                case .content(let images, let sync): self.ui = .content(images: images, sync: sync)
+                case .failure(let error): self.ui = .failure(error)
+                }
+            }
+        }
+        themeTask = Task { [weak self] in
+            guard let self else { return }
+            for await value in self.viewModel.displayTheme {
+                self.displayTheme = value
             }
         }
     }
@@ -43,5 +69,8 @@ final class GalleryObservable: ObservableObject {
         viewModel.refresh()
     }
 
-    deinit { collectTask?.cancel() }
+    deinit {
+        collectTask?.cancel()
+        themeTask?.cancel()
+    }
 }

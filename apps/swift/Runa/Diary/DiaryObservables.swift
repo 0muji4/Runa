@@ -1,11 +1,22 @@
 import Foundation
 import Shared
 
-/// ObservableObject bridge over the shared `DiaryListViewModel`. Mirrors
-/// `AuthObservable`: it collects the SKIE-bridged `StateFlow` and republishes each
-/// emission on the main actor; action methods forward straight to the shared VM.
+/// The diary list's page state, mapped from the shared `UiState<List<DiaryEntry>>`
+/// into a native Swift enum in the observable so the view never touches SKIE
+/// generics. Offline/sync ride along on `.content` as a `SyncPhase` (the quiet
+/// banner); local-first means `.failure` effectively never occurs.
+enum DiaryListUi {
+    case loading
+    case empty
+    case content(entries: [DiaryEntry], sync: SyncPhase)
+    case failure(AppError)
+}
+
+/// ObservableObject bridge over the shared `DiaryListViewModel`. Collects the
+/// SKIE-bridged `StateFlow<UiState<…>>`, maps each emission to [DiaryListUi], and
+/// republishes on the main actor; action methods forward straight to the shared VM.
 final class DiaryListObservable: ObservableObject {
-    @Published private(set) var state: DiaryListState?
+    @Published private(set) var ui: DiaryListUi = .loading
 
     private let viewModel: DiaryListViewModel
     private var collectTask: Task<Void, Never>?
@@ -14,9 +25,15 @@ final class DiaryListObservable: ObservableObject {
         self.viewModel = viewModel
         collectTask = Task { [weak self] in
             guard let self else { return }
-            let flow: SkieSwiftStateFlow<DiaryListState> = self.viewModel.state
-            for await value in flow {
-                await MainActor.run { self.state = value }
+            for await value in self.viewModel.state {
+                let mapped: DiaryListUi
+                switch runaDecode(value, as: [DiaryEntry].self) {
+                case .loading: mapped = .loading
+                case .empty: mapped = .empty
+                case .content(let entries, let sync): mapped = .content(entries: entries, sync: sync)
+                case .failure(let error): mapped = .failure(error)
+                }
+                await MainActor.run { self.ui = mapped }
             }
         }
     }
@@ -26,8 +43,10 @@ final class DiaryListObservable: ObservableObject {
 
     /// Finds a cached entry by its local id (used by the detail screen).
     func entry(clientId: String) -> DiaryEntry? {
-        guard let state, let content = state as? DiaryListStateContent else { return nil }
-        return content.entries.first { $0.clientId == clientId }
+        if case .content(let entries, _) = ui {
+            return entries.first { $0.clientId == clientId }
+        }
+        return nil
     }
 
     deinit { collectTask?.cancel() }

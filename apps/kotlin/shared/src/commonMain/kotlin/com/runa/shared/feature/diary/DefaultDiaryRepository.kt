@@ -2,6 +2,7 @@ package com.runa.shared.feature.diary
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.db.Diary_entries
 import com.runa.shared.db.RunaDatabase
 import com.runa.shared.network.ApiClient
@@ -47,8 +48,8 @@ class DefaultDiaryRepository(
 
     private val queries = database.diaryQueries
 
-    private val _syncStatus = MutableStateFlow(SyncStatus.Idle)
-    override val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
+    private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
+    override val syncStatus: StateFlow<SyncPhase> = _syncStatus.asStateFlow()
 
     // Coalesces overlapping syncs: a caller that finds one already running simply
     // returns, since that run will push everything currently pending.
@@ -128,15 +129,15 @@ class DefaultDiaryRepository(
     override suspend fun sync(): Result<Unit> {
         if (!syncMutex.tryLock()) return Result.success(Unit)
         return try {
-            _syncStatus.value = SyncStatus.Syncing
+            _syncStatus.value = SyncPhase.Syncing
             push()
             pull()
-            _syncStatus.value = SyncStatus.Idle
+            _syncStatus.value = SyncPhase.Idle
             Result.success(Unit)
         } catch (e: Exception) {
             // An ApiException means the server answered (we are online but it
             // errored); anything else is a transport/connectivity failure.
-            _syncStatus.value = if (e is ApiException) SyncStatus.Error else SyncStatus.Offline
+            _syncStatus.value = if (e is ApiException) SyncPhase.Error else SyncPhase.Offline
             Result.failure(e)
         } finally {
             syncMutex.unlock()

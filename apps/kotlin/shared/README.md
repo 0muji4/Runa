@@ -34,8 +34,8 @@ Android と iOS が共有する Kotlin Multiplatform モジュール。**ロジ�
 
 | シンボル | 役割 |
 | --- | --- |
-| `interface DiaryRepository` | `observeEntries(): Flow<List<DiaryEntry>>`（ローカル購読・即描画）／`createEntry` / `updateEntry` / `deleteEntry`（ローカル先行 → `pending_*`）／`sync()`／`syncStatus: StateFlow<SyncStatus>` |
-| `class DiaryListViewModel { val state: StateFlow<DiaryListState>; fun refresh(); fun delete(clientId) }` | 一覧。`DiaryListState = Loading / Content(entries, banner) / Empty(banner)`、`SyncBanner = None/Syncing/Offline/Error` |
+| `interface DiaryRepository` | `observeEntries(): Flow<List<DiaryEntry>>`（ローカル購読・即描画）／`createEntry` / `updateEntry` / `deleteEntry`（ローカル先行 → `pending_*`）／`sync()`／`syncStatus: StateFlow<SyncPhase>`（共通 `core/state`） |
+| `class DiaryListViewModel { val state: StateFlow<UiState<List<DiaryEntry>>>; fun refresh(); fun delete(clientId) }` | 一覧。共通 `UiState`（`Loading / Content(data, sync) / Empty / Failure`）。オフライン/同期は `Content.sync: SyncPhase` の帯で示す（状態画面の設計は [../../../README.md](../../../README.md) 参照） |
 | `class DiaryEditorViewModel { val state: StateFlow<DiaryEditorState>; fun onBodyChange; fun onMoodChange; fun saveNow() }` | 書く。`SaveStatus = Editing/Saving/Saved/Error`。初回の非空変更で `pending_create` 作成 → debounce 自動保存 |
 | `fun resolveDiaryListViewModel()` / `fun resolveDiaryEditorViewModel(clientId: String?)` | iOS（SKIE）向け解決入口。Android は `koinInject`（エディタは `parametersOf(clientId)`） |
 
@@ -45,7 +45,7 @@ Android と iOS が共有する Kotlin Multiplatform モジュール。**ロジ�
 - **`sync_state` 遷移**: `pending_create → (POST) → synced`／`synced → 編集 → pending_update → (PATCH) → synced`／`synced → 削除 → pending_delete → (DELETE) → ローカル物理削除`。未同期の作成を削除した場合はローカルから即破棄する。
 - **`sync()`**: pending を作成順に push（`pending_create`=POST / `pending_update`=PATCH / `pending_delete`=DELETE）してから、`GET /diary/sync?since=last_synced_at` で差分を pull。取得した `server_time` を次回の `since` として保持する（`diary_sync_meta` テーブル）。
 - **競合解決**: `updated_at` の last-write-wins で単純化。pull 時、未 push のローカル編集が新しければローカルを優先する。
-- **自動同期**: `NetworkMonitor` のオフライン→オンライン復帰、各ミューテーション直後、一覧の Pull to refresh／画面復帰で発火。オフラインはネットワーク呼び出しの失敗から検知し、`SyncBanner.Offline` を控えめに表示する。
+- **自動同期**: `NetworkMonitor` のオフライン→オンライン復帰、各ミューテーション直後、一覧の Pull to refresh／画面復帰で発火。オフラインはネットワーク呼び出しの失敗から検知し、`SyncPhase.Offline`（共通の帯）を控えめに表示する。
 
 ## ギャラリー（署名付きURL・画像アップロードの再利用型）
 
@@ -53,9 +53,9 @@ Android と iOS が共有する Kotlin Multiplatform モジュール。**ロジ�
 
 | シンボル | 役割 |
 | --- | --- |
-| `interface GalleryRepository` | `observeImages(): Flow<List<GalleryImage>>`（ローカル購読・即描画）／`addImage(bytes,width,height,mimeType,theme)`（`pending_upload` でキュー）／`deleteImage(clientId)`／`refresh()`／`syncStatus: StateFlow<GallerySyncStatus>`／`load/saveDisplayTheme` |
+| `interface GalleryRepository` | `observeImages(): Flow<List<GalleryImage>>`（ローカル購読・即描画）／`addImage(bytes,width,height,mimeType,theme)`（`pending_upload` でキュー）／`deleteImage(clientId)`／`refresh()`／`syncStatus: StateFlow<SyncPhase>`（共通 `core/state`）／`load/saveDisplayTheme` |
 | `interface StorageClient` | 署名付きURLへの**生バイト PUT 専用**（`putBytes(url,bytes,contentType,onProgress)`）。非認証・任意ホスト。`HttpClientFactory.createStorage`（ContentNegotiation なし・auth interceptor なし）で生成し、Koin `STORAGE_CLIENT` で束ねる。**認証クライアントは絶対に使わない**（署名URLホストに Runa Bearer を付けてしまうため） |
-| `class GalleryViewModel { val state: StateFlow<GalleryUiState>; fun setDisplayTheme; fun addImage; fun deleteImage; fun refresh }` | グリッド。`GalleryUiState = Loading / Content(images, displayTheme, banner) / Empty / Error`、`GalleryBanner = None/Syncing/Offline/Error` |
+| `class GalleryViewModel { val state: StateFlow<UiState<List<GalleryImage>>>; val displayTheme: StateFlow<GalleryDisplayTheme>; fun setDisplayTheme; fun addImage; fun deleteImage; fun refresh }` | グリッド。共通 `UiState`（`Loading / Content(images, sync) / Empty / Failure`）。表示テーマは Content/Empty 双方に出すクロームなので別 flow で公開 |
 | `class ImageDetailViewModel { val state: StateFlow<ImageDetailUiState>; fun focus; fun delete }` | ライトボックス。`ImageDetailUiState = Loading / Viewing(images, index) / Dismissed`。同じローカル画像 Flow を購読し、フォーカス中の画像が消えたら `Dismissed` |
 | `fun resolveGalleryViewModel()` / `fun resolveImageDetailViewModel(startClientId)` | iOS（SKIE）向け解決入口。Android は `koinInject` |
 

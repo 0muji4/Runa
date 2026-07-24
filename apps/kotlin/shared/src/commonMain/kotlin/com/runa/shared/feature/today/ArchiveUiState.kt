@@ -1,16 +1,19 @@
 package com.runa.shared.feature.today
 
+import com.runa.shared.core.state.AppError
 import com.runa.shared.network.dto.SongDto
 
 /**
  * UI state for the "past songs" archive. [songs] is the paged archive (newest
  * first); [history] is the local play log shown alongside it. [canLoadMore] drives
- * the paging affordance.
+ * the paging affordance. [error] is the classified [AppError] from a failed page
+ * load, so the screen can pick the shared offline/error state view (it is only a
+ * full-screen state when there is nothing paged in yet).
  */
 data class ArchiveUiState(
     val songs: List<SongDto> = emptyList(),
     val history: List<SongHistoryEntry> = emptyList(),
     val isLoading: Boolean = false,
     val canLoadMore: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
 )

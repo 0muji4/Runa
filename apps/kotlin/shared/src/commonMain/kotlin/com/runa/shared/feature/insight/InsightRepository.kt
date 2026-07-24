@@ -1,7 +1,7 @@
 package com.runa.shared.feature.insight
 
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.diary.DiaryRepository
-import com.runa.shared.feature.diary.SyncStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,8 +35,8 @@ interface InsightRepository {
      *  offline is a no-op that leaves the local render intact). */
     suspend fun refresh(): Result<Unit>
 
-    /** The diary sync status, surfaced as the insight screen's quiet banner. */
-    val syncStatus: StateFlow<SyncStatus>
+    /** The diary sync phase, surfaced as the insight screen's quiet banner. */
+    val syncStatus: StateFlow<SyncPhase>
 }
 
 /**
@@ -49,7 +49,7 @@ class DefaultInsightRepository(
     private val composer: SummaryComposer = RuleBasedSummaryComposer,
 ) : InsightRepository {
 
-    override val syncStatus: StateFlow<SyncStatus> = diaryRepository.syncStatus
+    override val syncStatus: StateFlow<SyncPhase> = diaryRepository.syncStatus
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeInsight(period: InsightPeriod, zone: TimeZone): Flow<Insight> =

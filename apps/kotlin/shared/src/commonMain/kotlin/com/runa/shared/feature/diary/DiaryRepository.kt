@@ -1,5 +1,6 @@
 package com.runa.shared.feature.diary
 
+import com.runa.shared.core.state.SyncPhase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.Instant
@@ -35,21 +36,6 @@ interface DiaryRepository {
      *  Idempotent and safe to call repeatedly; overlapping calls coalesce. */
     suspend fun sync(): Result<Unit>
 
-    /** Coarse status of the last/ongoing sync, for the list banner. */
-    val syncStatus: StateFlow<SyncStatus>
-}
-
-/** What a sync is currently doing, surfaced as the list's subtle banner. */
-enum class SyncStatus {
-    /** Nothing in flight; last sync (if any) succeeded. */
-    Idle,
-
-    /** A sync is running. */
-    Syncing,
-
-    /** The last sync could not reach the server (connectivity). */
-    Offline,
-
-    /** The last sync reached the server but failed (non-connectivity error). */
-    Error,
+    /** Coarse phase of the last/ongoing sync, for the list banner. */
+    val syncStatus: StateFlow<SyncPhase>
 }

@@ -33,24 +33,26 @@ struct InsightView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let state = model.state {
-            switch onEnum(of: state) {
-            case .content(let c):
-                periodBar(label: c.periodLabel, type: c.periodType)
-                letter(c.insight)
-                banner(c.banner)
-                Spacer().frame(height: 40)
-            case .empty(let e):
-                periodBar(label: e.periodLabel, type: e.periodType)
-                emptyLetter()
-                banner(e.banner)
-            case .loading:
-                Color.clear.frame(height: 240)
-            case .error:
-                errorLetter()
-            }
-        } else {
-            Color.clear.frame(height: 240)
+        // The period chrome always shows (over content and empty alike); the shared
+        // state surfaces drive the letter body below it.
+        if let header = model.header {
+            periodBar(label: header.periodLabel, type: header.periodType)
+        }
+        switch model.ui {
+        case .content(let insight, let sync):
+            letter(insight)
+            RunaSyncBanner(phase: sync)
+            Spacer().frame(height: 40)
+        case .empty:
+            RunaEmptyView(
+                title: "まだ、しるした夜がありません。",
+                message: "この期間は、静かなままです。"
+            )
+            .frame(height: 360)
+        case .loading:
+            RunaLoadingView().frame(height: 320)
+        case .failure(let error):
+            RunaFailureView(error: error, onRetry: { model.refresh() }).frame(height: 320)
         }
     }
 
@@ -197,52 +199,4 @@ struct InsightView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: empty / error / banner
-
-    private func emptyLetter() -> some View {
-        VStack(spacing: 0) {
-            NewMoonEmblem(diameter: 116)
-            Text("まだ、しるした夜がありません。")
-                .font(RunaFonts.heading(22))
-                .foregroundStyle(runaTheme.heading)
-                .multilineTextAlignment(.center)
-                .padding(.top, 28)
-            Text("この期間は、静かなままです。")
-                .font(RunaFonts.body(14))
-                .foregroundStyle(runaTheme.subtle)
-                .multilineTextAlignment(.center)
-                .padding(.top, 14)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 64)
-    }
-
-    private func errorLetter() -> some View {
-        VStack {
-            Text("同期に、少しつまずいています。")
-                .font(RunaFonts.body(14))
-                .foregroundStyle(runaTheme.subtle)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
-    }
-
-    @ViewBuilder private func banner(_ banner: InsightBanner) -> some View {
-        if let text = bannerText(banner) {
-            Text(text)
-                .font(RunaFonts.body(13))
-                .foregroundStyle(runaTheme.subtle)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 24)
-        }
-    }
-
-    private func bannerText(_ banner: InsightBanner) -> String? {
-        switch banner {
-        case .offline: return "オフライン。綴った言葉は、端末に守られています。"
-        case .error: return "同期に、少しつまずいています。"
-        default: return nil // .none / .syncing stay silent
-        }
-    }
 }

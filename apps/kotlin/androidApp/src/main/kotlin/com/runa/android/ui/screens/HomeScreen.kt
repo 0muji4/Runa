@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -23,9 +22,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.runa.android.R
+import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.moon.MoonPresentation
 import com.runa.android.ui.theme.RunaColors
-import com.runa.shared.feature.today.HomeUiState
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.today.HomeViewModel
 import com.runa.shared.feature.today.Today
 import kotlin.math.roundToInt
@@ -67,16 +67,13 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            when (val current = state) {
-                is HomeUiState.Loading -> CircularProgressIndicator(color = RunaColors.Accent)
-                is HomeUiState.Content -> HomeContent(current.today, offline = false, onOpenTodaysMoon)
-                is HomeUiState.Offline -> HomeContent(current.today, offline = true, onOpenTodaysMoon)
-                is HomeUiState.Error -> Text(
-                    text = stringResource(R.string.home_error),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = RunaColors.Subtle,
-                    textAlign = TextAlign.Center,
-                )
+            RunaStateView(
+                state = state,
+                onRetry = viewModel::load,
+                empty = {}, // the home always has content (the moon is computed locally)
+                modifier = Modifier.fillMaxSize(),
+            ) { today, sync ->
+                HomeContent(today, offline = sync == SyncPhase.Offline, onOpenTodaysMoon)
             }
         }
     }

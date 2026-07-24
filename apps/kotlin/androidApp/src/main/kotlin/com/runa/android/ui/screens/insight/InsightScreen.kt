@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,20 +29,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
-import com.runa.android.ui.components.NewMoonEmblem
+import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaErrorView
+import com.runa.android.ui.components.RunaLoadingView
+import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.CormorantGaramond
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.ZenKakuGothicNew
+import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.diary.DiaryMood
 import com.runa.shared.feature.insight.Insight
-import com.runa.shared.feature.insight.InsightBanner
 import com.runa.shared.feature.insight.InsightPeriodType
-import com.runa.shared.feature.insight.InsightUiState
 import com.runa.shared.feature.insight.InsightViewModel
 import com.runa.shared.feature.insight.MoodCount
 import com.runa.shared.feature.insight.MoonPhaseBucket
@@ -62,6 +62,7 @@ fun InsightScreen(
     viewModel: InsightViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
+    val header by viewModel.header.collectAsState()
 
     Column(
         Modifier
@@ -80,20 +81,25 @@ fun InsightScreen(
                 .padding(vertical = 6.dp, horizontal = 4.dp),
         )
 
+        // The period chrome always shows (over content and empty alike); the shared
+        // state surfaces drive the letter body below it.
+        PeriodBar(header.periodLabel, header.periodType, viewModel)
         when (val current = state) {
-            is InsightUiState.Content -> {
-                PeriodBar(current.periodLabel, current.periodType, viewModel)
-                LetterContent(current.insight)
-                Banner(current.banner)
+            is UiState.Content -> {
+                LetterContent(current.data)
+                RunaSyncBanner(current.sync)
                 Spacer(Modifier.height(40.dp))
             }
-            is InsightUiState.Empty -> {
-                PeriodBar(current.periodLabel, current.periodType, viewModel)
-                EmptyLetter()
-                Banner(current.banner)
-            }
-            InsightUiState.Loading -> Box(Modifier.fillMaxWidth().height(240.dp))
-            is InsightUiState.Error -> ErrorLetter()
+            UiState.Empty -> RunaEmptyView(
+                title = stringResource(R.string.insight_empty_title),
+                body = stringResource(R.string.insight_empty_body),
+                modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+            )
+            UiState.Loading -> RunaLoadingView(modifier = Modifier.fillMaxWidth().height(320.dp))
+            is UiState.Failure -> RunaErrorView(
+                onCta = viewModel::refresh,
+                modifier = Modifier.fillMaxWidth().height(320.dp),
+            )
         }
     }
 }
@@ -254,67 +260,6 @@ private fun MoodDots(distribution: List<MoodCount>, unmoodedCount: Int) {
             )
         }
     }
-}
-
-@Composable
-private fun EmptyLetter() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        NewMoonEmblem(diameter = 116.dp)
-        Spacer(Modifier.height(28.dp))
-        Text(
-            text = stringResource(R.string.insight_empty_title),
-            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 22.sp, lineHeight = 34.sp),
-            color = RunaColors.Heading,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.insight_empty_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = RunaColors.Subtle,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun ErrorLetter() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = stringResource(R.string.diary_banner_error),
-            style = MaterialTheme.typography.bodyMedium,
-            color = RunaColors.Subtle,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun Banner(banner: InsightBanner) {
-    val text = when (banner) {
-        InsightBanner.Offline -> stringResource(R.string.diary_banner_offline)
-        InsightBanner.Error -> stringResource(R.string.diary_banner_error)
-        else -> return // None / Syncing stay silent
-    }
-    Text(
-        text = text,
-        style = MaterialLabel,
-        color = RunaColors.Subtle,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 24.dp),
-    )
 }
 
 @Composable

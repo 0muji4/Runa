@@ -43,20 +43,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.runa.android.R
-import com.runa.android.ui.components.NewMoonEmblem
+import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaStateView
+import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.screens.gallery.ImageNormalizer
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.ZenKakuGothicNew
-import com.runa.shared.feature.gallery.GalleryBanner
+import com.runa.shared.core.state.SyncPhase
+import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.gallery.GalleryDisplayTheme
 import com.runa.shared.feature.gallery.GalleryImage
-import com.runa.shared.feature.gallery.GalleryUiState
 import com.runa.shared.feature.gallery.GalleryViewModel
 import com.runa.shared.feature.gallery.UploadState
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +77,7 @@ import java.util.Locale
 @Composable
 fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
     val state by viewModel.state.collectAsState()
+    val displayTheme by viewModel.displayTheme.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var lightboxIndex by remember { mutableStateOf<Int?>(null) }
@@ -95,31 +97,41 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             GalleryHeader(onAdd = launchPicker)
-            when (val s = state) {
-                is GalleryUiState.Content -> {
-                    ThemeToggle(s.displayTheme, viewModel::setDisplayTheme)
-                    Banner(s.banner)
-                    GalleryGrid(s.images, s.displayTheme, onOpen = { index -> lightboxIndex = index })
+            // Grid chrome (the display-theme toggle) + the quiet sync line show over
+            // both content and empty; the shared state surfaces drive the grid region.
+            ThemeToggle(displayTheme, viewModel::setDisplayTheme)
+            val sync = (state as? UiState.Content<List<GalleryImage>>)?.sync ?: SyncPhase.Idle
+            RunaSyncBanner(sync)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                RunaStateView(
+                    state = state,
+                    onRetry = viewModel::refresh,
+                    empty = {
+                        RunaEmptyView(
+                            title = stringResource(R.string.gallery_empty_line),
+                            body = stringResource(R.string.gallery_empty_body),
+                            ctaLabel = stringResource(R.string.gallery_add),
+                            onCta = launchPicker,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) { images, _ ->
+                    GalleryGrid(images, displayTheme, onOpen = { index -> lightboxIndex = index })
                 }
-                is GalleryUiState.Empty -> {
-                    ThemeToggle(s.displayTheme, viewModel::setDisplayTheme)
-                    Banner(s.banner)
-                    GalleryEmpty()
-                }
-                GalleryUiState.Loading -> Spacer(Modifier.height(240.dp))
-                is GalleryUiState.Error -> GalleryEmpty()
             }
         }
 
         // Lightbox (14) as a full-screen overlay over the grid state.
         val current = state
         val index = lightboxIndex
-        if (current is GalleryUiState.Content && index != null) {
-            if (index in current.images.indices) {
+        if (current is UiState.Content<List<GalleryImage>> && index != null) {
+            val images = current.data
+            if (index in images.indices) {
                 Lightbox(
-                    images = current.images,
+                    images = images,
                     startIndex = index,
-                    displayTheme = current.displayTheme,
+                    displayTheme = displayTheme,
                     onClose = { lightboxIndex = null },
                     onDelete = { clientId ->
                         viewModel.deleteImage(clientId)
@@ -243,39 +255,6 @@ private fun GalleryCell(image: GalleryImage, displayTheme: GalleryDisplayTheme, 
             }
         }
     }
-}
-
-@Composable
-private fun GalleryEmpty() {
-    Column(
-        Modifier.fillMaxSize().padding(top = 80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        NewMoonEmblem()
-        Spacer(Modifier.height(28.dp))
-        Text(
-            text = stringResource(R.string.gallery_empty_line),
-            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 16.sp),
-            color = RunaColors.Subtle,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun Banner(banner: GalleryBanner) {
-    val text = when (banner) {
-        GalleryBanner.Offline -> stringResource(R.string.diary_banner_offline)
-        GalleryBanner.Error -> stringResource(R.string.diary_banner_error)
-        else -> return // None / Syncing stay silent
-    }
-    Text(
-        text = text,
-        style = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 13.sp),
-        color = RunaColors.Subtle,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-    )
 }
 
 @Composable

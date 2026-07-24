@@ -7,10 +7,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.runa.android.ui.components.LocalReauthenticate
 import com.runa.android.ui.theme.RunaColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -86,13 +89,21 @@ fun diaryWriteOnRoute(isoDate: String): String = "diary/write-on/$isoDate"
 @Composable
 fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
     val state by authViewModel.state.collectAsState()
+    // Stable identity so providing it (a static CompositionLocal) doesn't recompose the
+    // whole tab tree when RunaApp recomposes (e.g. the user profile re-emits).
+    val reauthenticate = remember(authViewModel) { { authViewModel.logout() } }
 
     when (val current = state) {
         is AuthState.Restoring -> SplashScreen()
-        is AuthState.Authenticated -> RunaTabs(
-            displayName = current.user.displayName,
-            onSignOut = { authViewModel.logout() },
-        )
+        is AuthState.Authenticated ->
+            // Provide the shared re-authenticate action (clears the session → sign-in)
+            // so the RunaErrorView auth CTA works app-wide without threading a callback.
+            CompositionLocalProvider(LocalReauthenticate provides reauthenticate) {
+                RunaTabs(
+                    displayName = current.user.displayName,
+                    onSignOut = reauthenticate,
+                )
+            }
         else -> AuthFlow(state = current, authViewModel = authViewModel)
     }
 }

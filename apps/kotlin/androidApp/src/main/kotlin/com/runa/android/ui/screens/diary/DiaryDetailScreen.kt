@@ -32,7 +32,8 @@ import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
-import com.runa.shared.feature.diary.DiaryListState
+import com.runa.shared.core.state.UiState
+import com.runa.shared.feature.diary.DiaryEntry
 import com.runa.shared.feature.diary.DiaryListViewModel
 import org.koin.compose.koinInject
 
@@ -50,7 +51,7 @@ fun DiaryDetailScreen(
     viewModel: DiaryListViewModel = koinInject(),
 ) {
     val state by viewModel.state.collectAsState()
-    val entry = (state as? DiaryListState.Content)?.entries?.firstOrNull { it.clientId == clientId }
+    val entry = (state as? UiState.Content<List<DiaryEntry>>)?.data?.firstOrNull { it.clientId == clientId }
     var confirmDelete by remember { mutableStateOf(false) }
 
     Surface(color = RunaColors.Background) {

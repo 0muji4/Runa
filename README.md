@@ -162,6 +162,25 @@ curl http://localhost:8080/api/v1/healthz
   - **iOS**: `Info.plist` に `NSFaceIDUsageDescription`、`project.yml` に `UserNotifications.framework` / `LocalAuthentication.framework`（静的 XCFramework のリンク要件）。日次通知は `UNCalendarNotificationTrigger`（repeats、OS 管理で再起動対応）。詳細は [apps/swift/README.md](apps/swift/README.md)。
 - **BE（任意・最小）**: `PUT /api/v1/devices`（`push_token` / `platform` / `notify_time` / `enabled`）は将来のサーバ起点通知（FCM/APNs）用のトークン登録口。今回のリマインドはローカル通知で完結するため必須ではなく、`shared` からの呼び出しも将来スライスで接続する。詳細は [apps/go/README.md](apps/go/README.md) / [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
 
+### 状態画面（空 / オフライン / ローディング / エラー）
+
+「認証済み前提」。各機能が個別に持っていた状態表示を、**共通の状態語彙（`shared`）＋共通コンポーネント（各 OS）** に統一する回。新規ビジネスロジックはほぼ無く、世界観（月モチーフ・静けさ）で一貫させるのが目的（確定デザイン 24 空 / 25 オフライン / 26 ローディング / 27 エラー）。
+
+- **`UiState<T>`（`shared` の `core/state`）**: ページ全体の状態を全機能で統一した sealed 型。
+  - `Loading` … 静かな全画面ローディング。
+  - `Content(data, sync: SyncPhase)` … 本文＋背景同期フェーズ。**オフライン/同期は本文を隠さず `sync` の帯で示す**（2層オフラインモデル）。
+  - `Empty` … まだ何も無い＝行動への招待。
+  - `Failure(error: AppError)` … 本文を出せない致命状態（`error` で オフライン画面 か エラー画面 を出し分け）。
+  - **2層オフライン（DoD#2）**: キャッシュ/月相など見せられるものがある時は `Content(sync = Offline)`（本文＋静かな帯）、見せるものが何も無い時だけ `Failure(AppError.Offline)`（全画面 25）。ローカルファースト機能（ダイアリー/カレンダー/インサイト/ギャラリー/ホーム）は前者が基本で、`Failure` は実質発生しない。
+  - コンテンツ系 VM（Home/Diary/Calendar/Insight/Gallery/TodayMoon）は `UiState<T>` を返す。チーム/フォーム/アクション状態しか持たない VM（テーマ・通知・プレイヤー・保存状態・アカウント操作）は現状維持。ギャラリーの表示テーマ、インサイトの期間見出しは Content/Empty 双方に出す「クローム」なので `UiState` とは別の flow（`displayTheme` / `header`）で公開する。
+- **`SyncPhase`（同期フェーズ・帯）**: `Idle / Syncing / Offline / Error`。従来の重複 enum（diary `SyncStatus`・`GallerySyncStatus`・`SyncBanner`・`CalendarBanner`・`InsightBanner`・`GalleryBanner`）を 1 型に集約。repository の `syncStatus` もこの型を公開。帯（`RunaSyncBanner`）は Offline/Error のみ表示し、Syncing は各画面の更新表示に委ねる。
+- **`AppError`（エラー分類）**: `Offline`（到達不可）/ `Auth`（認証切れ→再認証）/ `Server`（4xx・5xx）/ `Unknown`。分類器 `Throwable.toAppError()` は既存の一行規則（`if (e is ApiException) Error else Offline`）を精緻化し、`ApiException` の **401 → `Auth`**、その他 `ApiException` → `Server`、非 `ApiException`（ネットワーク未応答）→ `Offline`。
+- **認証切れ → 再認証（DoD#3）**: 401 はまず HTTP 層で透過 refresh され、refresh も失敗した時だけ `TokenStore.sessionExpired` が発火し**アプリ全体が自動でサインインに戻る**（既存の主導線）。加えて `AppError.Auth` のエラー画面は CTA「サインインし直す」で共通の再認証アクション（= セッションクリア）を呼ぶ。ナビゲーション route ではなく、Android は `LocalReauthenticate`、iOS は `\.runaReauthenticate` の環境値で app 全体に注入（サインアウトと同じ仕組み）。
+- **共通コンポーネント（Android Compose / iOS SwiftUI）**: `RunaLoadingView` / `RunaEmptyView` / `RunaOfflineView` / `RunaErrorView` と、本文上の `RunaSyncBanner`。既存の月エンブレム（`GlowingMoon` 26 / `NewMoonEmblem` 24 / `CloudedMoon` 25 / `StumbleEmblem` 27、テーマ非連動の固定モチーフ）をラップし、周囲の文言/CTA はテーマトークンを読む。ローディングは月＋3点の静かな表示（スピナー禁止）で、**reduced motion 尊重**（Android=`ANIMATOR_DURATION_SCALE==0`、iOS=`accessibilityReduceMotion`）で静止に切り替わる。文面は LUNA の声（謝らず・何が起きたか・どうすればよいか）。空の文言は機能ごと（例: ダイアリー「まだ、なにもない夜。」）に差し込む。
+- **画面の使い方**: Android は `RunaStateView(state) { data, sync -> … }` ディスパッチャで全画面を包む（本文冒頭に `RunaSyncBanner(sync)`）。iOS は各 View が `onEnum(of:)` で分岐し同じ共通コンポーネントへ渡す（コレクション payload の Diary/Gallery は observable でネイティブ enum に写して SKIE ジェネリクスを避ける）。両 OS で状態表現・モチーフ・文言が一致する（DoD#5）。
+- **テスト（commonTest）**: `AppErrorTest`（401→Auth / その他 4xx・5xx→Server / 非 ApiException→Offline）、`DiaryListViewModelTest`（Loading→Empty / Content が `SyncPhase` を帯として保持 / オフライン→復帰で本文を落とさず帯だけ切替）。
+- **ローカル検証の限界**: `shared` は `./gradlew :shared:testDebugUnitTest` で green を確認。JDK17/Xcode 不在のため Android/iOS UI は手レビュー。iOS の SKIE 記号（`UiState`/`AppError`/`SyncPhase` のブリッジ、ジェネリック `data` の型）は実 XCFramework ビルドに対して再整合が必要（[apps/swift/README.md](apps/swift/README.md) の方針に従う）。
+
 ### 動作確認
 
 ```sh

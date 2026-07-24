@@ -28,13 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
+import com.runa.android.ui.components.RunaLoadingView
+import com.runa.android.ui.components.RunaOfflineView
+import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.CormorantGaramond
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.ZenKakuGothicNew
-import com.runa.shared.feature.calendar.CalendarBanner
+import com.runa.shared.core.state.SyncPhase
+import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.calendar.CalendarDay
-import com.runa.shared.feature.calendar.CalendarUiState
+import com.runa.shared.feature.calendar.CalendarMonth
 import com.runa.shared.feature.calendar.CalendarViewModel
 import com.runa.shared.feature.today.moon.moonIsWaxing
 import org.koin.compose.koinInject
@@ -74,9 +78,13 @@ fun CalendarScreen(
                 .padding(vertical = 6.dp, horizontal = 4.dp),
         )
 
+        // Local-first: the grid is effectively always Loading then Content (a month
+        // with no records is all-zero counts). Non-content branches fall back to the
+        // shared state surfaces; the sync phase rides along as a quiet banner.
         when (val current = state) {
-            is CalendarUiState.Content -> MonthContent(
-                content = current,
+            is UiState.Content -> MonthContent(
+                month = current.data,
+                banner = current.sync,
                 onPrev = viewModel::showPreviousMonth,
                 onNext = viewModel::showNextMonth,
                 onToday = viewModel::showToday,
@@ -85,28 +93,31 @@ fun CalendarScreen(
                     if (day.entryCount > 0) onOpenDayRecords(iso) else onWriteOnDay(iso)
                 },
             )
-            CalendarUiState.Loading -> Box(Modifier.fillMaxSize()) // brief; DB emits quickly
+            UiState.Loading -> RunaLoadingView(modifier = Modifier.fillMaxSize())
+            UiState.Empty -> Unit // never: a monthless grid is simply all-zero
+            is UiState.Failure -> RunaOfflineView(onRetry = viewModel::refresh, modifier = Modifier.fillMaxSize())
         }
     }
 }
 
 @Composable
 private fun ColumnScope.MonthContent(
-    content: CalendarUiState.Content,
+    month: CalendarMonth,
+    banner: SyncPhase,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
     onDayClick: (CalendarDay) -> Unit,
 ) {
     Spacer(Modifier.height(8.dp))
-    MonthHeader(content.year, content.month, onPrev, onNext, onToday)
+    MonthHeader(month.year, month.month, onPrev, onNext, onToday)
     Spacer(Modifier.height(24.dp))
     WeekdayRow()
     Spacer(Modifier.height(8.dp))
-    MonthGrid(content.firstDayOfWeek, content.days, onDayClick)
+    MonthGrid(month.firstDayOfWeek, month.days, onDayClick)
 
     Spacer(Modifier.weight(1f))
-    CalendarLegend(content.banner)
+    CalendarLegend(banner)
     Spacer(Modifier.height(28.dp))
 }
 
@@ -217,16 +228,10 @@ private fun DayCell(day: CalendarDay, onDayClick: (CalendarDay) -> Unit) {
 }
 
 @Composable
-private fun CalendarLegend(banner: CalendarBanner) {
+private fun CalendarLegend(banner: SyncPhase) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        bannerText(banner)?.let {
-            Text(
-                text = it,
-                style = MaterialLabel,
-                color = RunaColors.Subtle,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
-        }
+        // Quiet offline/error line over the always-rendered grid (Idle/Syncing stay silent).
+        RunaSyncBanner(banner)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(
                 Modifier
@@ -240,13 +245,6 @@ private fun CalendarLegend(banner: CalendarBanner) {
             )
         }
     }
-}
-
-@Composable
-private fun bannerText(banner: CalendarBanner): String? = when (banner) {
-    CalendarBanner.Offline -> stringResource(R.string.diary_banner_offline)
-    CalendarBanner.Error -> stringResource(R.string.diary_banner_error)
-    else -> null // None / Syncing stay silent
 }
 
 private val MaterialLabel = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 13.sp)

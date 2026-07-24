@@ -26,10 +26,10 @@ import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
+import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.today.moon.moonIsWaxing
 import com.runa.shared.feature.today.moon.moonPhaseNameJa
 import com.runa.shared.feature.todaymoon.TodayMoon
-import com.runa.shared.feature.todaymoon.TodayMoonUiState
 import com.runa.shared.feature.todaymoon.TodayMoonViewModel
 import org.koin.compose.koinInject
 
@@ -61,10 +61,9 @@ fun TodaysMoonScreen(
                 .padding(vertical = 6.dp, horizontal = 4.dp),
         )
 
-        when (val current = state) {
-            is TodayMoonUiState.Content -> MoonContent(current.moon)
-            TodayMoonUiState.Loading -> Unit // resolves synchronously
-        }
+        // Pure local computation: settles to Content synchronously; Loading/Empty/
+        // Failure never surface for the moon.
+        (state as? UiState.Content<TodayMoon>)?.let { MoonContent(it.data) }
     }
 }
 

@@ -24,6 +24,7 @@
     <string name="gallery_theme_pink">ピンク</string>
     <string name="gallery_add">写真を追加</string>
     <string name="gallery_empty_line">まだ、ひかりの記録はありません。</string>
+    <string name="gallery_empty_body">最初のひかりを、\nそっと残してみませんか。</string>
     <string name="gallery_close">閉じる</string>
     <string name="gallery_delete">削除</string>
 
@@ -71,9 +72,9 @@
     <string name="diary_empty_body">最初のひとことを、\nそっと綴ってみませんか。</string>
     <string name="diary_empty_cta">綴りはじめる</string>
     <string name="diary_banner_syncing">同期しています…</string>
-    <string name="diary_banner_offline">オフライン。綴った言葉は、端末に守られています。</string>
-    <string name="diary_banner_error">同期に、少しつまずいています。</string>
 
+    <!-- diary_banner_offline / diary_banner_error removed: superseded by the shared
+         state_banner_* strings (RunaSyncBanner). -->
     <string name="diary_editor_prompt">きょう、心にのこったこと。</string>
     <string name="diary_editor_autosave">静かに、綴る</string>
     <string name="diary_editor_saving">保存しています…</string>
@@ -105,13 +106,14 @@
 
     <!-- Today (home / player / archive). -->
     <string name="home_offline_hint">オフライン表示中（月あかりは端末で算出しています）</string>
-    <string name="home_error">今日をよみこめませんでした。</string>
     <string name="home_no_quote">今日の言葉は、まだ紡がれていません。</string>
     <string name="today_song_none">今日の一曲は、まだ選ばれていません。</string>
+    <string name="today_song_none_body">選ばれた一曲は、ここに灯ります。</string>
     <string name="today_song_open_archive">これまでの一曲</string>
     <string name="song_archive_title">これまでの一曲</string>
     <string name="song_archive_history">再生の記録</string>
     <string name="song_archive_empty">アーカイブはまだありません。</string>
+    <string name="song_archive_empty_body">日々の一曲が、ここに積もっていきます。</string>
     <string name="song_archive_load_more">もっと見る</string>
     <string name="player_play">再生</string>
     <string name="player_pause">一時停止</string>
@@ -195,4 +197,20 @@
     <string name="account_delete_confirm_body">日記・画像を含むすべてのデータが完全に削除され、元に戻せません。</string>
     <string name="account_deleting">削除しています…</string>
     <string name="account_load_error">プロフィールを取得できませんでした。</string>
+
+    <!-- Shared state screens (24 空 / 25 オフライン / 26 ローディング / 27 エラー).
+         Rendered by RunaStateViews; the empty copy is per-feature (diary_empty_*,
+         insight_empty_*, gallery_empty_line) and passed in by each screen. -->
+    <string name="state_loading_caption">月が、のぼるまで。</string>
+    <string name="state_offline_title">雲が、月をかくしています。</string>
+    <string name="state_offline_body">接続がありません。\n綴った言葉は、端末に守られています。</string>
+    <string name="state_offline_cta">もう一度ためす</string>
+    <string name="state_error_title">すこし、つまずきました。</string>
+    <string name="state_error_body">うまく読み込めませんでした。\nゆっくり、もう一度。</string>
+    <string name="state_error_cta">やりなおす</string>
+    <string name="state_auth_title">また、ここから。</string>
+    <string name="state_auth_body">サインインの有効期限が切れたようです。</string>
+    <string name="state_auth_cta">サインインし直す</string>
+    <string name="state_banner_offline">オフライン。記録は端末に守られています。</string>
+    <string name="state_banner_error">同期に、少しつまずいています。</string>
 </resources>

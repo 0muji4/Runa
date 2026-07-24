@@ -51,26 +51,24 @@ struct DiaryListView: View {
     }
 
     private var isContent: Bool {
-        if let state = model.state, case .content = onEnum(of: state) { return true }
+        if case .content = model.ui { return true }
         return false
     }
 
     @ViewBuilder private var content: some View {
-        if let state = model.state {
-            switch onEnum(of: state) {
-            case .loading:
-                Color.clear
-            case .content(let c):
-                listBody(entries: c.entries, banner: c.banner)
-            case .empty(let e):
-                emptyState(banner: e.banner)
-            }
-        } else {
+        switch model.ui {
+        case .loading:
             Color.clear
+        case .content(let entries, let sync):
+            listBody(entries: entries, sync: sync)
+        case .empty:
+            emptyState()
+        case .failure(let error):
+            RunaFailureView(error: error, onRetry: { model.refresh() })
         }
     }
 
-    private func listBody(entries: [DiaryEntry], banner: SyncBanner) -> some View {
+    private func listBody(entries: [DiaryEntry], sync: SyncPhase) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .firstTextBaseline) {
@@ -85,7 +83,7 @@ struct DiaryListView: View {
                 }
                 .padding(.top, 40)
                 .padding(.bottom, 4)
-                bannerLine(banner)
+                RunaSyncBanner(phase: sync)
                 ForEach(entries, id: \.clientId) { entry in
                     DiaryCardRow(entry: entry)
                         .contentShape(Rectangle())
@@ -99,7 +97,7 @@ struct DiaryListView: View {
         .refreshable { model.refresh() }
     }
 
-    private func emptyState(banner: SyncBanner) -> some View {
+    private func emptyState() -> some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
@@ -109,35 +107,15 @@ struct DiaryListView: View {
                 }
             }
             .padding(.top, 40)
-            bannerLine(banner)
-            Spacer()
-            NewMoonEmblem(diameter: 116)
-            Text("まだ、なにもない夜。")
-                .font(RunaFonts.heading(26))
-                .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.md)
-            Text("最初のひとことを、\nそっと綴ってみませんか。")
-                .font(RunaFonts.body(14))
-                .foregroundStyle(runaTheme.subtle)
-                .multilineTextAlignment(.center)
-                .padding(.top, RunaSpacing.sm)
-            Button { path.append(DiaryRoute.editorNew) } label: {
-                Text("綴りはじめる")
-                    .font(RunaFonts.body(16))
-                    .foregroundStyle(runaTheme.accent)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28)
-                            .stroke(runaTheme.accent.opacity(0.7), lineWidth: 1)
-                    )
-            }
-            .padding(.top, RunaSpacing.lg)
-            Spacer()
-            Spacer()
+            .padding(.horizontal, RunaSpacing.lg)
+            // Shared empty surface (24) — the diary's own copy over the shared motif.
+            RunaEmptyView(
+                title: "まだ、なにもない夜。",
+                message: "最初のひとことを、\nそっと綴ってみませんか。",
+                ctaLabel: "綴りはじめる",
+                onCta: { path.append(DiaryRoute.editorNew) }
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, RunaSpacing.lg)
     }
 
     /// Quiet link into the retrospective calendar (12 ふりかえり).
@@ -177,21 +155,6 @@ struct DiaryListView: View {
         .padding(28)
     }
 
-    @ViewBuilder private func bannerLine(_ banner: SyncBanner) -> some View {
-        if let text = bannerText(banner) {
-            Text(text)
-                .font(RunaFonts.body(13))
-                .foregroundStyle(runaTheme.subtle)
-        }
-    }
-
-    private func bannerText(_ banner: SyncBanner) -> String? {
-        switch banner {
-        case .offline: return "オフライン。綴った言葉は、端末に守られています。"
-        case .error: return "同期に、少しつまずいています。"
-        default: return nil // .none / .syncing (the pull indicator covers syncing)
-        }
-    }
 }
 
 /// One quiet record card, led by its day's moon phase.

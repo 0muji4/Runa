@@ -21,6 +21,7 @@ final class SongArchiveObservable: ObservableObject {
     }
 
     func loadNextPage() { viewModel.loadNextPage(reset: false) }
+    func reload() { viewModel.loadNextPage(reset: true) }
 
     deinit { collectTask?.cancel() }
 }
@@ -68,13 +69,31 @@ struct SongArchiveView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
 
-            if (archive.state?.songs.isEmpty ?? true), archive.state?.isLoading == false {
-                Text("アーカイブはまだありません。")
-                    .font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
+            // Empty / initial-loading / load-failure route through the shared state
+            // surfaces (over the list, which is offline-tolerant once a page landed).
+            if archive.state?.songs.isEmpty ?? true {
+                stateOverlay
             }
         }
         .navigationTitle("これまでの一曲")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private var stateOverlay: some View {
+        if let state = archive.state {
+            if state.isLoading {
+                RunaLoadingView()
+            } else if let error = state.error {
+                RunaFailureView(error: error, onRetry: { archive.reload() })
+            } else {
+                RunaEmptyView(
+                    title: "アーカイブはまだありません。",
+                    message: "日々の一曲が、ここに積もっていきます。"
+                )
+            }
+        } else {
+            RunaLoadingView()
+        }
     }
 
     private func songRow(_ song: SongDto) -> some View {

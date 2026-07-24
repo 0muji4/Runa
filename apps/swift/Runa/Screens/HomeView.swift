@@ -1,13 +1,21 @@
 import SwiftUI
 import Shared
 
-/// ObservableObject bridge over the shared `HomeViewModel`.
-///
-/// SKIE bridges the Kotlin `StateFlow<HomeUiState>` to a `SkieSwiftStateFlow` (an
-/// `AsyncSequence`); we collect it and republish each emission on the main actor.
+/// The home's page state, decoded from the shared `UiState<Today>` into a native Swift
+/// enum in the observable so the view never touches SKIE generics. The home always has
+/// content (the moon is computed locally); offline rides on `.content` as a `SyncPhase`.
+enum HomeUi {
+    case loading
+    case content(today: Today, sync: SyncPhase)
+    case failure(AppError)
+}
+
+/// ObservableObject bridge over the shared `HomeViewModel`. Collects the SKIE-bridged
+/// `StateFlow<UiState<Today>>`, decodes each emission to [HomeUi], and republishes on
+/// the main actor.
 @MainActor
 final class HomeObservable: ObservableObject {
-    @Published private(set) var state: HomeUiState?
+    @Published private(set) var ui: HomeUi = .loading
 
     private let viewModel: HomeViewModel
     private var collectTask: Task<Void, Never>?
@@ -16,21 +24,22 @@ final class HomeObservable: ObservableObject {
         self.viewModel = viewModel
         collectTask = Task { [weak self] in
             guard let self else { return }
-            let stateFlow: SkieSwiftStateFlow<HomeUiState> = self.viewModel.state
-            for await value in stateFlow {
-                self.state = value
+            for await value in self.viewModel.state {
+                switch runaDecode(value, as: Today.self) {
+                case .content(let today, let sync): self.ui = .content(today: today, sync: sync)
+                case .failure(let error): self.ui = .failure(error)
+                case .loading, .empty: self.ui = .loading
+                }
             }
         }
     }
 
+    func reload() { viewModel.load() }
+
     /// Today's song, if the home has content (used by the player as its default).
     var todaySong: SongDto? {
-        guard let state else { return nil }
-        switch onEnum(of: state) {
-        case .content(let c): return c.today.song
-        case .offline(let o): return o.today.song
-        default: return nil
-        }
+        if case .content(let today, _) = ui { return today.song }
+        return nil
     }
 
     deinit { collectTask?.cancel() }
@@ -65,18 +74,17 @@ struct HomeView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let state = home.state {
-            switch onEnum(of: state) {
-            case .content(let c): todayView(c.today, offline: false)
-            case .offline(let o): todayView(o.today, offline: true)
-            case .error:
-                Text("今日をよみこめませんでした。")
-                    .font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
-            case .loading:
-                ProgressView().tint(runaTheme.accent)
-            }
-        } else {
-            ProgressView().tint(runaTheme.accent)
+        switch home.ui {
+        case .content(let today, let sync): todayView(today, offline: isOffline(sync))
+        case .loading: RunaLoadingView()
+        case .failure(let error): RunaFailureView(error: error, onRetry: { home.reload() })
+        }
+    }
+
+    private func isOffline(_ phase: SyncPhase) -> Bool {
+        switch phase {
+        case .offline: return true
+        default: return false
         }
     }
 

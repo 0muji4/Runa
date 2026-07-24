@@ -1,5 +1,6 @@
 package com.runa.shared.feature.today
 
+import com.runa.shared.core.state.toAppError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,7 +46,7 @@ class SongArchiveViewModel(
                     canLoadMore = page.nextCursor != null,
                 )
             } catch (e: Exception) {
-                _state.value.copy(isLoading = false, error = e.message ?: "unknown error")
+                _state.value.copy(isLoading = false, error = e.toAppError())
             }
         }
     }

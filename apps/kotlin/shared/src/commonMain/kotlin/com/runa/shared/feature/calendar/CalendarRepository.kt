@@ -1,8 +1,8 @@
 package com.runa.shared.feature.calendar
 
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.diary.DiaryEntry
 import com.runa.shared.feature.diary.DiaryRepository
-import com.runa.shared.feature.diary.SyncStatus
 import com.runa.shared.network.ApiClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,8 +37,8 @@ interface CalendarRepository {
      */
     suspend fun refresh(year: Int, month: Int, zone: TimeZone): Result<Unit>
 
-    /** The diary sync status, surfaced as the calendar's quiet banner. */
-    val syncStatus: StateFlow<SyncStatus>
+    /** The diary sync phase, surfaced as the calendar's quiet banner. */
+    val syncStatus: StateFlow<SyncPhase>
 }
 
 /**
@@ -54,7 +54,7 @@ class DefaultCalendarRepository(
     private val clock: Clock = Clock.System,
 ) : CalendarRepository {
 
-    override val syncStatus: StateFlow<SyncStatus> = diaryRepository.syncStatus
+    override val syncStatus: StateFlow<SyncPhase> = diaryRepository.syncStatus
 
     override fun observeMonth(year: Int, month: Int, zone: TimeZone): Flow<List<CalendarDay>> =
         diaryRepository.observeEntries().map { entries ->

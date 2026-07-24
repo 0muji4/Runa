@@ -1,9 +1,9 @@
 package com.runa.shared.feature.insight
 
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.diary.DiaryEntry
 import com.runa.shared.feature.diary.DiaryRepository
 import com.runa.shared.feature.diary.SyncState
-import com.runa.shared.feature.diary.SyncStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,14 +71,14 @@ class InsightRepositoryTest {
 /** Minimal in-memory [DiaryRepository]: a controllable entry stream + sync counter. */
 private class FakeDiaryRepository : DiaryRepository {
     private val entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
-    private val _syncStatus = MutableStateFlow(SyncStatus.Idle)
+    private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
     var syncCalls = 0
         private set
 
     fun setEntries(list: List<DiaryEntry>) { entries.value = list }
 
     override fun observeEntries(): Flow<List<DiaryEntry>> = entries
-    override val syncStatus: StateFlow<SyncStatus> = _syncStatus
+    override val syncStatus: StateFlow<SyncPhase> = _syncStatus
     override suspend fun getEntry(clientId: String): DiaryEntry? = entries.value.firstOrNull { it.clientId == clientId }
     override suspend fun createEntry(bodyText: String, mood: String?, createdAt: Instant?): DiaryEntry = error("unused")
     override suspend fun updateEntry(clientId: String, bodyText: String, mood: String?): Result<Unit> = Result.success(Unit)

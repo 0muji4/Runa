@@ -2,6 +2,7 @@ package com.runa.shared.feature.gallery
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.db.Gallery_images
 import com.runa.shared.db.RunaDatabase
 import com.runa.shared.network.ApiClient
@@ -52,8 +53,8 @@ class DefaultGalleryRepository(
 
     private val queries = database.galleryQueries
 
-    private val _syncStatus = MutableStateFlow(GallerySyncStatus.Idle)
-    override val syncStatus: StateFlow<GallerySyncStatus> = _syncStatus.asStateFlow()
+    private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
+    override val syncStatus: StateFlow<SyncPhase> = _syncStatus.asStateFlow()
 
     // Live per-image upload progress (0..1), keyed by client_id. Merged into the
     // grid stream so a cell can show its progress without a DB column.
@@ -123,13 +124,13 @@ class DefaultGalleryRepository(
     private suspend fun sync(): Result<Unit> {
         if (!syncMutex.tryLock()) return Result.success(Unit)
         return try {
-            _syncStatus.value = GallerySyncStatus.Syncing
+            _syncStatus.value = SyncPhase.Syncing
             push()
             pull()
-            _syncStatus.value = GallerySyncStatus.Idle
+            _syncStatus.value = SyncPhase.Idle
             Result.success(Unit)
         } catch (e: Exception) {
-            _syncStatus.value = if (e is ApiException) GallerySyncStatus.Error else GallerySyncStatus.Offline
+            _syncStatus.value = if (e is ApiException) SyncPhase.Error else SyncPhase.Offline
             Result.failure(e)
         } finally {
             syncMutex.unlock()

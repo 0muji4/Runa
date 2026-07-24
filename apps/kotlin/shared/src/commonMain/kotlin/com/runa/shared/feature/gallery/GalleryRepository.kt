@@ -1,5 +1,6 @@
 package com.runa.shared.feature.gallery
 
+import com.runa.shared.core.state.SyncPhase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -30,8 +31,8 @@ interface GalleryRepository {
      *  deletions. Overlapping calls coalesce. */
     suspend fun refresh(): Result<Unit>
 
-    /** Coarse status of the last/ongoing sync, for the grid banner. */
-    val syncStatus: StateFlow<GallerySyncStatus>
+    /** Coarse phase of the last/ongoing sync, for the grid banner. */
+    val syncStatus: StateFlow<SyncPhase>
 
     /** The persisted gallery display-theme toggle (enum name), or null if unset.
      *  This is a client-only view preference, stored in the gallery meta table. */
@@ -39,16 +40,4 @@ interface GalleryRepository {
 
     /** Persist the gallery display-theme toggle (enum name). */
     suspend fun saveDisplayTheme(value: String)
-}
-
-/** What a sync is currently doing, surfaced as the grid's subtle banner. */
-enum class GallerySyncStatus {
-    Idle,
-    Syncing,
-
-    /** The last sync could not reach the server/store (connectivity). */
-    Offline,
-
-    /** The last sync reached the server but failed (non-connectivity error). */
-    Error,
 }

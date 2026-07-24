@@ -1,6 +1,6 @@
 package com.runa.shared.feature.calendar
 
-import com.runa.shared.feature.diary.SyncStatus
+import com.runa.shared.core.state.UiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,8 +18,12 @@ import kotlinx.datetime.toLocalDateTime
 
 /**
  * Drives the retrospective calendar. Holds the month on show and derives [state]
- * from the local DB stream + sync status, so it renders instantly from cache and
- * works fully offline. Android collects [state] directly; iOS observes via SKIE.
+ * (the shared [UiState]) from the local DB stream + sync phase, so it renders
+ * instantly from cache and works fully offline. Local-first means the grid always
+ * renders (a month with no records is simply all-zero counts), so the state is
+ * effectively [UiState.Loading] then [UiState.Content]; offline/error ride along as
+ * [UiState.Content.sync] rather than hiding the body. Android collects [state]
+ * directly; iOS observes via SKIE.
  *
  * A `factory` binding gives each open a fresh instance starting at today's month
  * (so "今日へ戻る" is the default entry point).
@@ -33,18 +37,20 @@ class CalendarViewModel(
 ) {
     private val month = MutableStateFlow(currentYearMonth())
 
-    val state: StateFlow<CalendarUiState> =
+    val state: StateFlow<UiState<CalendarMonth>> =
         month.flatMapLatest { ym ->
             combine(repository.observeMonth(ym.year, ym.month, zone), repository.syncStatus) { days, sync ->
-                CalendarUiState.Content(
-                    year = ym.year,
-                    month = ym.month,
-                    firstDayOfWeek = CalendarGrid.firstDayOfWeekIndex(ym.year, ym.month),
-                    days = days,
-                    banner = sync.toBanner(),
+                UiState.Content(
+                    CalendarMonth(
+                        year = ym.year,
+                        month = ym.month,
+                        firstDayOfWeek = CalendarGrid.firstDayOfWeekIndex(ym.year, ym.month),
+                        days = days,
+                    ),
+                    sync,
                 )
             }
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), CalendarUiState.Loading)
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Bring other devices' entries in; the local render is already showing.
@@ -85,28 +91,13 @@ data class YearMonth(val year: Int, val month: Int) {
 }
 
 /**
- * Calendar UI state. Local-first means we almost always have [Content]; the grid
- * always renders (a month with no records is simply all-zero counts), and
- * offline/error ride along as a quiet [banner] rather than hiding the body.
- * [Loading] shows only before the first DB emission.
+ * The month a calendar screen renders: the [days] grid plus its layout metadata
+ * ([year]/[month] and the [firstDayOfWeek] index for the leading blank cells). This
+ * is the payload carried by [UiState.Content].
  */
-sealed interface CalendarUiState {
-    data object Loading : CalendarUiState
-    data class Content(
-        val year: Int,
-        val month: Int,
-        val firstDayOfWeek: Int,
-        val days: List<CalendarDay>,
-        val banner: CalendarBanner,
-    ) : CalendarUiState
-}
-
-/** The quiet status line shown on the calendar. */
-enum class CalendarBanner { None, Syncing, Offline, Error }
-
-private fun SyncStatus.toBanner(): CalendarBanner = when (this) {
-    SyncStatus.Idle -> CalendarBanner.None
-    SyncStatus.Syncing -> CalendarBanner.Syncing
-    SyncStatus.Offline -> CalendarBanner.Offline
-    SyncStatus.Error -> CalendarBanner.Error
-}
+data class CalendarMonth(
+    val year: Int,
+    val month: Int,
+    val firstDayOfWeek: Int,
+    val days: List<CalendarDay>,
+)

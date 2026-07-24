@@ -1,5 +1,6 @@
 package com.runa.shared.feature.diary
 
+import com.runa.shared.core.state.UiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -10,19 +11,22 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Drives the diary list. [state] is derived from the local DB stream and the
- * repository's [SyncStatus], so it renders instantly from cache and never blocks
- * on the network. Android collects it directly; iOS observes via SKIE.
+ * Drives the diary list. [state] is the shared [UiState]: it is derived from the
+ * local DB stream and the repository's [com.runa.shared.core.state.SyncPhase], so it
+ * renders instantly from cache and never blocks on the network. Local-first means we
+ * almost always have [UiState.Content] or [UiState.Empty]; offline/error ride along
+ * as [UiState.Content.sync] (the quiet banner) rather than hiding the list.
+ * [UiState.Loading] shows only before the first DB emission. Android collects it
+ * directly; iOS observes via SKIE.
  */
 class DiaryListViewModel(
     private val repository: DiaryRepository,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
-    val state: StateFlow<DiaryListState> =
+    val state: StateFlow<UiState<List<DiaryEntry>>> =
         combine(repository.observeEntries(), repository.syncStatus) { entries, sync ->
-            val banner = sync.toBanner()
-            if (entries.isEmpty()) DiaryListState.Empty(banner) else DiaryListState.Content(entries, banner)
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), DiaryListState.Loading)
+            if (entries.isEmpty()) UiState.Empty else UiState.Content(entries, sync)
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Kick a sync when the list opens; the repository also auto-syncs on
@@ -39,25 +43,4 @@ class DiaryListViewModel(
     fun delete(clientId: String) {
         scope.launch { repository.deleteEntry(clientId) }
     }
-}
-
-/**
- * List UI state. Local-first means we almost always have [Content] or [Empty];
- * offline/error are carried as a subtle [SyncBanner] over them rather than as
- * body-hiding states. [Loading] only shows before the first DB emission.
- */
-sealed interface DiaryListState {
-    data object Loading : DiaryListState
-    data class Content(val entries: List<DiaryEntry>, val banner: SyncBanner) : DiaryListState
-    data class Empty(val banner: SyncBanner) : DiaryListState
-}
-
-/** The quiet status line shown above the list. */
-enum class SyncBanner { None, Syncing, Offline, Error }
-
-private fun SyncStatus.toBanner(): SyncBanner = when (this) {
-    SyncStatus.Idle -> SyncBanner.None
-    SyncStatus.Syncing -> SyncBanner.Syncing
-    SyncStatus.Offline -> SyncBanner.Offline
-    SyncStatus.Error -> SyncBanner.Error
 }

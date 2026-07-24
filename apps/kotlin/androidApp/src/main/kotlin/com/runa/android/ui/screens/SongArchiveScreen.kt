@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,7 +31,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.runa.android.R
+import com.runa.android.ui.components.LocalReauthenticate
+import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaErrorView
+import com.runa.android.ui.components.RunaLoadingView
+import com.runa.android.ui.components.RunaOfflineView
 import com.runa.android.ui.theme.RunaColors
+import com.runa.shared.core.state.AppError
 import com.runa.shared.feature.today.SongArchiveViewModel
 import com.runa.shared.feature.today.player.SongPlayerViewModel
 import com.runa.shared.network.dto.SongDto
@@ -72,14 +79,39 @@ fun SongArchiveScreen(
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (state.songs.isEmpty() && !state.isLoading) {
+            // Empty / initial-loading / load-failure all route through the shared
+            // state surfaces (as a tall item so the local play history can still show
+            // below). The list itself is offline-tolerant once a page has landed.
+            if (state.songs.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.song_archive_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = RunaColors.Subtle,
-                        modifier = Modifier.padding(vertical = 32.dp),
-                    )
+                    val stateModifier = Modifier.fillMaxWidth().height(360.dp)
+                    val reauthenticate = LocalReauthenticate.current
+                    val error = state.error
+                    when {
+                        state.isLoading -> RunaLoadingView(modifier = stateModifier)
+                        error is AppError.Offline -> RunaOfflineView(
+                            onRetry = { viewModel.loadNextPage(reset = true) },
+                            modifier = stateModifier,
+                        )
+                        // Session expired → re-authenticate (retrying would just re-401);
+                        // matches RunaStateView's own Failure→Auth branch and iOS.
+                        error is AppError.Auth -> RunaErrorView(
+                            title = stringResource(R.string.state_auth_title),
+                            body = stringResource(R.string.state_auth_body),
+                            ctaLabel = stringResource(R.string.state_auth_cta),
+                            onCta = reauthenticate,
+                            modifier = stateModifier,
+                        )
+                        error != null -> RunaErrorView(
+                            onCta = { viewModel.loadNextPage(reset = true) },
+                            modifier = stateModifier,
+                        )
+                        else -> RunaEmptyView(
+                            title = stringResource(R.string.song_archive_empty),
+                            body = stringResource(R.string.song_archive_empty_body),
+                            modifier = stateModifier,
+                        )
+                    }
                 }
             }
 

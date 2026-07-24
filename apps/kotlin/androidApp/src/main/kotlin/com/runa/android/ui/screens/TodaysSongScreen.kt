@@ -31,9 +31,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.runa.android.R
+import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.theme.RunaColors
-import com.runa.shared.feature.today.HomeUiState
+import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.today.HomeViewModel
+import com.runa.shared.feature.today.Today
 import com.runa.shared.feature.today.player.SongPlayerViewModel
 import com.runa.shared.network.dto.SongDto
 import org.koin.compose.koinInject
@@ -53,8 +55,8 @@ fun TodaysSongScreen(
     val homeState by homeViewModel.state.collectAsState()
     val playerState by playerViewModel.state.collectAsState()
 
-    val todaySong = (homeState as? HomeUiState.Content)?.today?.song
-        ?: (homeState as? HomeUiState.Offline)?.today?.song
+    // Offline now rides along on Content (sync = Offline), so both cases are Content.
+    val todaySong = (homeState as? UiState.Content<Today>)?.data?.song
     val song = playerState.song ?: todaySong
 
     Scaffold(
@@ -80,11 +82,10 @@ fun TodaysSongScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             if (song == null) {
-                Text(
-                    text = stringResource(R.string.today_song_none),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = RunaColors.Subtle,
-                    textAlign = TextAlign.Center,
+                RunaEmptyView(
+                    title = stringResource(R.string.today_song_none),
+                    body = stringResource(R.string.today_song_none_body),
+                    modifier = Modifier.fillMaxSize(),
                 )
                 return@Column
             }

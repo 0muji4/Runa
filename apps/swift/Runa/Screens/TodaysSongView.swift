@@ -46,8 +46,10 @@ struct TodaysSongView: View {
                 if let song {
                     playerBody(song)
                 } else {
-                    Text("今日の一曲は、まだ選ばれていません。")
-                        .font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
+                    RunaEmptyView(
+                        title: "今日の一曲は、まだ選ばれていません。",
+                        message: "選ばれた一曲は、ここに灯ります。"
+                    )
                 }
             }
             .navigationTitle("きょうの一曲")

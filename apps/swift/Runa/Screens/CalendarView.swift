@@ -34,38 +34,35 @@ struct CalendarView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let state = model.state {
-            switch onEnum(of: state) {
-            case .content(let c): monthBody(c)
-            case .loading: Spacer()
-            }
-        } else {
-            Spacer()
+        switch model.ui {
+        case .content(let month, let sync): monthBody(month, banner: sync)
+        case .loading: Spacer()
+        case .failure(let error): RunaFailureView(error: error, onRetry: { model.refresh() })
         }
     }
 
-    private func monthBody(_ c: CalendarUiStateContent) -> some View {
+    private func monthBody(_ month: CalendarMonth, banner: SyncPhase) -> some View {
         VStack(spacing: 0) {
-            header(c)
+            header(month)
             Spacer().frame(height: 24)
             weekdayRow
             Spacer().frame(height: 8)
             LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(0..<Int(c.firstDayOfWeek), id: \.self) { _ in
+                ForEach(0..<Int(month.firstDayOfWeek), id: \.self) { _ in
                     Color.clear.frame(height: 58)
                 }
-                ForEach(c.days, id: \.day) { day in
+                ForEach(month.days, id: \.day) { day in
                     dayCell(day)
                 }
             }
             Spacer()
-            legend(c.banner)
+            legend(banner)
             Spacer().frame(height: 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func header(_ c: CalendarUiStateContent) -> some View {
+    private func header(_ month: CalendarMonth) -> some View {
         HStack {
             Button { model.showPreviousMonth() } label: {
                 Text("‹").font(RunaFonts.logo(34)).foregroundStyle(runaTheme.subtle)
@@ -73,8 +70,8 @@ struct CalendarView: View {
             Spacer()
             Button { model.showToday() } label: {
                 HStack(spacing: 14) {
-                    Text("\(c.year)").font(RunaFonts.logo(32)).foregroundStyle(runaTheme.heading)
-                    Text("\(c.month)月").font(RunaFonts.heading(30)).foregroundStyle(runaTheme.heading)
+                    Text("\(month.year)").font(RunaFonts.logo(32)).foregroundStyle(runaTheme.heading)
+                    Text("\(month.month)月").font(RunaFonts.heading(30)).foregroundStyle(runaTheme.heading)
                 }
             }
             .buttonStyle(.plain)
@@ -120,11 +117,10 @@ struct CalendarView: View {
         .onTapGesture { onTap(day) }
     }
 
-    private func legend(_ banner: CalendarBanner) -> some View {
+    private func legend(_ banner: SyncPhase) -> some View {
         VStack(spacing: 12) {
-            if let text = bannerText(banner) {
-                Text(text).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-            }
+            // Quiet offline/error line over the always-rendered grid (idle/syncing silent).
+            RunaSyncBanner(phase: banner)
             HStack(spacing: 10) {
                 Circle().fill(runaTheme.subAccent).frame(width: 8, height: 8)
                 Text("記録のある日に、月あかり")
@@ -133,14 +129,6 @@ struct CalendarView: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func bannerText(_ banner: CalendarBanner) -> String? {
-        switch banner {
-        case .offline: return "オフライン。綴った言葉は、端末に守られています。"
-        case .error: return "同期に、少しつまずいています。"
-        default: return nil // .none / .syncing stay silent
-        }
     }
 
     private func onTap(_ day: CalendarDay) {

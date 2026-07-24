@@ -47,23 +47,22 @@ struct GalleryView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let state = model.state {
-            switch onEnum(of: state) {
-            case .content(let c):
-                themeToggle(c.displayTheme)
-                bannerLabel(c.banner)
-                grid(images: c.images, theme: c.displayTheme)
-            case .empty(let e):
-                themeToggle(e.displayTheme)
-                bannerLabel(e.banner)
-                emptyState()
-            case .loading:
-                Spacer()
-            case .error:
-                emptyState()
-            }
-        } else {
-            Spacer()
+        // The display-theme toggle (grid chrome) shows over content and empty alike;
+        // the shared state surfaces drive the grid region.
+        themeToggle(model.displayTheme)
+        switch model.ui {
+        case .content(let images, let sync):
+            RunaSyncBanner(phase: sync)
+            grid(images: images, theme: model.displayTheme)
+        case .empty:
+            RunaEmptyView(
+                title: "まだ、ひかりの記録はありません。",
+                message: "最初のひかりを、\nそっと残してみませんか。"
+            )
+        case .loading:
+            RunaLoadingView()
+        case .failure(let error):
+            RunaFailureView(error: error, onRetry: { model.refresh() })
         }
     }
 
@@ -137,39 +136,6 @@ struct GalleryView: View {
                     lightbox = LightboxContext(images: allImages, startIndex: idx, displayTheme: theme)
                 }
             }
-    }
-
-    // MARK: empty / banner
-
-    private func emptyState() -> some View {
-        VStack(spacing: 28) {
-            Spacer()
-            NewMoonEmblem()
-            Text("まだ、ひかりの記録はありません。")
-                .font(RunaFonts.heading(16))
-                .foregroundStyle(runaTheme.subtle)
-                .multilineTextAlignment(.center)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    @ViewBuilder private func bannerLabel(_ banner: GalleryBanner) -> some View {
-        if let text = bannerText(banner) {
-            Text(text)
-                .font(RunaFonts.body(13))
-                .foregroundStyle(runaTheme.subtle)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 12)
-        }
-    }
-
-    private func bannerText(_ banner: GalleryBanner) -> String? {
-        switch banner {
-        case .offline: return "オフライン。取得済みの記録は、端末に残っています。"
-        case .error: return "同期に、少しつまずいています。"
-        default: return nil
-        }
     }
 
     // MARK: helpers

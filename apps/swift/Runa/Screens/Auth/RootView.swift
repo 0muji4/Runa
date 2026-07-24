@@ -24,6 +24,10 @@ struct RootView: View {
                         displayName: authenticated.user.displayName,
                         onSignOut: { auth.logout() }
                     )
+                    // Provide the app-wide re-authenticate action (clears the session
+                    // → sign-in) so RunaErrorView's auth CTA works without threading a
+                    // callback. Mirrors Android's LocalReauthenticate.
+                    .environment(\.runaReauthenticate, { auth.logout() })
                 default:
                     AuthFlowView(auth: auth, state: state)
                 }

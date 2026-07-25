@@ -15,10 +15,16 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        // Dev base URL for the Android emulator: 10.0.2.2 is the host loopback.
         // host+port ONLY — the shared module appends /api/v1/healthz itself.
-        // TODO: switch per build type / flavor once a staging/prod host exists.
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080\"")
+        // Default is the emulator's host loopback (10.0.2.2), which ONLY works in
+        // the emulator. Real devices can't reach it, so point them at a real host:
+        //   ./gradlew :androidApp:installDebug -PRUNA_BASE_URL=https://runa-backend-dev-g75z.onrender.com
+        // (or set RUNA_BASE_URL in gradle.properties).
+        buildConfigField(
+            "String",
+            "BASE_URL",
+            "\"${project.findProperty("RUNA_BASE_URL") ?: "http://10.0.2.2:8080"}\"",
+        )
 
         // Native sign-in configuration (see README). Empty by default so the app
         // builds without credentials; the Google/Apple buttons surface a clear

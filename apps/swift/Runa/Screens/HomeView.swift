@@ -72,14 +72,10 @@ struct HomeView: View {
                 .ignoresSafeArea()
                 content
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SettingsView(onSignOut: onSignOut)) {
-                        Image(systemName: "gearshape").foregroundStyle(runaTheme.subAccent)
-                    }
-                    .accessibilityLabel("設定")
-                }
-            }
+            // No nav bar — like the other tabs, the header is the page, so all four
+            // start their content at RunaSpacing.lg below the safe area (the gear rides
+            // on Home's header row).
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -101,24 +97,36 @@ struct HomeView: View {
 
     private func todayView(_ today: Today, offline: Bool) -> some View {
         VStack(spacing: 0) {
-            // Drawn moon phase + date + phase name, pinned to the top (tap → 15 今日の月).
-            NavigationLink {
-                TodaysMoonView()
-            } label: {
-                HStack(spacing: 12) {
-                    MoonPhaseDisc(
-                        illumination: CGFloat(today.moon.illumination),
-                        waxing: moonIsWaxing(key: today.moon.phaseKey),
-                        diameter: 30
-                    )
-                    Text(today.dateLabel)
-                        .font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
-                    Text(moonPhaseNameJa(key: today.moon.phaseKey))
-                        .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
+            // Header row: drawn moon + date centered (tap → 15 今日の月), settings gear
+            // at the trailing edge. Starts at RunaSpacing.lg, matching the other tabs.
+            ZStack {
+                NavigationLink {
+                    TodaysMoonView()
+                } label: {
+                    HStack(spacing: 12) {
+                        MoonPhaseDisc(
+                            illumination: CGFloat(today.moon.illumination),
+                            waxing: moonIsWaxing(key: today.moon.phaseKey),
+                            diameter: 30
+                        )
+                        Text(today.dateLabel)
+                            .font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
+                        Text(moonPhaseNameJa(key: today.moon.phaseKey))
+                            .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                HStack {
+                    Spacer()
+                    NavigationLink(destination: SettingsView(onSignOut: onSignOut)) {
+                        Image(systemName: "gearshape").foregroundStyle(runaTheme.subAccent)
+                    }
+                    .accessibilityLabel("設定")
                 }
             }
-            .buttonStyle(.plain)
-            .padding(.top, RunaSpacing.sm)
+            .padding(.top, RunaSpacing.lg)
+            .padding(.horizontal, RunaSpacing.md)
 
             Spacer()
 

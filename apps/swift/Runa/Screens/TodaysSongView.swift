@@ -43,30 +43,38 @@ struct TodaysSongView: View {
         NavigationStack {
             ZStack {
                 runaTheme.background.ignoresSafeArea()
-                if let song {
-                    playerBody(song)
-                } else {
-                    RunaEmptyView(
-                        title: "今日の一曲は、まだ選ばれていません。",
-                        message: "選ばれた一曲は、ここに灯ります。"
-                    )
-                }
-            }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("きょうの一曲")
-                        .font(RunaFonts.heading(16))
-                        .tracking(4)
-                        .foregroundStyle(runaTheme.subtle)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SongArchiveView()) {
-                        Text("これまでの一曲").foregroundStyle(runaTheme.accent)
+                VStack(spacing: 0) {
+                    // No nav bar — the header is the page (centered 明朝 label + archive
+                    // link), starting at RunaSpacing.lg like the other tabs.
+                    ZStack {
+                        Text("きょうの一曲")
+                            .font(RunaFonts.heading(16))
+                            .tracking(4)
+                            .foregroundStyle(runaTheme.subtle)
+                        HStack {
+                            Spacer()
+                            NavigationLink(destination: SongArchiveView()) {
+                                Text("これまでの一曲").foregroundStyle(runaTheme.accent)
+                            }
+                        }
                     }
+                    .padding(.top, RunaSpacing.lg)
+                    .padding(.horizontal, RunaSpacing.md)
+
+                    ZStack {
+                        if let song {
+                            playerBody(song)
+                        } else {
+                            RunaEmptyView(
+                                title: "今日の一曲は、まだ選ばれていません。",
+                                message: "選ばれた一曲は、ここに灯ります。"
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 

@@ -42,7 +42,7 @@ struct GalleryView: View {
                 }
             }
         }
-        .padding(.top, 20)
+        .padding(.top, RunaSpacing.lg)
         .padding(.horizontal, 20)
     }
 

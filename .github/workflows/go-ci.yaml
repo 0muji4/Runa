@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "apps/go/**"
-      - ".github/workflows/backend-ci.yaml"
+      - ".github/workflows/go-ci.yaml"
 
 permissions:
   contents: read
@@ -20,7 +20,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache: true
           cache-dependency-path: apps/go/go.sum
       - name: Vet

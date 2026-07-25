@@ -38,7 +38,7 @@ struct GalleryView: View {
             HStack {
                 Spacer()
                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Text("＋").font(RunaFonts.body(24)).foregroundStyle(runaTheme.subtle)
+                    Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(runaTheme.subtle)
                 }
             }
         }
@@ -260,7 +260,7 @@ private struct LightboxView: View {
 
             HStack {
                 Button { dismiss() } label: {
-                    Text("✕").font(RunaFonts.body(22)).foregroundStyle(runaTheme.body)
+                    Image(systemName: "xmark").font(.system(size: 18)).foregroundStyle(runaTheme.body)
                 }
                 Spacer()
                 Button {

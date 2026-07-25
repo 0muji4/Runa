@@ -75,8 +75,17 @@ struct SongArchiveView: View {
                 stateOverlay
             }
         }
-        .navigationTitle("これまでの一曲")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("これまでの一曲")
+                    .font(RunaFonts.heading(16))
+                    .tracking(4)
+                    .foregroundStyle(runaTheme.subtle)
+            }
+        }
     }
 
     @ViewBuilder private var stateOverlay: some View {

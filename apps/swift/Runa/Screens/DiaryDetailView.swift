@@ -46,7 +46,7 @@ struct DiaryDetailView: View {
                 .padding(.top, RunaSpacing.sm)
             }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
         .alert("この記録を削除しますか", isPresented: $confirmDelete) {
             Button("やめる", role: .cancel) {}
             Button("削除する", role: .destructive) {

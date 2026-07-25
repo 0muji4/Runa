@@ -50,6 +50,7 @@ struct ThemeView: View {
         .background(runaTheme.background)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private func card(_ option: Option) -> some View {

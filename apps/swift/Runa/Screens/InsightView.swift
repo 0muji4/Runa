@@ -29,7 +29,7 @@ struct InsightView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
     }
 
     @ViewBuilder private var content: some View {

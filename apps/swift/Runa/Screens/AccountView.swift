@@ -28,7 +28,7 @@ struct AccountView: View {
                     profileSection(state)
                     exportSection(state)
                     divider
-                    actionRow(glyph: "⇥", label: "サインアウト", action: onSignOut)
+                    actionRow(icon: "rectangle.portrait.and.arrow.right", label: "サインアウト", action: onSignOut)
                     Spacer().frame(height: RunaSpacing.xl)
                     deleteSection(state)
                 } else {
@@ -40,6 +40,7 @@ struct AccountView: View {
         .background(runaTheme.background)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear { account.loadProfile() }
         .alert("アカウントを削除しますか", isPresented: deleteConfirmBinding) {
             Button("削除する", role: .destructive) { account.confirmDelete() }
@@ -102,7 +103,7 @@ struct AccountView: View {
 
     @ViewBuilder
     private func exportSection(_ state: AccountUiState) -> some View {
-        actionRow(glyph: "↥", label: "エクスポート") { account.export() }
+        actionRow(icon: "square.and.arrow.up", label: "エクスポート") { account.export() }
         switch onEnum(of: state.export) {
         case .inProgress:
             Text("エクスポートを準備しています…")
@@ -152,10 +153,10 @@ struct AccountView: View {
         Rectangle().fill(runaTheme.subtle.opacity(0.15)).frame(height: 1)
     }
 
-    private func actionRow(glyph: String, label: String, action: @escaping () -> Void) -> some View {
+    private func actionRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(glyph).font(RunaFonts.body(18)).foregroundStyle(runaTheme.heading).frame(width: 36, alignment: .leading)
+                Image(systemName: icon).font(.system(size: 18)).foregroundStyle(runaTheme.heading).frame(width: 36, alignment: .leading)
                 Text(label).font(RunaFonts.body(17)).foregroundStyle(runaTheme.heading)
                 Spacer()
             }

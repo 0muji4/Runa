@@ -19,7 +19,7 @@ enum DiaryMoonCalc {
 
     /// Synodic order, matching `MoonPhaseKey` / `moonPhaseNameJa` in shared.
     private static let names = [
-        "新月", "三日月", "上弦の月", "十三夜", "満月", "寝待月", "下弦の月", "有明月",
+        "新月", "三日月", "上弦の月", "十三夜月", "満月", "寝待月", "下弦の月", "有明月",
     ]
 
     static func moon(epochMs: Int64) -> DiaryMoon {

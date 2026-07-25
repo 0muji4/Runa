@@ -41,7 +41,9 @@ fun moonPhaseNameJa(key: MoonPhaseKey): String = when (key) {
     MoonPhaseKey.NEW_MOON -> "新月"
     MoonPhaseKey.WAXING_CRESCENT -> "三日月"
     MoonPhaseKey.FIRST_QUARTER -> "上弦の月"
-    MoonPhaseKey.WAXING_GIBBOUS -> "十三夜"
+    // 「十三夜」だけでは旧暦九月十三日の一夜（後の月）を指すので、毎月出る相の名前としては
+    // 「十三夜月」と書く。
+    MoonPhaseKey.WAXING_GIBBOUS -> "十三夜月"
     MoonPhaseKey.FULL_MOON -> "満月"
     MoonPhaseKey.WANING_GIBBOUS -> "寝待月"
     MoonPhaseKey.LAST_QUARTER -> "下弦の月"

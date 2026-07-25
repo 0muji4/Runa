@@ -22,7 +22,9 @@ enum class DiaryMood(val value: String, val labelJa: String) {
     Gentle("gentle", "おだやか"),
     Tired("tired", "つかれ"),
     Hopeful("hopeful", "のぞみ"),
-    Heavy("heavy", "おもい");
+    // 「おもい」は 思い / 重い のどちらとも読めて意味が定まらないので、つかれ・のぞみ と同じ
+    // 和語名詞の「おもさ」にする（[value] は不変なので保存済みデータには影響しない）。
+    Heavy("heavy", "おもさ");
 
     companion object {
         /** The [DiaryMood] for a persisted [value], or null for an unknown/absent one

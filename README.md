@@ -107,7 +107,7 @@ curl http://localhost:8080/api/v1/healthz
 「うつろい」= ダイアリーの mood と記録から週/月の傾向を映し返す静かな画面。**描画の正はローカル集計**で通信不要。
 
 - **集計ロジックは `shared` の純ロジックが主役**。`InsightCalculator.calculate(period, entries, zone)` が `daysJournaled`／`moodDistribution`／`mostFrequentMood`／`longestStreak`／`moonOverlap`（月相バケット、`MoonPhaseCalculator` を再利用）を算出。純 `commonMain`（`kotlin.math` + `kotlinx-datetime`）なので Android/iOS で結果が一致し、`commonTest` がピン留め値で担保する。`InsightRepository.observeInsight` は既存の `DiaryRepository.observeEntries()` を畳むだけで新規永続化なし。
-- **mood は静かな 5 カテゴリ**（`shared` の `DiaryMood`：しずか/おだやか/つかれ/のぞみ/おもい、値 `calm/gentle/tired/hopeful/heavy`）。感情を数値化しない。「書く」画面の mood 選択がこの値を書き込み、集計が同じ値を読む（単一の真実）。**mood 未選択（過去データ含む）は日数・記録数には数えるが分布からは除外**し、「しるしのない夜」として静かに示す。
+- **mood は静かな 5 カテゴリ**（`shared` の `DiaryMood`：しずか/おだやか/つかれ/のぞみ/おもさ、値 `calm/gentle/tired/hopeful/heavy`）。感情を数値化しない。「書く」画面の mood 選択がこの値を書き込み、集計が同じ値を読む（単一の真実）。**mood 未選択（過去データ含む）は日数・記録数には数えるが分布からは除外**し、「しるしのない夜」として静かに示す。
 - **週起点は既定 日曜**（`InsightPeriods.DEFAULT_WEEK_START = DayOfWeek.SUNDAY`、カレンダーの 日〜土 に合わせる）。`InsightViewModel(weekStart = …)` で変更可能。期間は `[start, endExclusive)` の半開区間で、**タイムゾーンはユーザー現地日付**（`TimeZone.currentSystemDefault()`、日境界は現地 0:00）。うるう 2 月・月/年跨ぎ・TZ 境界は `InsightPeriodsTest`／`InsightCalculatorTest` が網羅。
 - **要約はまずルールベースで `shared` に閉じる**。`SummaryComposer`（interface）越しに `RuleBasedSummaryComposer` がテンプレ＋条件分岐で静かな詩文を組み立てる（断定・診断・助言はしない）。**将来サーバ LLM 要約へ差し替える場合は `SummaryComposer` の別実装を `InsightRepository` の裏で注入するだけ**で、ViewModel と両 UI は無変更（`compose` は `suspend` なので通信実装も収まる）。
 - **`GET /api/v1/insights?period=weekly|monthly&start=&tz=` は任意・最小のサーバ側集計**（`days_journaled`／`entry_count`／`unmooded_count`／`mood_distribution`）。カレンダー同様の**整合性確認の補助**で、描画には使わない（クライアントはローカル集計が正）。月相はクライアント専用のためサーバは返さない。詳細は [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
@@ -151,16 +151,16 @@ curl http://localhost:8080/api/v1/healthz
 - **Android**: Google は Credential Manager（Gradle property `RUNA_GOOGLE_SERVER_CLIENT_ID` に Google の**Web**クライアント ID）。Apple は Web フロー（`RUNA_APPLE_SERVICE_ID` / `RUNA_APPLE_REDIRECT_URI`）。詳細は [apps/kotlin/README.md](apps/kotlin/README.md)。
 - **iOS**: Apple はネイティブ（`Runa/Runa.entitlements` の Sign in with Apple、App ID にケイパビリティ付与）。Google は `Info.plist` の `GIDClientID`（iOS クライアント ID）。詳細は [apps/swift/README.md](apps/swift/README.md)。
 
-### 通知・プライバシーロック（夜のリマインド / 生体認証）
+### 通知・プライバシーロック（夜のリマインダー / 生体認証）
 
 「認証済み前提」。OS 固有機能が主役の回で、`shared` はインターフェイスと設定の保持・状態のみを持ち、通知スケジュールと生体認証の実処理は各ネイティブの actual が担う（04 通知許可 / 21 通知設定 / 22 プライバシー・ロック）。
 
-- **夜のリマインド（ローカル通知）**: 指定時刻に「静かに綴る時間」を知らせる日次ローカル通知。ON/OFF と時刻（プリセット 21:00 / 22:00 / 23:00＋自由指定、既定 22:00）を持つ。`shared` の `NotificationSettingsRepository` が multiplatform-settings に永続化し、`LocalNotificationScheduler`（expect 相当のインターフェイス、`platformModule()` で束縛）越しに各 OS のスケジューラを叩く。文面は世界観に沿う詩的コピー（`ReminderNotificationText`：「月が出ました」＋「今日を、そっと綴りませんか。」）を `shared` で共有。**プッシュ（サーバ起点）は必須にせず**、ローカル通知で完結。将来のサーバ起点告知用に BE の `PUT /api/v1/devices`（トークン登録口）だけ用意（下記）。
+- **夜のリマインダー（ローカル通知）**: 指定時刻に「静かに綴る時間」を知らせる日次ローカル通知。ON/OFF と時刻（プリセット 21:00 / 22:00 / 23:00＋自由指定、既定 22:00）を持つ。`shared` の `NotificationSettingsRepository` が multiplatform-settings に永続化し、`LocalNotificationScheduler`（expect 相当のインターフェイス、`platformModule()` で束縛）越しに各 OS のスケジューラを叩く。文面は世界観に沿う詩的コピー（`ReminderNotificationText`：「月が出ました」＋「今日を、そっと綴りませんか。」）を `shared` で共有。**プッシュ（サーバ起点）は必須にせず**、ローカル通知で完結。将来のサーバ起点告知用に BE の `PUT /api/v1/devices`（トークン登録口）だけ用意（下記）。
 - **プライバシー・ロック（生体認証）**: ON にすると起動/復帰時に生体認証（Face ID / BiometricPrompt）でアプリをロックし、成功でのみ中身が見える。失敗時は端末パスコードにフォールバック（Android: `BIOMETRIC_STRONG or DEVICE_CREDENTIAL`／iOS: `LAPolicyDeviceOwnerAuthentication`）。**認証（サインイン）とは別レイヤーのロック**で、`AppLockViewModel` が `Unlocked / Locked / Authenticating / Unavailable` を持ち、ロック中はコンテンツを構築しない（内容が背後に漏れない）。端末セキュリティ未設定（`Unavailable`）は恒久ロックアウトを避け、注意表示のうえ内容を通す。設定は単一の `lockEnabled`（確定デザインの パスコード/Face ID/すぐにロック 3 コントロールは単一 ON/OFF に簡素化、合意済み）。
 - **OS 別の権限・設定要件**:
   - **Android**: `POST_NOTIFICATIONS`（API 33+、導入フロー ④ で実行時要求）、`RECEIVE_BOOT_COMPLETED`（再起動後の再スケジュール）を `shared` の androidMain マニフェストで宣言。日次通知は `AlarmManager.setAndAllowWhileIdle`（不正確・許可不要）＋ `BroadcastReceiver` で翌日を再スケジュール。生体は `androidx.biometric`、`MainActivity` は `FragmentActivity`。詳細は [apps/kotlin/README.md](apps/kotlin/README.md)。
   - **iOS**: `Info.plist` に `NSFaceIDUsageDescription`、`project.yml` に `UserNotifications.framework` / `LocalAuthentication.framework`（静的 XCFramework のリンク要件）。日次通知は `UNCalendarNotificationTrigger`（repeats、OS 管理で再起動対応）。詳細は [apps/swift/README.md](apps/swift/README.md)。
-- **BE（任意・最小）**: `PUT /api/v1/devices`（`push_token` / `platform` / `notify_time` / `enabled`）は将来のサーバ起点通知（FCM/APNs）用のトークン登録口。今回のリマインドはローカル通知で完結するため必須ではなく、`shared` からの呼び出しも将来スライスで接続する。詳細は [apps/go/README.md](apps/go/README.md) / [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
+- **BE（任意・最小）**: `PUT /api/v1/devices`（`push_token` / `platform` / `notify_time` / `enabled`）は将来のサーバ起点通知（FCM/APNs）用のトークン登録口。今回のリマインダーはローカル通知で完結するため必須ではなく、`shared` からの呼び出しも将来スライスで接続する。詳細は [apps/go/README.md](apps/go/README.md) / [apps/go/api/openapi.yaml](apps/go/api/openapi.yaml)。
 
 ### 状態画面（空 / オフライン / ローディング / エラー）
 

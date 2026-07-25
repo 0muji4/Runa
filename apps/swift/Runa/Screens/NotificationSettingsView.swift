@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 import Shared
 
-/// 通知設定 (21) — 夜のリマインド. A quiet toggle, a large time display, three preset
+/// 通知設定 (21) — 夜のリマインダー. A quiet toggle, a large time display, three preset
 /// chips (21:00 / 22:00 / 23:00) plus a free time picker, over a poetic footer.
 /// Turning the reminder on asks for notification authorization; a denial doesn't
 /// break the screen — the preference is still saved (DoD#3).
@@ -17,7 +17,7 @@ struct NotificationSettingsView: View {
                 .font(RunaFonts.body(13)).tracking(3)
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.top, RunaSpacing.md)
-            Text("夜のリマインド")
+            Text("夜のリマインダー")
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
                 .padding(.top, RunaSpacing.xs)
@@ -26,7 +26,7 @@ struct NotificationSettingsView: View {
                 get: { obs.enabled },
                 set: { on in if on { enableReminder() } else { obs.toggle(false) } }
             )) {
-                Text("リマインドをうけとる")
+                Text("リマインダーを受け取る")
                     .font(RunaFonts.body(17))
                     .foregroundStyle(runaTheme.heading)
             }

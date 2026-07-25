@@ -145,7 +145,7 @@ struct HomeView: View {
 
             if offline {
                 Spacer().frame(height: RunaSpacing.md)
-                Text("オフライン表示中（月あかりは端末で算出しています）")
+                Text("オフライン表示中（月あかりは端末で計算しています）")
                     .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
             }

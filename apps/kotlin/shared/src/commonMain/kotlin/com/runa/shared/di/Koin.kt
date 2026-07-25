@@ -152,7 +152,7 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
-    // Notification (夜のリマインド) + privacy lock. Both are local preferences via the
+    // Notification (夜のリマインダー) + privacy lock. Both are local preferences via the
     // platform-provided Settings; the reminder repository also drives the platform
     // LocalNotificationScheduler, and the lock uses the platform BiometricAuthenticator
     // — both bound in platformModule().

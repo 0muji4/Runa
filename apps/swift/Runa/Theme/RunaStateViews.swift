@@ -169,7 +169,7 @@ struct RunaFailureView: View {
         } else if error is AppErrorAuth {
             RunaErrorView(
                 title: "また、ここから。",
-                message: "サインインの有効期限が切れたようです。",
+                message: "サインインの有効期限が切れました。",
                 ctaLabel: "サインインし直す",
                 onCta: reauthenticate
             )
@@ -201,7 +201,7 @@ struct RunaSyncBanner: View {
     private var bannerText: String? {
         switch phase {
         case .offline: return "オフライン。記録は端末に守られています。"
-        case .error: return "同期に、少しつまずいています。"
+        case .error: return "同期に、すこしつまずいています。"
         default: return nil // idle / syncing stay silent
         }
     }

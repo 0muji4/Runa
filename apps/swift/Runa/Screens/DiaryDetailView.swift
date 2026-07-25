@@ -47,7 +47,7 @@ struct DiaryDetailView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar, .tabBar)
-        .alert("この記録を削除しますか", isPresented: $confirmDelete) {
+        .alert("この記録を削除しますか？", isPresented: $confirmDelete) {
             Button("やめる", role: .cancel) {}
             Button("削除する", role: .destructive) {
                 model.delete(clientId: clientId)

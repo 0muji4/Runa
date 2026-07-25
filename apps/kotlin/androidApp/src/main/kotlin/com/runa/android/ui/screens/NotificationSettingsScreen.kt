@@ -46,7 +46,7 @@ import com.runa.shared.feature.notification.ReminderTime
 import org.koin.compose.koinInject
 
 /**
- * 通知設定 (21) — 夜のリマインド. A quiet toggle, a large time display, three preset
+ * 通知設定 (21) — 夜のリマインダー. A quiet toggle, a large time display, three preset
  * chips (21:00 / 22:00 / 23:00) and a free time picker, over a poetic footer.
  * Turning the reminder on requests POST_NOTIFICATIONS (API 33+); a denial doesn't
  * break the screen — the preference is still saved.

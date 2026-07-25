@@ -1,8 +1,10 @@
 package com.runa.android.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,15 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,6 +31,7 @@ import coil.compose.AsyncImage
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.today.HomeViewModel
 import com.runa.shared.feature.today.Today
@@ -45,7 +44,6 @@ import org.koin.compose.koinInject
  * shared [HomeViewModel]); once a song is playing (today's or one chosen from the
  * archive) it reflects the shared [SongPlayerViewModel]'s live state.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodaysSongScreen(
     onOpenArchive: () -> Unit,
@@ -59,47 +57,59 @@ fun TodaysSongScreen(
     val todaySong = (homeState as? UiState.Content<Today>)?.data?.song
     val song = playerState.song ?: todaySong
 
-    Scaffold(
-        containerColor = RunaColors.Background,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tab_todays_song), color = RunaColors.Heading) },
-                actions = {
-                    TextButton(onClick = onOpenArchive) {
-                        Text(stringResource(R.string.today_song_open_archive), color = RunaColors.Accent)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = RunaColors.Background),
-            )
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (song == null) {
-                RunaEmptyView(
-                    title = stringResource(R.string.today_song_none),
-                    body = stringResource(R.string.today_song_none_body),
-                    modifier = Modifier.fillMaxSize(),
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(RunaColors.Background),
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            // No Material app bar — the header is the page, starting at RunaTabHeaderTop
+            // like the other tab roots.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = RunaTabHeaderTop, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.tab_todays_song),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = RunaColors.Heading,
+                    modifier = Modifier.weight(1f),
                 )
-                return@Column
+                TextButton(onClick = onOpenArchive) {
+                    Text(stringResource(R.string.today_song_open_archive), color = RunaColors.Accent)
+                }
             }
 
-            Player(
-                song = song,
-                isPlaying = playerState.isPlaying,
-                positionMs = playerState.positionMs,
-                durationMs = playerState.durationMs,
-                onToggle = {
-                    if (playerState.song == null) playerViewModel.play(song) else playerViewModel.togglePlayPause()
-                },
-                onSeek = { playerViewModel.seekTo(it) },
-            )
+            // Player (or empty state) centered in the space below the header.
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                if (song == null) {
+                    RunaEmptyView(
+                        title = stringResource(R.string.today_song_none),
+                        body = stringResource(R.string.today_song_none_body),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    return@Column
+                }
+
+                Player(
+                    song = song,
+                    isPlaying = playerState.isPlaying,
+                    positionMs = playerState.positionMs,
+                    durationMs = playerState.durationMs,
+                    onToggle = {
+                        if (playerState.song == null) playerViewModel.play(song) else playerViewModel.togglePlayPause()
+                    },
+                    onSeek = { playerViewModel.seekTo(it) },
+                )
+            }
         }
     }
 }

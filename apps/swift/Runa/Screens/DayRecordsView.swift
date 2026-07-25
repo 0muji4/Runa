@@ -60,7 +60,7 @@ struct DayRecordsView: View {
             }
             .padding(.horizontal, 20)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
     }
 
     private func card(_ entry: DiaryEntry) -> some View {

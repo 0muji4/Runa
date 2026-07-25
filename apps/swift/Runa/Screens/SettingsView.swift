@@ -22,12 +22,12 @@ struct SettingsView: View {
                     .padding(.bottom, RunaSpacing.lg)
 
                 NavigationLink { ThemeView() } label: {
-                    SettingRow(glyph: "☾", label: "テーマ", value: themeName(theme.themeId))
+                    SettingRow(icon: "moon", label: "テーマ", value: themeName(theme.themeId))
                 }
                 divider
                 NavigationLink { NotificationSettingsView() } label: {
                     SettingRow(
-                        glyph: "◷",
+                        icon: "bell",
                         label: "通知",
                         value: notification.enabled ? notification.time.label : "オフ"
                     )
@@ -35,14 +35,14 @@ struct SettingsView: View {
                 divider
                 NavigationLink { PrivacyLockView() } label: {
                     SettingRow(
-                        glyph: "⚿",
+                        icon: "lock",
                         label: "プライバシー・ロック",
                         value: lock.lockEnabled ? "オン" : "オフ"
                     )
                 }
                 divider
                 NavigationLink { AccountView(onSignOut: onSignOut) } label: {
-                    SettingRow(glyph: "◍", label: "アカウント・データ")
+                    SettingRow(icon: "person", label: "アカウント・データ")
                 }
 
                 premiumCard
@@ -60,6 +60,7 @@ struct SettingsView: View {
         .background(runaTheme.background)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var divider: some View {
@@ -77,7 +78,7 @@ struct SettingsView: View {
                 Text("プレミアムで、もっと深く").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
             Spacer()
-            Text("›").foregroundStyle(runaTheme.accent)
+            Image(systemName: "chevron.right").foregroundStyle(runaTheme.accent)
         }
         .padding(20)
         .background(runaTheme.surface, in: RoundedRectangle(cornerRadius: 20))
@@ -96,10 +97,10 @@ struct SettingsView: View {
     }
 }
 
-/// One quiet settings row: leading glyph, label, optional trailing value, chevron.
+/// One quiet settings row: leading SF Symbol, label, optional trailing value, chevron.
 private struct SettingRow: View {
     @Environment(\.runaTheme) private var runaTheme
-    let glyph: String
+    let icon: String
     let label: String
     var value: String? = nil
     var enabled: Bool = true
@@ -107,13 +108,13 @@ private struct SettingRow: View {
     var body: some View {
         let labelColor = enabled ? runaTheme.heading : runaTheme.subtle
         HStack {
-            Text(glyph).font(RunaFonts.body(18)).foregroundStyle(labelColor).frame(width: 36, alignment: .leading)
+            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(labelColor).frame(width: 36, alignment: .leading)
             Text(label).font(RunaFonts.body(17)).foregroundStyle(labelColor)
             Spacer()
             if let value {
                 Text(value).font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
             }
-            Text("›").font(RunaFonts.body(20)).foregroundStyle(runaTheme.subtle)
+            Image(systemName: "chevron.right").font(.system(size: 14)).foregroundStyle(runaTheme.subtle)
         }
         .padding(.vertical, 20)
         .contentShape(Rectangle())

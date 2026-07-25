@@ -26,7 +26,7 @@ struct TodaysMoonView: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
     }
 
     @ViewBuilder private var content: some View {

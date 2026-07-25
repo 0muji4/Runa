@@ -96,7 +96,7 @@ struct DiaryEditorView: View {
             .padding(.top, RunaSpacing.sm)
             .padding(.bottom, RunaSpacing.sm)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar, .tabBar)
         .onDisappear { model.saveNow() }
     }
 

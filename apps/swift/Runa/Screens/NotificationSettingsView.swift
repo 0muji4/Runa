@@ -68,6 +68,7 @@ struct NotificationSettingsView: View {
         .background(runaTheme.background)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showPicker) {
             TimePickerSheet(initial: obs.time) { picked in
                 obs.selectTime(picked)

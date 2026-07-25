@@ -52,9 +52,15 @@ struct TodaysSongView: View {
                     )
                 }
             }
-            .navigationTitle("きょうの一曲")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("きょうの一曲")
+                        .font(RunaFonts.heading(16))
+                        .tracking(4)
+                        .foregroundStyle(runaTheme.subtle)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: SongArchiveView()) {
                         Text("これまでの一曲").foregroundStyle(runaTheme.accent)

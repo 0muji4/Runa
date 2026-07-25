@@ -57,5 +57,6 @@ struct PrivacyLockView: View {
         .background(runaTheme.background)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 }

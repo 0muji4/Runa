@@ -59,6 +59,17 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
                 runaTheme.background.ignoresSafeArea()
+                // A whisper of warm moonlight behind the moon, matching the design's glow.
+                RadialGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.97, green: 0.95, blue: 0.89).opacity(0.10),
+                        .clear,
+                    ]),
+                    center: UnitPoint(x: 0.5, y: 0.16),
+                    startRadius: 0,
+                    endRadius: 340
+                )
+                .ignoresSafeArea()
                 content
             }
             .toolbar {
@@ -89,27 +100,40 @@ struct HomeView: View {
     }
 
     private func todayView(_ today: Today, offline: Bool) -> some View {
-        VStack(spacing: RunaSpacing.sm) {
-            // Tapping the moon opens 15 今日の月.
+        VStack(spacing: 0) {
+            // Drawn moon phase + date + phase name, pinned to the top (tap → 15 今日の月).
             NavigationLink {
                 TodaysMoonView()
             } label: {
-                Text(moonPhaseGlyph(key: today.moon.phaseKey))
-                    .font(.system(size: 56))
+                HStack(spacing: 12) {
+                    MoonPhaseDisc(
+                        illumination: CGFloat(today.moon.illumination),
+                        waxing: moonIsWaxing(key: today.moon.phaseKey),
+                        diameter: 30
+                    )
+                    Text(today.dateLabel)
+                        .font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
+                    Text(moonPhaseNameJa(key: today.moon.phaseKey))
+                        .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
+                }
             }
             .buttonStyle(.plain)
-            Text("\(today.dateLabel) · \(moonPhaseNameJa(key: today.moon.phaseKey))")
-                .font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
-            Text("照度 \(Int((today.moon.illumination * 100).rounded()))%")
-                .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+            .padding(.top, RunaSpacing.sm)
 
-            Spacer().frame(height: RunaSpacing.lg)
+            Spacer()
 
+            // The daily quote — the emotional center of the screen.
             Text(today.quote?.bodyText ?? "今日の言葉は、まだ紡がれていません。")
                 .font(RunaFonts.heading(26))
                 .foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, RunaSpacing.md)
+
+            if today.quote != nil {
+                Spacer().frame(height: RunaSpacing.md)
+                Text("—  きょうの、ひとこと  —")
+                    .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+            }
 
             if offline {
                 Spacer().frame(height: RunaSpacing.md)
@@ -117,6 +141,9 @@ struct HomeView: View {
                     .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
             }
+
+            Spacer()
+            Spacer().frame(height: RunaSpacing.lg)
         }
     }
 }

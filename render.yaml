@@ -1,0 +1,75 @@
+# Render Blueprint — Runa backend（apps/go）。
+#
+# 方針（Karin の Blueprint を踏襲しつつ Runa 固有差分を反映）:
+#  - PostgreSQL は外部 Neon（DATABASE_URL を Secret で渡す。?sslmode=require 推奨）。
+#    計算ホストとの結合を弱め脱ロックイン・可搬性に効く。低・間欠トラフィックのため
+#    無料プランのコールドスタートは許容する。Render Postgres を使うなら databases:
+#    ブロックを足し、DATABASE_URL を fromDatabase 参照に変える。
+#  - ギャラリー画像は外部 S3 互換オブジェクトストレージ（既定は Cloudflare R2）。
+#    Render はオブジェクトストレージを提供しないため、ここは必ず外部を使う。バケットは
+#    private のままでよい（アップロードは presigned PUT、閲覧は presigned GET）。
+#    R2 例: S3_ENDPOINT=<account>.r2.cloudflarestorage.com / S3_REGION=auto /
+#           S3_USE_SSL=true。S3_PUBLIC_ENDPOINT は presigned URL に焼かれる公開ホスト
+#           （同じ R2 エンドポイント、または R2 に割り当てた独自ドメイン）。
+#    AWS S3 なら S3_REGION を ap-northeast-1 等に、endpoint は空 or s3.<region>.amazonaws.com。
+#  - マイグレーションはサーバ起動時に自動適用される（cmd/api が file://migrations を
+#    m.Up() する）。よって preDeployCommand も別 migrate ジョブも不要。
+#  - サーバ push 通知は無く（通知は端末ローカル）、日次バッチも無いため cron サービスは不要。
+#    web 1 サービスで完結する。
+#
+# 注意: Render の Blueprint 仕様は変わりうる。デプロイ時に最新仕様で要検証。
+
+services:
+  - type: web
+    name: runa-backend
+    runtime: docker
+    rootDir: apps/go
+    dockerfilePath: ./Dockerfile
+    region: singapore # 日本に最も近いリージョン
+    plan: free
+    healthCheckPath: /api/v1/healthz # Runa の liveness は /api/v1 配下（DB 未接続でも 200）
+    envVars:
+      # Render は PORT を自動注入し、Runa は PORT を読んで待ち受けるため上書きしない。
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ALLOWED_ORIGINS # ネイティブ client は CORS 非対象。必要なら絞る。
+        value: "*"
+
+      # --- DB（Neon）---
+      - key: DATABASE_URL # Neon 接続文字列（?sslmode=require）。Secret として手動設定。
+        sync: false
+
+      # --- Auth ---
+      - key: JWT_SECRET # 本番用の長いランダム鍵を Render に生成させる（dev 既定は使わない）。
+        generateValue: true
+      - key: ACCESS_TOKEN_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL
+        value: 720h
+      - key: APPLE_CLIENT_IDS # 本番 Bundle ID / Service ID をカンマ区切り。
+        sync: false
+      - key: GOOGLE_CLIENT_IDS # 本番 OAuth Client ID（iOS / Android / Web）をカンマ区切り。
+        sync: false
+
+      # --- ギャラリー用オブジェクトストレージ（既定: Cloudflare R2）---
+      - key: S3_ENDPOINT # 例: <account>.r2.cloudflarestorage.com（サーバが到達するホスト）
+        sync: false
+      - key: S3_PUBLIC_ENDPOINT # presigned URL に焼く公開ホスト（同上 or 独自ドメイン）
+        sync: false
+      - key: S3_REGION # R2 は auto。AWS は例: ap-northeast-1。
+        value: auto
+      - key: S3_BUCKET
+        value: runa-gallery
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_USE_SSL
+        value: "true"
+
+      # --- Today 管理（任意）---
+      # 日次コンテンツ（引用/曲）を seed するときだけ設定する。空なら admin 系は全 403。
+      - key: ADMIN_API_TOKEN
+        sync: false

@@ -21,7 +21,7 @@
 
 services:
   - type: web
-    name: runa-backend
+    name: runa-backend-dev
     runtime: docker
     rootDir: apps/go
     dockerfilePath: ./Dockerfile
@@ -31,7 +31,7 @@ services:
     envVars:
       # Render は PORT を自動注入し、Runa は PORT を読んで待ち受けるため上書きしない。
       - key: APP_ENV
-        value: production
+        value: development
       - key: LOG_LEVEL
         value: info
       - key: CORS_ALLOWED_ORIGINS # ネイティブ client は CORS 非対象。必要なら絞る。
@@ -61,7 +61,7 @@ services:
       - key: S3_REGION # R2 は auto。AWS は例: ap-northeast-1。
         value: auto
       - key: S3_BUCKET
-        value: runa-gallery
+        value: runa-gallery-dev
       - key: S3_ACCESS_KEY
         sync: false
       - key: S3_SECRET_KEY

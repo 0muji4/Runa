@@ -41,6 +41,7 @@ import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
@@ -71,7 +72,7 @@ fun DiaryListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 16.dp),
+                    .padding(start = 24.dp, end = 24.dp, top = RunaTabHeaderTop, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(

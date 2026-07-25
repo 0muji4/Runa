@@ -1,7 +1,7 @@
 package com.runa.android.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,14 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +30,7 @@ import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.today.HomeViewModel
 import com.runa.shared.feature.today.Today
@@ -44,10 +41,11 @@ import org.koin.compose.koinInject
 /**
  * 06 Home. The quiet face of the app: a large 明朝 daily quote centered in
  * generous whitespace, with the day's drawn moon phase + date pinned to the top and
- * a soft glow behind it. The quote and moon still render offline (the moon is always
- * computed on-device).
+ * a soft glow behind it. No Material app bar — like the other tabs, the header is
+ * the page, so all four tabs start their content at [RunaTabHeaderTop]. The settings
+ * gear sits as a quiet top-end overlay. The quote and moon still render offline (the
+ * moon is always computed on-device).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     displayName: String,
@@ -57,42 +55,27 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(
-        containerColor = RunaColors.Background,
-        topBar = {
-            TopAppBar(
-                title = { Text("") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            RunaIcons.Settings,
-                            contentDescription = stringResource(R.string.tab_settings),
-                            tint = RunaColors.Subtle,
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        // A whisper of warm moonlight behind the moon, matching the design's glow.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // A whisper of warm moonlight behind the moon, matching the design's glow.
+            .drawBehind {
+                val glowCenter = Offset(size.width / 2f, size.height * 0.16f)
+                val glowRadius = size.width * 0.62f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x1AF7F2E4), Color.Transparent),
+                        center = glowCenter,
+                        radius = glowRadius,
+                    ),
+                    radius = glowRadius,
+                    center = glowCenter,
+                )
+            },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .drawBehind {
-                    val glowCenter = Offset(size.width / 2f, size.height * 0.16f)
-                    val glowRadius = size.width * 0.62f
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(Color(0x1AF7F2E4), Color.Transparent),
-                            center = glowCenter,
-                            radius = glowRadius,
-                        ),
-                        radius = glowRadius,
-                        center = glowCenter,
-                    )
-                }
-                .padding(innerPadding)
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -105,6 +88,20 @@ fun HomeScreen(
                 HomeContent(today, offline = sync == SyncPhase.Offline, onOpenTodaysMoon)
             }
         }
+
+        // Settings gear — a quiet top-end overlay, aligned with the header row.
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = RunaTabHeaderTop - 8.dp, end = 8.dp),
+        ) {
+            Icon(
+                RunaIcons.Settings,
+                contentDescription = stringResource(R.string.tab_settings),
+                tint = RunaColors.Subtle,
+            )
+        }
     }
 }
 
@@ -116,9 +113,9 @@ private fun HomeContent(today: Today, offline: Boolean, onOpenTodaysMoon: () -> 
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(RunaTabHeaderTop))
 
-        // Drawn moon phase + date + phase name, pinned to the top (tap → 今日の月).
+        // Drawn moon phase + date + phase name, at the top (tap → 今日の月).
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable(onClick = onOpenTodaysMoon),

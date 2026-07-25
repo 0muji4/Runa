@@ -52,6 +52,7 @@ import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.screens.gallery.ImageNormalizer
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.ZenKakuGothicNew
 import com.runa.shared.core.state.SyncPhase
@@ -147,7 +148,7 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
 
 @Composable
 private fun GalleryHeader(onAdd: () -> Unit) {
-    Box(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 4.dp)) {
+    Box(Modifier.fillMaxWidth().padding(top = RunaTabHeaderTop, bottom = 4.dp)) {
         Text(
             text = stringResource(R.string.gallery_title),
             style = TextStyle(fontFamily = ShipporiMincho, fontSize = 26.sp, letterSpacing = 6.sp),

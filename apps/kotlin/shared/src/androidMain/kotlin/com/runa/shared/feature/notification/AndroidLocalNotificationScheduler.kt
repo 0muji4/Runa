@@ -96,7 +96,7 @@ class AndroidLocalNotificationScheduler(
         private fun ensureChannel(context: Context) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "夜のリマインド",
+                "夜のリマインダー",
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply { description = "静かに綴る時間のお知らせ" }
             val manager = context.getSystemService(NotificationManager::class.java)

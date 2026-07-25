@@ -66,7 +66,7 @@ struct TodaysSongView: View {
                             playerBody(song)
                         } else {
                             RunaEmptyView(
-                                title: "今日の一曲は、まだ選ばれていません。",
+                                title: "きょうの一曲は、まだ選ばれていません。",
                                 message: "選ばれた一曲は、ここに灯ります。"
                             )
                         }

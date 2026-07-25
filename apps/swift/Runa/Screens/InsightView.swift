@@ -191,7 +191,7 @@ struct InsightView: View {
                 }
             }
             if unmooded > 0 {
-                Text("しるしのない夜も、\(unmooded)。")
+                Text("しるしのない夜も、\(unmooded)つ。")
                     .font(RunaFonts.heading(13))
                     .foregroundStyle(runaTheme.subtle)
             }

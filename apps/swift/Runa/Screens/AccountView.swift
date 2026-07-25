@@ -42,7 +42,7 @@ struct AccountView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .onAppear { account.loadProfile() }
-        .alert("アカウントを削除しますか", isPresented: deleteConfirmBinding) {
+        .alert("アカウントを削除しますか？", isPresented: deleteConfirmBinding) {
             Button("削除する", role: .destructive) { account.confirmDelete() }
             Button("やめる", role: .cancel) { account.cancelDelete() }
         } message: {
@@ -114,7 +114,7 @@ struct AccountView: View {
                     Text("テキストで書き出す").font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
                 }
                 ShareLink(item: ready.json) {
-                    Text("JSON で書き出す").font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
+                    Text("JSONで書き出す").font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
                 }
                 Button("閉じる") { account.clearExport() }
                     .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)

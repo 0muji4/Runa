@@ -59,10 +59,10 @@
     <string name="signin_toggle_to_signup">アカウントをお持ちでない方はこちら</string>
     <string name="signin_toggle_to_login">すでにアカウントをお持ちの方はこちら</string>
     <string name="signin_error_generic">サインインに失敗しました。</string>
-    <string name="signin_provider_unconfigured">この方法は、いまはえらべません。</string>
+    <string name="signin_provider_unconfigured">この方法は、いまは選べません。</string>
 
     <!-- Authenticated home + sign out. -->
-    <string name="home_greeting">こんばんは、%1$s さん</string>
+    <string name="home_greeting">こんばんは、%1$sさん</string>
     <string name="action_sign_out">サインアウト</string>
 
     <!-- Diary (screens 09/10/11). -->
@@ -85,7 +85,7 @@
     <string name="diary_detail_back">記録</string>
     <string name="diary_action_edit">編集</string>
     <string name="diary_action_delete">削除</string>
-    <string name="diary_delete_confirm_title">この記録を削除しますか</string>
+    <string name="diary_delete_confirm_title">この記録を削除しますか？</string>
     <string name="diary_delete_confirm_body">削除した記録は元に戻せません。</string>
     <string name="action_delete">削除する</string>
     <string name="action_cancel">やめる</string>
@@ -100,15 +100,15 @@
     <string name="insight_toggle_month">月</string>
     <string name="insight_moon_new">新月</string>
     <string name="insight_moon_full">満月</string>
-    <string name="insight_unmooded">しるしのない夜も、%1$d。</string>
+    <string name="insight_unmooded">しるしのない夜も、%1$dつ。</string>
     <string name="insight_empty_title">まだ、しるした夜がありません。</string>
     <string name="insight_empty_body">この期間は、静かなままです。</string>
 
     <!-- Today (home / player / archive). -->
-    <string name="home_offline_hint">オフライン表示中（月あかりは端末で算出しています）</string>
+    <string name="home_offline_hint">オフライン表示中（月あかりは端末で計算しています）</string>
     <string name="home_no_quote">今日の言葉は、まだ紡がれていません。</string>
     <string name="home_quote_caption">きょうの、ひとこと</string>
-    <string name="today_song_none">今日の一曲は、まだ選ばれていません。</string>
+    <string name="today_song_none">きょうの一曲は、まだ選ばれていません。</string>
     <string name="today_song_none_body">選ばれた一曲は、ここに灯ります。</string>
     <string name="today_song_open_archive">これまでの一曲</string>
     <string name="song_archive_title">これまでの一曲</string>
@@ -118,9 +118,6 @@
     <string name="song_archive_load_more">もっと見る</string>
     <string name="player_play">再生</string>
     <string name="player_pause">一時停止</string>
-
-    <!-- Moon (phase glyph + name come from shared; these are the numeric labels). -->
-    <string name="moon_illumination">照度 %1$d%%</string>
 
     <!-- Calendar (12 ふりかえり) + its day-records view. -->
     <string name="diary_open_calendar">ふりかえり</string>
@@ -139,13 +136,13 @@
     <string name="settings_row_privacy_lock">プライバシー・ロック</string>
     <string name="settings_row_account">アカウント・データ</string>
 
-    <!-- Notification settings (21 通知設定 — 夜のリマインド). -->
+    <!-- Notification settings (21 通知設定 — 夜のリマインダー). -->
     <string name="notif_settings_eyebrow">NOTIFICATION</string>
-    <string name="notif_settings_title">夜のリマインド</string>
-    <string name="notif_settings_toggle">リマインドをうけとる</string>
+    <string name="notif_settings_title">夜のリマインダー</string>
+    <string name="notif_settings_toggle">リマインダーを受け取る</string>
     <string name="notif_settings_time_caption">おやすみ前の、しずかな時刻</string>
     <string name="notif_settings_footer">その時刻に、月がそっと\n今日をふりかえるひとことを。</string>
-    <string name="notif_settings_pick_time">じかんを選ぶ</string>
+    <string name="notif_settings_pick_time">時刻を選ぶ</string>
     <string name="notif_value_off">オフ</string>
 
     <!-- Privacy lock (22 プライバシー・ロック). -->
@@ -189,12 +186,12 @@
     <string name="account_name_label">表示名</string>
     <string name="account_save">保存</string>
     <string name="account_export">エクスポート</string>
-    <string name="account_export_json">JSON で書き出す</string>
+    <string name="account_export_json">JSONで書き出す</string>
     <string name="account_export_text">テキストで書き出す</string>
     <string name="account_export_preparing">エクスポートを準備しています…</string>
     <string name="account_export_share_title">データのエクスポート</string>
     <string name="account_delete">アカウントを削除</string>
-    <string name="account_delete_confirm_title">アカウントを削除しますか</string>
+    <string name="account_delete_confirm_title">アカウントを削除しますか？</string>
     <string name="account_delete_confirm_body">日記・画像を含むすべてのデータが完全に削除され、元に戻せません。</string>
     <string name="account_deleting">削除しています…</string>
     <string name="account_load_error">プロフィールを取得できませんでした。</string>
@@ -210,8 +207,8 @@
     <string name="state_error_body">うまく読み込めませんでした。\nゆっくり、もう一度。</string>
     <string name="state_error_cta">やりなおす</string>
     <string name="state_auth_title">また、ここから。</string>
-    <string name="state_auth_body">サインインの有効期限が切れたようです。</string>
+    <string name="state_auth_body">サインインの有効期限が切れました。</string>
     <string name="state_auth_cta">サインインし直す</string>
     <string name="state_banner_offline">オフライン。記録は端末に守られています。</string>
-    <string name="state_banner_error">同期に、少しつまずいています。</string>
+    <string name="state_banner_error">同期に、すこしつまずいています。</string>
 </resources>

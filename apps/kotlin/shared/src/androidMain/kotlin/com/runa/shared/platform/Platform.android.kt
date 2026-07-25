@@ -7,6 +7,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.IOException
+import java.security.GeneralSecurityException
+import java.security.KeyStore
 import app.cash.sqldelight.db.SqlDriver
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
@@ -86,19 +89,50 @@ class AndroidNetworkMonitor(context: Context) : NetworkMonitor {
  * EncryptedSharedPreferences-backed [SecureKeyValueStore]. Values are encrypted
  * at rest with a hardware-backed master key.
  */
-class EncryptedPrefsStore(context: Context) : SecureKeyValueStore {
+class EncryptedPrefsStore(private val context: Context) : SecureKeyValueStore {
 
     private val prefs: SharedPreferences by lazy {
+        try {
+            createEncryptedPrefs()
+        } catch (e: GeneralSecurityException) {
+            // The Tink keyset can no longer be decrypted by the AndroidKeyStore
+            // master key — e.g. the key was rotated/invalidated across a reinstall
+            // or a lock-screen change. Left unhandled this throws AEADBadTagException
+            // and crashes at startup (restoreSession reads tokens here). Recovery:
+            // discard the corrupted store + master key so a fresh keyset is created.
+            // Secrets are lost; the app falls back to unauthenticated and re-login.
+            recoverFromCorruptedKeystore()
+            createEncryptedPrefs()
+        } catch (e: IOException) {
+            recoverFromCorruptedKeystore()
+            createEncryptedPrefs()
+        }
+    }
+
+    private fun createEncryptedPrefs(): SharedPreferences {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
-        EncryptedSharedPreferences.create(
+        return EncryptedSharedPreferences.create(
             context,
-            "runa_secure_prefs",
+            PREFS_NAME,
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
+    }
+
+    /** Drops the encrypted prefs file (holding the wrapped keyset) and the master key. */
+    private fun recoverFromCorruptedKeystore() {
+        context.deleteSharedPreferences(PREFS_NAME)
+        try {
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                .deleteEntry(MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+        } catch (e: GeneralSecurityException) {
+            // Master key already absent/unusable — the prefs deletion above is enough.
+        } catch (e: IOException) {
+            // Keystore unavailable; nothing more we can safely do here.
+        }
     }
 
     override fun get(key: String): String? = prefs.getString(key, null)
@@ -109,6 +143,10 @@ class EncryptedPrefsStore(context: Context) : SecureKeyValueStore {
 
     override fun remove(key: String) {
         prefs.edit().remove(key).apply()
+    }
+
+    private companion object {
+        const val PREFS_NAME = "runa_secure_prefs"
     }
 }
 

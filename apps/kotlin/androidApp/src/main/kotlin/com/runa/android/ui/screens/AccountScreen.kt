@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
+import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.settings.AccountViewModel
 import com.runa.shared.feature.settings.DeletionStatus
 import com.runa.shared.feature.settings.ExportStatus
@@ -132,6 +136,7 @@ fun AccountScreen(
         Text(
             text = stringResource(R.string.account_title),
             color = RunaColors.Heading,
+            fontFamily = ShipporiMincho,
             fontWeight = FontWeight.Medium,
             fontSize = 36.sp,
         )
@@ -146,7 +151,7 @@ fun AccountScreen(
         }
 
         Spacer(Modifier.height(36.dp))
-        AccountActionRow("↥", stringResource(R.string.account_export), enabled = state.export != ExportStatus.InProgress) {
+        AccountActionRow(RunaIcons.Export, stringResource(R.string.account_export), enabled = state.export != ExportStatus.InProgress) {
             viewModel.export()
         }
         if (state.export == ExportStatus.InProgress) {
@@ -156,7 +161,7 @@ fun AccountScreen(
             Text(it.message, color = RunaColors.Accent, fontSize = 13.sp)
         }
         ActionDivider()
-        AccountActionRow("⇥", stringResource(R.string.action_sign_out), onClick = onSignOut)
+        AccountActionRow(RunaIcons.SignOut, stringResource(R.string.action_sign_out), onClick = onSignOut)
 
         Spacer(Modifier.height(56.dp))
         val deleting = state.deletion == DeletionStatus.InProgress
@@ -247,7 +252,7 @@ private fun ProfileSection(
 
 @Composable
 private fun AccountActionRow(
-    glyph: String,
+    icon: ImageVector,
     label: String,
     enabled: Boolean = true,
     onClick: () -> Unit,
@@ -259,7 +264,8 @@ private fun AccountActionRow(
             .padding(vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(glyph, color = RunaColors.Heading, fontSize = 18.sp, modifier = Modifier.width(36.dp))
+        Icon(icon, contentDescription = null, tint = RunaColors.Heading, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(16.dp))
         Text(label, color = RunaColors.Heading, fontSize = 17.sp, modifier = Modifier.weight(1f))
     }
 }

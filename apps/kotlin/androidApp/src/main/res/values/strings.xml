@@ -107,6 +107,7 @@
     <!-- Today (home / player / archive). -->
     <string name="home_offline_hint">オフライン表示中（月あかりは端末で算出しています）</string>
     <string name="home_no_quote">今日の言葉は、まだ紡がれていません。</string>
+    <string name="home_quote_caption">きょうの、ひとこと</string>
     <string name="today_song_none">今日の一曲は、まだ選ばれていません。</string>
     <string name="today_song_none_body">選ばれた一曲は、ここに灯ります。</string>
     <string name="today_song_open_archive">これまでの一曲</string>

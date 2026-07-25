@@ -38,7 +38,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
+import com.runa.android.ui.theme.CormorantGaramond
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.notification.NotificationSettingsViewModel
 import com.runa.shared.feature.notification.ReminderTime
 import org.koin.compose.koinInject
@@ -93,6 +95,7 @@ fun NotificationSettingsScreen(
         Text(
             text = stringResource(R.string.notif_settings_title),
             color = RunaColors.Heading,
+            fontFamily = ShipporiMincho,
             fontWeight = FontWeight.Medium,
             fontSize = 40.sp,
         )
@@ -135,7 +138,8 @@ fun NotificationSettingsScreen(
         Text(
             text = state.time.label,
             color = RunaColors.Heading,
-            fontWeight = FontWeight.Light,
+            fontFamily = CormorantGaramond,
+            fontWeight = FontWeight.Normal,
             fontSize = 72.sp,
             modifier = Modifier
                 .fillMaxWidth()

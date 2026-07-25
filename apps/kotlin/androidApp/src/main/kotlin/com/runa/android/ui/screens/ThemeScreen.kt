@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.runaColorsFor
 import com.runa.shared.feature.settings.AppTheme
 import com.runa.shared.feature.settings.ThemeViewModel
@@ -71,6 +72,7 @@ fun ThemeScreen(
         Text(
             text = stringResource(R.string.theme_title),
             color = RunaColors.Heading,
+            fontFamily = ShipporiMincho,
             fontWeight = FontWeight.Medium,
             fontSize = 40.sp,
         )

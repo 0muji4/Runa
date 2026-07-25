@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.LockEmblem
 import com.runa.android.ui.theme.RunaColors
+import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.lock.AppLockViewModel
 import org.koin.compose.koinInject
 
@@ -68,6 +69,7 @@ fun PrivacyLockScreen(
         Text(
             text = stringResource(R.string.lock_settings_title),
             color = RunaColors.Heading,
+            fontFamily = ShipporiMincho,
             fontWeight = FontWeight.Medium,
             fontSize = 40.sp,
         )

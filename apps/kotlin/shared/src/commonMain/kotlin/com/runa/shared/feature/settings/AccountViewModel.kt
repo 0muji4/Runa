@@ -1,5 +1,6 @@
 package com.runa.shared.feature.settings
 
+import com.runa.shared.core.state.toJaMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,7 +38,7 @@ class AccountViewModel(
                 .onSuccess { user -> _state.update { it.copy(profile = user, isLoadingProfile = false) } }
                 .onFailure { e ->
                     _state.update {
-                        it.copy(isLoadingProfile = false, loadError = e.message ?: "プロフィールを取得できませんでした")
+                        it.copy(isLoadingProfile = false, loadError = e.toJaMessage("プロフィールを取得できませんでした。"))
                     }
                 }
         }
@@ -62,7 +63,7 @@ class AccountViewModel(
     fun saveName() {
         val name = _state.value.displayNameDraft.trim()
         if (name.isEmpty()) {
-            _state.update { it.copy(nameError = "名前を入力してください") }
+            _state.update { it.copy(nameError = "名前を入力してください。") }
             return
         }
         _state.update { it.copy(isSavingName = true, nameError = null) }
@@ -72,7 +73,7 @@ class AccountViewModel(
                     _state.update { it.copy(profile = user, isEditingName = false, isSavingName = false) }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isSavingName = false, nameError = e.message ?: "保存に失敗しました") }
+                    _state.update { it.copy(isSavingName = false, nameError = e.toJaMessage("保存できませんでした。")) }
                 }
         }
     }
@@ -91,7 +92,7 @@ class AccountViewModel(
                     _state.update { it.copy(export = ready) }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(export = ExportStatus.Error(e.message ?: "エクスポートに失敗しました")) }
+                    _state.update { it.copy(export = ExportStatus.Error(e.toJaMessage("エクスポートできませんでした。"))) }
                 }
         }
     }
@@ -117,7 +118,7 @@ class AccountViewModel(
             repository.deleteAccount()
                 .onSuccess { _state.update { it.copy(deletion = DeletionStatus.Deleted) } }
                 .onFailure { e ->
-                    _state.update { it.copy(deletion = DeletionStatus.Error(e.message ?: "削除に失敗しました")) }
+                    _state.update { it.copy(deletion = DeletionStatus.Error(e.toJaMessage("削除できませんでした。"))) }
                 }
         }
     }

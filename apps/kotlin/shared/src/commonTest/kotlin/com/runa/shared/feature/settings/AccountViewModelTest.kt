@@ -64,7 +64,7 @@ class AccountViewModelTest {
         vm.saveName()
         advanceUntilIdle()
 
-        assertEquals("名前を入力してください", vm.state.value.nameError)
+        assertEquals("名前を入力してください。", vm.state.value.nameError)
         assertTrue(vm.state.value.isEditingName)
     }
 

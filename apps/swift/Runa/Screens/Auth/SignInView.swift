@@ -148,7 +148,7 @@ struct SignInView: View {
                 .joined(separator: " ")
             onApple(idToken, name.isEmpty ? nil : name)
         case .failure(let error):
-            onAppleError(error.localizedDescription)
+            onAppleError(L.signinErrorAuth)
         }
     }
 

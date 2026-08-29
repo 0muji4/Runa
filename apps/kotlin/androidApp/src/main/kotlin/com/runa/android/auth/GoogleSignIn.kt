@@ -11,6 +11,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.runa.android.BuildConfig
 import com.runa.android.R
+import com.runa.shared.core.state.toJaMessage
 import kotlinx.coroutines.launch
 
 /**
@@ -54,7 +55,7 @@ fun rememberGoogleSignIn(
                     onError(context.getString(R.string.signin_error_generic))
                 }
             } catch (e: Exception) {
-                onError(e.message ?: context.getString(R.string.signin_error_generic))
+                onError(e.toJaMessage(context.getString(R.string.signin_error_generic)))
             }
         }
     }

@@ -49,7 +49,7 @@ struct SongArchiveView: View {
                         .listRowBackground(runaTheme.background)
                     }
                     if archive.state?.canLoadMore == true {
-                        Button("もっと見る") { archive.loadNextPage() }
+                        Button(L.songArchiveLoadMore) { archive.loadNextPage() }
                             .foregroundStyle(runaTheme.accent)
                             .listRowBackground(runaTheme.background)
                     }
@@ -57,7 +57,7 @@ struct SongArchiveView: View {
 
                 let history = archive.state?.history ?? []
                 if !history.isEmpty {
-                    Section("再生の記録") {
+                    Section(L.songArchiveHistory) {
                         ForEach(history, id: \.id) { entry in
                             Text("\(entry.title) · \(entry.artist)")
                                 .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
@@ -80,7 +80,7 @@ struct SongArchiveView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("これまでの一曲")
+                Text(L.songArchiveTitle)
                     .font(RunaFonts.heading(16))
                     .tracking(4)
                     .foregroundStyle(runaTheme.subtle)
@@ -96,8 +96,8 @@ struct SongArchiveView: View {
                 RunaFailureView(error: error, onRetry: { archive.reload() })
             } else {
                 RunaEmptyView(
-                    title: "アーカイブはまだありません。",
-                    message: "日々の一曲が、ここに積もっていきます。"
+                    title: L.songArchiveEmpty,
+                    message: L.songArchiveEmptyBody
                 )
             }
         } else {

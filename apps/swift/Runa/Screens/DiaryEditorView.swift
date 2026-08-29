@@ -53,7 +53,7 @@ struct DiaryEditorView: View {
                     .font(RunaFonts.body(13))
                     .foregroundStyle(runaTheme.subtle)
 
-                Text("きょう、心にのこったこと。")
+                Text(L.diaryEditorPrompt)
                     .font(RunaFonts.heading(20, relativeTo: .body))
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.md)
@@ -79,7 +79,7 @@ struct DiaryEditorView: View {
                         model.saveNow()
                         dismiss()
                     } label: {
-                        Text("とじる")
+                        Text(L.diaryClose)
                             .font(RunaFonts.body(16))
                             .foregroundStyle(runaTheme.accent)
                             .padding(.horizontal, 28)
@@ -140,10 +140,10 @@ struct DiaryEditorView: View {
 
     private func saveLabel(_ status: SaveStatus?) -> String {
         switch status {
-        case .saving: return "保存しています…"
-        case .saved: return "保存しました"
-        case .error: return "保存に、つまずきました"
-        default: return "静かに、綴る" // .editing / nil (pre-load)
+        case .saving: return L.diaryEditorSaving
+        case .saved: return L.diaryEditorSaved
+        case .error: return L.diaryEditorError
+        default: return L.diaryEditorAutosave // .editing / nil (pre-load)
         }
     }
 }

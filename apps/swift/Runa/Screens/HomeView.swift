@@ -122,7 +122,7 @@ struct HomeView: View {
                     NavigationLink(destination: SettingsView(onSignOut: onSignOut)) {
                         Image(systemName: "gearshape").foregroundStyle(runaTheme.subAccent)
                     }
-                    .accessibilityLabel("設定")
+                    .accessibilityLabel(L.tabSettings)
                 }
             }
             .padding(.top, RunaSpacing.lg)
@@ -131,7 +131,7 @@ struct HomeView: View {
             Spacer()
 
             // The daily quote — the emotional center of the screen.
-            Text(today.quote?.bodyText ?? "今日の言葉は、まだ紡がれていません。")
+            Text(today.quote?.bodyText ?? L.homeNoQuote)
                 .font(RunaFonts.heading(26))
                 .foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
@@ -139,13 +139,13 @@ struct HomeView: View {
 
             if today.quote != nil {
                 Spacer().frame(height: RunaSpacing.md)
-                Text("—  きょうの、ひとこと  —")
+                Text("—  " + L.homeQuoteCaption + "  —")
                     .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
 
             if offline {
                 Spacer().frame(height: RunaSpacing.md)
-                Text("オフライン表示中（月あかりは端末で計算しています）")
+                Text(L.homeOfflineHint)
                     .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
             }

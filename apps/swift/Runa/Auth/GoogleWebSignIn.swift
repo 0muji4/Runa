@@ -24,7 +24,7 @@ final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextPro
 
     func signIn(onIdToken: @escaping (String) -> Void, onError: @escaping (String) -> Void) {
         guard let clientID = Self.clientID, !clientID.isEmpty else {
-            onError("この方法は現在利用できません（設定が必要です）。")
+            onError(L.signinProviderUnconfigured)
             return
         }
 
@@ -45,7 +45,7 @@ final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextPro
         ]
 
         guard let url = components.url else {
-            onError("サインインURLの生成に失敗しました。")
+            onError(L.signinErrorPrepare)
             return
         }
 
@@ -56,7 +56,7 @@ final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextPro
             }
             guard let callbackURL = callbackURL,
                   let idToken = Self.idToken(fromFragment: callbackURL.fragment) else {
-                onError("id_token を取得できませんでした。")
+                onError(L.signinErrorAuth)
                 return
             }
             onIdToken(idToken)

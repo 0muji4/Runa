@@ -13,22 +13,22 @@ struct ContentView: View {
         TabView {
             HomeView(displayName: displayName, onSignOut: onSignOut)
                 .tabItem {
-                    Label("ホーム", systemImage: "moon.stars")
+                    Label(L.tabHome, systemImage: "moon.stars")
                 }
 
             TodaysSongView()
                 .tabItem {
-                    Label("きょうの一曲", systemImage: "music.note")
+                    Label(L.tabTodaysSong, systemImage: "music.note")
                 }
 
             DiaryListView()
                 .tabItem {
-                    Label("ダイアリー", systemImage: "doc.text")
+                    Label(L.tabDiary, systemImage: "doc.text")
                 }
 
             GalleryView()
                 .tabItem {
-                    Label("ギャラリー", systemImage: "photo.on.rectangle")
+                    Label(L.tabGallery, systemImage: "photo.on.rectangle")
                 }
         }
         .tint(runaTheme.accent)

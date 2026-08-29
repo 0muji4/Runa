@@ -1,0 +1,22 @@
+name: UI strings
+
+on:
+  pull_request:
+    paths:
+      - "apps/kotlin/androidApp/src/main/res/values/strings.xml"
+      - "apps/swift/Runa/**"
+      - "hack/gen-ios-strings.sh"
+      - "hack/check-ui-strings.sh"
+      - "hack/ui-strings-allow.txt"
+      - ".github/workflows/ui-strings.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check UI string parity
+        run: ./hack/check-ui-strings.sh

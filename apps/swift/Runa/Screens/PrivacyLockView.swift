@@ -16,7 +16,7 @@ struct PrivacyLockView: View {
                 .font(RunaFonts.body(13)).tracking(3)
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.top, RunaSpacing.md)
-            Text("ロック")
+            Text(L.lockSettingsTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
                 .padding(.top, RunaSpacing.xs)
@@ -25,7 +25,7 @@ struct PrivacyLockView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, RunaSpacing.xl)
 
-            Text("あなたの夜を、あなただけに。")
+            Text(L.lockSettingsCaption)
                 .font(RunaFonts.heading(18))
                 .foregroundStyle(runaTheme.body)
                 .frame(maxWidth: .infinity)
@@ -36,7 +36,7 @@ struct PrivacyLockView: View {
                 get: { obs.lockEnabled },
                 set: { obs.setLockEnabled($0) }
             )) {
-                Text("ロックする")
+                Text(L.lockSettingsToggle)
                     .font(RunaFonts.body(17))
                     .foregroundStyle(runaTheme.heading)
             }
@@ -44,7 +44,7 @@ struct PrivacyLockView: View {
             .padding(.top, RunaSpacing.xl)
 
             if !obs.biometricAvailable() {
-                Text("この端末では、生体認証や画面ロックが設定されていません。端末の設定をご確認ください。")
+                Text(L.lockSettingsUnavailable)
                     .font(RunaFonts.body(13))
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.sm)

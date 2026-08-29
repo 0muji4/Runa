@@ -63,7 +63,7 @@ func runaDecode<T>(_ value: Any, as type: T.Type) -> RunaUi<T> {
 struct RunaLoadingView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var caption: String = "月が、のぼるまで。"
+    var caption: String = L.stateLoadingCaption
 
     var body: some View {
         RunaStateScaffold {
@@ -115,13 +115,13 @@ struct RunaOfflineView: View {
     var body: some View {
         RunaStateScaffold {
             CloudedMoon(diameter: 116)
-            Text("雲が、月をかくしています。")
+            Text(L.stateOfflineTitle)
                 .font(RunaFonts.heading(26)).foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
-            Text("接続がありません。\n綴った言葉は、端末に守られています。")
+            Text(L.stateOfflineBody)
                 .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
-            RunaPillButton(label: "もう一度ためす", accent: false, action: onRetry)
+            RunaPillButton(label: L.stateOfflineCta, accent: false, action: onRetry)
                 .padding(.top, RunaSpacing.sm)
         }
     }
@@ -133,9 +133,9 @@ struct RunaOfflineView: View {
 /// on, in the world's voice. The auth variant overrides the copy + CTA.
 struct RunaErrorView: View {
     @Environment(\.runaTheme) private var runaTheme
-    var title: String = "すこし、つまずきました。"
-    var message: String = "うまく読み込めませんでした。\nゆっくり、もう一度。"
-    var ctaLabel: String = "やりなおす"
+    var title: String = L.stateErrorTitle
+    var message: String = L.stateErrorBody
+    var ctaLabel: String = L.stateErrorCta
     let onCta: () -> Void
 
     var body: some View {
@@ -168,9 +168,9 @@ struct RunaFailureView: View {
             RunaOfflineView(onRetry: onRetry)
         } else if error is AppErrorAuth {
             RunaErrorView(
-                title: "また、ここから。",
-                message: "サインインの有効期限が切れました。",
-                ctaLabel: "サインインし直す",
+                title: L.stateAuthTitle,
+                message: L.stateAuthBody,
+                ctaLabel: L.stateAuthCta,
                 onCta: reauthenticate
             )
         } else {
@@ -200,8 +200,8 @@ struct RunaSyncBanner: View {
 
     private var bannerText: String? {
         switch phase {
-        case .offline: return "オフライン。記録は端末に守られています。"
-        case .error: return "同期に、すこしつまずいています。"
+        case .offline: return L.stateBannerOffline
+        case .error: return L.stateBannerError
         default: return nil // idle / syncing stay silent
         }
     }

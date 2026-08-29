@@ -47,30 +47,30 @@ struct DiaryDetailView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar, .tabBar)
-        .alert("この記録を削除しますか？", isPresented: $confirmDelete) {
-            Button("やめる", role: .cancel) {}
-            Button("削除する", role: .destructive) {
+        .alert(L.diaryDeleteConfirmTitle, isPresented: $confirmDelete) {
+            Button(L.actionCancel, role: .cancel) {}
+            Button(L.actionDelete, role: .destructive) {
                 model.delete(clientId: clientId)
                 if !path.isEmpty { path.removeLast() }
             }
         } message: {
-            Text("削除した記録は元に戻せません。")
+            Text(L.diaryDeleteConfirmBody)
         }
     }
 
     private var topBar: some View {
         HStack(alignment: .center) {
-            Text("‹ 記録")
+            Text("‹ " + L.diaryDetailBack)
                 .font(RunaFonts.body(16))
                 .foregroundStyle(runaTheme.subtle)
                 .onTapGesture { if !path.isEmpty { path.removeLast() } }
             Spacer()
-            Text("編集")
+            Text(L.diaryActionEdit)
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.subtle)
                 .padding(8)
                 .onTapGesture { path.append(DiaryRoute.editor(clientId: clientId)) }
-            Text("削除")
+            Text(L.diaryActionDelete)
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.accent)
                 .padding(8)

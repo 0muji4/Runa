@@ -34,12 +34,12 @@ struct SignInView: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: 44)
                 GlowingMoon(diameter: 148)
-                Text("LUNA")
+                Text(L.logoWordmark)
                     .font(RunaFonts.logo(44))
                     .tracking(14)
                     .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
-                Text("あなたの夜を、はじめましょう。")
+                Text(L.signinTagline)
                     .font(RunaFonts.heading(22))
                     .foregroundStyle(runaTheme.heading)
                     .multilineTextAlignment(.center)
@@ -55,13 +55,13 @@ struct SignInView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .disabled(isBusy)
 
-                surfacePill(title: "Googleでつづける", action: onGoogle).padding(.top, 14)
-                surfacePill(title: "メールでつづける", action: { showEmail = true }).padding(.top, 14)
+                surfacePill(title: L.signinGoogle, action: onGoogle).padding(.top, 14)
+                surfacePill(title: L.signinEmailContinue, action: { showEmail = true }).padding(.top, 14)
 
                 if isBusy { ProgressView().tint(runaTheme.accent).padding(.top, RunaSpacing.md) }
                 if let errorMessage { errorLine(errorMessage) }
 
-                Text("いまはスキップ")
+                Text(L.signinSkip)
                     .font(RunaFonts.body(13))
                     .tracking(4)
                     .foregroundStyle(runaTheme.subtle)
@@ -87,25 +87,25 @@ struct SignInView: View {
     private var emailStep: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("‹ メールでつづける")
+                Text("‹ " + L.signinEmailContinue)
                     .font(RunaFonts.body(14))
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.vertical, 8)
                     .onTapGesture { if !isBusy { showEmail = false } }
 
-                Text("メールではじめる")
+                Text(L.signinEmailTitle)
                     .font(RunaFonts.heading(26))
                     .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
 
-                quietField("メールアドレス", text: $email, keyboard: .emailAddress).padding(.top, RunaSpacing.md)
-                quietSecureField("パスワード", text: $password).padding(.top, 14)
+                quietField(L.signinEmailLabel, text: $email, keyboard: .emailAddress).padding(.top, RunaSpacing.md)
+                quietSecureField(L.signinPasswordLabel, text: $password).padding(.top, 14)
                 if isSignup {
-                    quietField("表示名（任意）", text: $displayName, keyboard: .default).padding(.top, 14)
+                    quietField(L.signinNameLabel, text: $displayName, keyboard: .default).padding(.top, 14)
                 }
 
                 filledPill(
-                    title: isSignup ? "新規登録" : "ログイン",
+                    title: isSignup ? L.actionSignup : L.actionLogin,
                     enabled: canSubmit
                 ) {
                     onEmailSubmit(
@@ -117,7 +117,7 @@ struct SignInView: View {
                 }
                 .padding(.top, RunaSpacing.md)
 
-                Text(isSignup ? "すでにアカウントをお持ちの方はこちら" : "アカウントをお持ちでない方はこちら")
+                Text(isSignup ? L.signinToggleToLogin : L.signinToggleToSignup)
                     .font(RunaFonts.body(13))
                     .foregroundStyle(runaTheme.subAccent)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -140,7 +140,7 @@ struct SignInView: View {
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = credential.identityToken,
                   let idToken = String(data: tokenData, encoding: .utf8) else {
-                onAppleError("Apple IDトークンを取得できませんでした。")
+                onAppleError(L.signinErrorAuth)
                 return
             }
             let name = [credential.fullName?.givenName, credential.fullName?.familyName]

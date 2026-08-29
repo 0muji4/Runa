@@ -72,7 +72,7 @@ struct DiaryListView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("日々の記録")
+                    Text(L.diaryListTitle)
                         .font(RunaFonts.heading(34))
                         .foregroundStyle(runaTheme.heading)
                     Spacer()
@@ -110,9 +110,9 @@ struct DiaryListView: View {
             .padding(.horizontal, RunaSpacing.lg)
             // Shared empty surface (24) — the diary's own copy over the shared motif.
             RunaEmptyView(
-                title: "まだ、なにもない夜。",
-                message: "最初のひとことを、\nそっと綴ってみませんか。",
-                ctaLabel: "綴りはじめる",
+                title: L.diaryEmptyTitle,
+                message: L.diaryEmptyBody,
+                ctaLabel: L.diaryEmptyCta,
                 onCta: { path.append(DiaryRoute.editorNew) }
             )
         }
@@ -121,7 +121,7 @@ struct DiaryListView: View {
     /// Quiet link into the retrospective calendar (12 ふりかえり).
     private var calendarLink: some View {
         Button { path.append(DiaryRoute.calendar) } label: {
-            Text("ふりかえり")
+            Text(L.diaryOpenCalendar)
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.accent)
         }
@@ -130,7 +130,7 @@ struct DiaryListView: View {
     /// Quiet link into the insight letter (16 インサイト).
     private var insightLink: some View {
         Button { path.append(DiaryRoute.insight) } label: {
-            Text("うつろい")
+            Text(L.diaryOpenInsight)
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.accent)
         }

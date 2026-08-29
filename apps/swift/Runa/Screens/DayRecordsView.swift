@@ -22,7 +22,7 @@ struct DayRecordsView: View {
             runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
                 Button { dismiss() } label: {
-                    Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                    Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                 }
                 .padding(.top, 14)
                 .padding(.vertical, 6)
@@ -45,7 +45,7 @@ struct DayRecordsView: View {
                 .scrollIndicators(.hidden)
 
                 Button { path.append(DiaryRoute.writeOn(isoDate: isoDate)) } label: {
-                    Text("この日を綴る")
+                    Text(L.calendarWriteOnDay)
                         .font(RunaFonts.body(16))
                         .foregroundStyle(runaTheme.accent)
                         .padding(.horizontal, 32)

@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  LUNA の UI 文言の唯一の正典。iOS 側の apps/swift/Runa/Strings.swift は
+  hack/gen-ios-strings.sh がこのファイルから生成するので、文言を直すときは
+  ここだけを編集して `make ios-strings` を回す（差分は CI が検証する）。
+  iOS でしか使わない文言もここに置く（キーのコメントで明示）。
+-->
 <resources>
     <string name="app_name">Runa</string>
 
@@ -16,6 +22,8 @@
     <!-- Generic placeholder copy for empty shells. -->
     <string name="placeholder_coming_soon">準備中</string>
     <string name="action_back">戻る</string>
+    <!-- iOS のみ: 23 のエクスポート結果を閉じる。Android は共有シートを OS が閉じる。 -->
+    <string name="action_close">閉じる</string>
 
     <!-- Gallery (13 ひかりの記録 / 14 画像詳細). The display-theme toggle re-grades the
          whole grid (monotone ⇔ pink) and is gallery-scoped — NOT the app theme. -->
@@ -60,6 +68,10 @@
     <string name="signin_toggle_to_login">すでにアカウントをお持ちの方はこちら</string>
     <string name="signin_error_generic">サインインに失敗しました。</string>
     <string name="signin_provider_unconfigured">この方法は、いまは選べません。</string>
+    <!-- iOS のみ: プロバイダ側の失敗。内部語（id_token, Apple ID トークン, サインイン URL の
+         生成）は表に出さず、この 2 つに寄せる。 -->
+    <string name="signin_error_auth">認証できませんでした。</string>
+    <string name="signin_error_prepare">サインインの準備ができませんでした。</string>
 
     <!-- Authenticated home + sign out. -->
     <string name="home_greeting">こんばんは、%1$sさん</string>

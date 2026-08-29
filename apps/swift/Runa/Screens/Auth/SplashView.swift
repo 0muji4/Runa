@@ -10,12 +10,12 @@ struct SplashView: View {
 
             VStack(spacing: 0) {
                 GlowingMoon(diameter: 152)
-                Text("LUNA")
+                Text(L.logoWordmark)
                     .font(RunaFonts.logo(44))
                     .tracking(14)
                     .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
-                Text("月あかりの記録")
+                Text(L.splashTagline)
                     .font(RunaFonts.body(14))
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.xs)

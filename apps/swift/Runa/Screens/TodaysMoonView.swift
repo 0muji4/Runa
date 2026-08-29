@@ -17,7 +17,7 @@ struct TodaysMoonView: View {
             VStack {
                 HStack {
                     Button { dismiss() } label: {
-                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                        Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     }
                     Spacer()
                 }
@@ -41,7 +41,7 @@ struct TodaysMoonView: View {
     private func moonView(_ moon: TodayMoon) -> some View {
         VStack(spacing: 0) {
             Spacer()
-            Text("今日の月")
+            Text(L.todaysMoonLabel)
                 .font(RunaFonts.heading(15))
                 .foregroundStyle(runaTheme.subtle)
             Spacer().frame(height: 36)
@@ -57,7 +57,7 @@ struct TodaysMoonView: View {
                 .font(RunaFonts.heading(34))
                 .foregroundStyle(runaTheme.heading)
             Spacer().frame(height: 10)
-            Text("月齢 \(String(format: "%.1f", moon.ageDays)) ・ \(moon.dateLabel)")
+            Text(L.todaysMoonAge(String(format: "%.1f", moon.ageDays), moon.dateLabel))
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.subtle)
 
@@ -69,7 +69,7 @@ struct TodaysMoonView: View {
                 .lineSpacing(8)
 
             Spacer()
-            Text("next ▸ \(moon.nextPhaseDateLabel)　\(moonPhaseNameJa(key: moon.nextPhaseKey))")
+            Text(L.todaysMoonNext(moon.nextPhaseDateLabel, moonPhaseNameJa(key: moon.nextPhaseKey)))
                 .font(RunaFonts.body(13))
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.bottom, 40)

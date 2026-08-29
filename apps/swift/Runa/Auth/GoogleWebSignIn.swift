@@ -51,7 +51,7 @@ final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextPro
 
         let session = ASWebAuthenticationSession(url: url, callbackURLScheme: reversed) { callbackURL, error in
             if let error = error {
-                onError(error.localizedDescription)
+                onError(L.signinErrorAuth)
                 return
             }
             guard let callbackURL = callbackURL,

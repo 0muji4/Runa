@@ -1,5 +1,6 @@
 package com.runa.shared.feature.auth
 
+import com.runa.shared.core.state.toJaMessage
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.auth.StoredTokens
 import com.runa.shared.network.auth.TokenStore
@@ -136,7 +137,7 @@ class DefaultAuthRepository(
             _authState.value = AuthState.Authenticated(user)
             Result.success(Unit)
         } catch (e: Exception) {
-            _authState.value = AuthState.Error(e.message ?: "authentication failed")
+            _authState.value = AuthState.Error(e.toJaMessage())
             Result.failure(e)
         }
     }

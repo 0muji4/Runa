@@ -16,10 +16,11 @@ android {
         versionName = "0.1.0"
 
         // host+port ONLY — the shared module appends /api/v1/healthz itself.
-        // Default is the emulator's host loopback (10.0.2.2), which ONLY works in
-        // the emulator. Real devices can't reach it, so point them at a real host:
-        //   ./gradlew :androidApp:installDebug -PRUNA_BASE_URL=https://runa-backend-dev-g75z.onrender.com
-        // (or set RUNA_BASE_URL in gradle.properties).
+        // The default comes from RUNA_BASE_URL in gradle.properties (the dev
+        // backend), so device and emulator builds both reach a real server with no
+        // extra flags. The 10.0.2.2 literal below is only the last-resort fallback
+        // when the property is absent. Override for a locally running API:
+        //   ./gradlew :androidApp:installDebug -PRUNA_BASE_URL=http://10.0.2.2:8080
         buildConfigField(
             "String",
             "BASE_URL",

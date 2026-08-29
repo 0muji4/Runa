@@ -53,22 +53,25 @@ This reads `project.yml` and produces `Runa.xcodeproj` (git-ignored).
 open Runa.xcodeproj
 ```
 
-### 4. Run on an iOS 16+ simulator
+### 4. Run on a simulator or a device
 
-Select the `Runa` scheme and an iOS 16+ simulator, then Run.
+Select the `Runa` scheme and an iOS 16+ simulator, then Run. For a physical
+device, `make ios-run IOS_TEAM=<team id> IOS_DEVICE=<udid>` builds, signs,
+installs and launches it (`make ios-devices` lists the UDIDs).
 
-### 5. Confirm connectivity
+### 5. Backend connectivity
 
-Start the backend so it listens on `:8080` (serving
-`GET /api/v1/healthz -> {"status":"ok"}`). The iOS **simulator** reaches the host
-machine via `http://localhost:8080` (already set as `BASE_URL` in `Info.plist`;
-the shared module appends `/api/v1/healthz`).
+`BASE_URL` in `Info.plist` is filled from the `RUNA_BASE_URL` build setting,
+whose default lives in `project.yml`; the shared module appends `/api/v1`. The
+default points at the dev backend, so a fresh build talks to a real server.
 
-On the **Home** tab you should see:
+To hit a backend running on your machine, override it per build — note that a
+physical device cannot reach `localhost`, which is the phone's own loopback:
 
-- a spinner while `Loading`
-- **接続OK** once the health check succeeds
-- **接続エラー** plus the message on failure
+```bash
+make ios-build RUNA_BASE_URL=http://localhost:8080        # simulator
+make ios-run   RUNA_BASE_URL=http://192.168.1.10:8080 ...  # device (make lan-ip)
+```
 
 ## How the shared module is consumed (SKIE)
 

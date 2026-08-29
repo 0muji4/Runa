@@ -22,9 +22,13 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 
 	<!-- Backend base URL injected into the app; shared appends /api/v1/healthz.
-	     iOS simulator reaches the host machine via localhost. -->
+	     The simulator reaches the host machine via localhost, but a physical device
+	     does not. The value comes from the RUNA_BASE_URL build setting (default in
+	     project.yml), so it can be overridden per build — the counterpart of
+	     Android's -PRUNA_BASE_URL:
+	       make ios-run RUNA_BASE_URL=http://192.168.1.10:8080 ... -->
 	<key>BASE_URL</key>
-	<string>http://localhost:8080</string>
+	<string>$(RUNA_BASE_URL)</string>
 
 	<!-- Google iOS OAuth client ID for Sign in with Google (empty = disabled).
 	     Fill with the iOS client ID from Google Cloud, e.g.

@@ -18,6 +18,10 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    # Info.plist の BASE_URL に差し込まれる既定値。実機は localhost に届かないので
+    # ビルド時に上書きする（make ios-run RUNA_BASE_URL=http://192.168.1.10:8080）。
+    # Android の -PRUNA_BASE_URL（androidApp/build.gradle.kts）と対になる設定。
+    RUNA_BASE_URL: "https://runa-backend-dev-g75z.onrender.com"
     # 1 = iPhone only. Add 2 for iPad if needed later.
     TARGETED_DEVICE_FAMILY: "1"
 

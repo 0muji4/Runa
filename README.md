@@ -37,13 +37,13 @@ curl http://localhost:8080/api/v1/healthz
 
 ### Android
 
-`apps/kotlin` を Android Studio で開き、`androidApp` をエミュレータで実行する。Home タブに疎通結果（成功時「接続OK」）が表示される。エミュレータからホストの backend へは `http://10.0.2.2:8080` で届く。
+`apps/kotlin` を Android Studio で開き、`androidApp` をエミュレータまたは実機で実行する（`make android-run` でも可）。接続先は `gradle.properties` の `RUNA_BASE_URL` で、既定は dev バックエンド。ローカルの backend を叩くときだけ上書きする（エミュレータは `http://10.0.2.2:8080`、実機は同じ LAN のホスト IP）。
 
 ### iOS
 
-共有 XCFramework をビルドし、`apps/swift` で `xcodegen generate` を実行してから、`Runa` を iOS 16 以上のシミュレータで実行する。シミュレータからホストの backend へは `http://localhost:8080` で届く。
+共有 XCFramework をビルドし、`apps/swift` で `xcodegen generate` を実行してから、`Runa` を iOS 16 以上のシミュレータまたは実機で実行する（`make ios-run` でも可）。接続先は `project.yml` の `RUNA_BASE_URL` で、既定は dev バックエンド。ローカルの backend を叩くときだけ上書きする（シミュレータは `http://localhost:8080`、実機は同じ LAN のホスト IP）。
 
-> クライアントに注入する Base URL はホスト + ポートのみ（`/api/v1` は含めない）。エミュレータは `10.0.2.2`、シミュレータは `localhost` を使う点に注意する。
+> クライアントに注入する Base URL はホスト + ポートのみ（`/api/v1` は含めない）。実機からは `10.0.2.2` も `localhost` も届かないため、既定は dev バックエンドにしてある。ホストの LAN IP は `make lan-ip` で確認できる。
 
 ## 環境変数
 
@@ -66,8 +66,8 @@ curl http://localhost:8080/api/v1/healthz
 
 ### クライアントへの Base URL 注入
 
-- **Android**: `BuildConfig` の Base URL を `initKoin(context, baseUrl)` に渡す（dev は `http://10.0.2.2:8080`）。認証のセキュアストレージ（EncryptedSharedPreferences）が `Context` を必要とするため、Android は Context を伴う 2 引数版を使う。
-- **iOS**: `Info.plist` の Base URL を `initKoin(baseUrl)` に渡す（dev は `http://localhost:8080`）。
+- **Android**: `BuildConfig` の Base URL を `initKoin(context, baseUrl)` に渡す（`gradle.properties` の `RUNA_BASE_URL`、既定は dev バックエンド）。認証のセキュアストレージ（EncryptedSharedPreferences）が `Context` を必要とするため、Android は Context を伴う 2 引数版を使う。
+- **iOS**: `Info.plist` の Base URL を `initKoin(baseUrl)` に渡す（`project.yml` の `RUNA_BASE_URL` ビルド設定を差し込む、既定は dev バックエンド）。
 
 ## 認証（最初の縦切り機能）
 

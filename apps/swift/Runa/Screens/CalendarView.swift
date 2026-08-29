@@ -20,7 +20,7 @@ struct CalendarView: View {
             runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
                 Button { dismiss() } label: {
-                    Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                    Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                 }
                 .padding(.top, 14)
                 .padding(.vertical, 6)
@@ -123,7 +123,7 @@ struct CalendarView: View {
             RunaSyncBanner(phase: banner)
             HStack(spacing: 10) {
                 Circle().fill(runaTheme.subAccent).frame(width: 8, height: 8)
-                Text("記録のある日に、月あかり")
+                Text(L.calendarLegend)
                     .font(RunaFonts.heading(13))
                     .foregroundStyle(runaTheme.subtle)
             }

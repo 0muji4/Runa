@@ -19,12 +19,12 @@ struct AuthFlowView: View {
         switch step {
         case .onboarding1:
             OnboardingView(
-                title: "あなたの夜に、\nそっと寄り添う。",
+                title: L.onboarding1Title,
                 onNext: { step = .onboarding2 }
             )
         case .onboarding2:
             OnboardingView(
-                title: "三つの、\n静かな時間。",
+                title: L.onboarding2Title,
                 onNext: { step = .notifications }
             )
         case .notifications:

@@ -17,7 +17,7 @@ struct InsightView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Button { dismiss() } label: {
-                        Text("‹ 戻る").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                        Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
                     }
                     .padding(.top, 14)
                     .padding(.vertical, 6)
@@ -45,8 +45,8 @@ struct InsightView: View {
             Spacer().frame(height: 40)
         case .empty:
             RunaEmptyView(
-                title: "まだ、しるした夜がありません。",
-                message: "この期間は、静かなままです。"
+                title: L.insightEmptyTitle,
+                message: L.insightEmptyBody
             )
             .frame(height: 360)
         case .loading:
@@ -61,8 +61,8 @@ struct InsightView: View {
     private func periodBar(label: String, type: InsightPeriodType) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                toggleChip("週", selected: isWeekly(type)) { model.showWeekly() }
-                toggleChip("月", selected: !isWeekly(type)) { model.showMonthly() }
+                toggleChip(L.insightToggleWeek, selected: isWeekly(type)) { model.showWeekly() }
+                toggleChip(L.insightToggleMonth, selected: !isWeekly(type)) { model.showMonthly() }
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 12)
@@ -113,7 +113,7 @@ struct InsightView: View {
 
     private func letter(_ insight: Insight) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("あなたへの、手紙")
+            Text(L.insightLetterTitle)
                 .font(RunaFonts.heading(32))
                 .foregroundStyle(runaTheme.heading)
                 .padding(.top, 16)
@@ -166,11 +166,11 @@ struct InsightView: View {
             .frame(height: 120, alignment: .bottom)
 
             HStack {
-                Text("新月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
+                Text(L.insightMoonNew).font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
                 Spacer()
-                Text("満月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
+                Text(L.insightMoonFull).font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
                 Spacer()
-                Text("新月").font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
+                Text(L.insightMoonNew).font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
             }
         }
     }
@@ -191,7 +191,7 @@ struct InsightView: View {
                 }
             }
             if unmooded > 0 {
-                Text("しるしのない夜も、\(unmooded)つ。")
+                Text(L.insightUnmooded(unmooded))
                     .font(RunaFonts.heading(13))
                     .foregroundStyle(runaTheme.subtle)
             }

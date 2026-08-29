@@ -31,7 +31,7 @@ struct GalleryView: View {
 
     private var header: some View {
         ZStack {
-            Text("ひかりの記録")
+            Text(L.galleryTitle)
                 .font(RunaFonts.heading(26))
                 .tracking(6)
                 .foregroundStyle(runaTheme.heading)
@@ -56,8 +56,8 @@ struct GalleryView: View {
             grid(images: images, theme: model.displayTheme)
         case .empty:
             RunaEmptyView(
-                title: "まだ、ひかりの記録はありません。",
-                message: "最初のひかりを、\nそっと残してみませんか。"
+                title: L.galleryEmptyLine,
+                message: L.galleryEmptyBody
             )
         case .loading:
             RunaLoadingView()
@@ -70,8 +70,8 @@ struct GalleryView: View {
         HStack {
             Spacer()
             HStack(spacing: 4) {
-                themeSegment("モノトーン", selected: isMonotone(selected)) { model.setDisplayTheme(.monotone) }
-                themeSegment("ピンク", selected: !isMonotone(selected)) { model.setDisplayTheme(.pink) }
+                themeSegment(L.galleryThemeMonotone, selected: isMonotone(selected)) { model.setDisplayTheme(.monotone) }
+                themeSegment(L.galleryThemePink, selected: !isMonotone(selected)) { model.setDisplayTheme(.pink) }
             }
             .padding(4)
             .background(runaTheme.surface)
@@ -269,7 +269,7 @@ private struct LightboxView: View {
                     }
                     dismiss()
                 } label: {
-                    Text("削除").font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
+                    Text(L.galleryDelete).font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
                 }
             }
             .padding(.horizontal, 20)

@@ -15,40 +15,40 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("設定")
+                Text(L.settingsTitle)
                     .font(RunaFonts.heading(40))
                     .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.md)
                     .padding(.bottom, RunaSpacing.lg)
 
                 NavigationLink { ThemeView() } label: {
-                    SettingRow(icon: "moon", label: "テーマ", value: themeName(theme.themeId))
+                    SettingRow(icon: "moon", label: L.settingsRowTheme, value: themeName(theme.themeId))
                 }
                 divider
                 NavigationLink { NotificationSettingsView() } label: {
                     SettingRow(
                         icon: "bell",
-                        label: "通知",
-                        value: notification.enabled ? notification.time.label : "オフ"
+                        label: L.settingsRowNotifications,
+                        value: notification.enabled ? notification.time.label : L.notifValueOff
                     )
                 }
                 divider
                 NavigationLink { PrivacyLockView() } label: {
                     SettingRow(
                         icon: "lock",
-                        label: "プライバシー・ロック",
-                        value: lock.lockEnabled ? "オン" : "オフ"
+                        label: L.settingsRowPrivacyLock,
+                        value: lock.lockEnabled ? L.lockValueOn : L.lockValueOff
                     )
                 }
                 divider
                 NavigationLink { AccountView(onSignOut: onSignOut) } label: {
-                    SettingRow(icon: "person", label: "アカウント・データ")
+                    SettingRow(icon: "person", label: L.settingsRowAccount)
                 }
 
                 premiumCard
                     .padding(.top, RunaSpacing.lg)
 
-                Text("LUNA version \(appVersion)")
+                Text(L.settingsVersion(appVersion))
                     .font(RunaFonts.body(12))
                     .foregroundStyle(runaTheme.subtle)
                     .frame(maxWidth: .infinity)
@@ -74,8 +74,8 @@ struct SettingsView: View {
         HStack(spacing: RunaSpacing.sm) {
             Circle().fill(runaTheme.subAccent).frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 4) {
-                Text("LUNA +").font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
-                Text("プレミアムで、もっと深く").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                Text(L.settingsPremiumTitle).font(RunaFonts.heading(22)).foregroundStyle(runaTheme.heading)
+                Text(L.settingsPremiumSubtitle).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
             Spacer()
             Image(systemName: "chevron.right").foregroundStyle(runaTheme.accent)
@@ -90,9 +90,9 @@ struct SettingsView: View {
 
     private func themeName(_ id: String) -> String {
         switch id {
-        case "light": return "あさ（ライト）"
-        case "pink": return "ピンク×ピンク"
-        default: return "夜（ダーク）"
+        case "light": return L.themeLightName
+        case "pink": return L.themePinkName
+        default: return L.themeDarkName
         }
     }
 }

@@ -16,9 +16,9 @@ struct ThemeView: View {
     }
 
     private let options = [
-        Option(id: "dark", name: "夜（ダーク）", desc: "深い夜色に、月あかり"),
-        Option(id: "light", name: "あさ（ライト）", desc: "朝の光のような、白"),
-        Option(id: "pink", name: "ピンク×ピンク", desc: "ルナピンクの、灯り"),
+        Option(id: "dark", name: L.themeDarkName, desc: L.themeDarkDesc),
+        Option(id: "light", name: L.themeLightName, desc: L.themeLightDesc),
+        Option(id: "pink", name: L.themePinkName, desc: L.themePinkDesc),
     ]
 
     var body: some View {
@@ -27,7 +27,7 @@ struct ThemeView: View {
                 .font(RunaFonts.body(13)).tracking(3)
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.top, RunaSpacing.md)
-            Text("テーマ")
+            Text(L.themeTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
                 .padding(.top, RunaSpacing.xs)
@@ -39,7 +39,7 @@ struct ThemeView: View {
             }
 
             Spacer()
-            Text("あなたの夜に、あわせて。")
+            Text(L.themeFooter)
                 .font(RunaFonts.body(14))
                 .foregroundStyle(runaTheme.subtle)
                 .frame(maxWidth: .infinity)

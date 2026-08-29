@@ -17,7 +17,7 @@ struct NotificationSettingsView: View {
                 .font(RunaFonts.body(13)).tracking(3)
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.top, RunaSpacing.md)
-            Text("夜のリマインダー")
+            Text(L.notifSettingsTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
                 .padding(.top, RunaSpacing.xs)
@@ -26,14 +26,14 @@ struct NotificationSettingsView: View {
                 get: { obs.enabled },
                 set: { on in if on { enableReminder() } else { obs.toggle(false) } }
             )) {
-                Text("リマインダーを受け取る")
+                Text(L.notifSettingsToggle)
                     .font(RunaFonts.body(17))
                     .foregroundStyle(runaTheme.heading)
             }
             .tint(runaTheme.accent)
             .padding(.top, RunaSpacing.lg)
 
-            Text("おやすみ前の、しずかな時刻")
+            Text(L.notifSettingsTimeCaption)
                 .font(RunaFonts.body(14))
                 .foregroundStyle(runaTheme.subtle)
                 .frame(maxWidth: .infinity)
@@ -56,7 +56,7 @@ struct NotificationSettingsView: View {
             .padding(.top, RunaSpacing.md)
 
             Spacer()
-            Text("その時刻に、月がそっと\n今日をふりかえるひとことを。")
+            Text(L.notifSettingsFooter)
                 .font(RunaFonts.body(14))
                 .foregroundStyle(runaTheme.subtle)
                 .multilineTextAlignment(.center)
@@ -124,10 +124,10 @@ private struct TimePickerSheet: View {
                 .datePickerStyle(.wheel)
                 .labelsHidden()
             HStack {
-                Button("やめる", action: onCancel)
+                Button(L.timePickerCancel, action: onCancel)
                     .foregroundStyle(runaTheme.subtle)
                 Spacer()
-                Button("決定") {
+                Button(L.timePickerConfirm) {
                     let c = Calendar.current.dateComponents([.hour, .minute], from: date)
                     onConfirm(ReminderTime(hour: Int32(c.hour ?? 22), minute: Int32(c.minute ?? 0)))
                 }

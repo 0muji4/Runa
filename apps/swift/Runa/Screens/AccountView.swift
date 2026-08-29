@@ -18,7 +18,7 @@ struct AccountView: View {
                     .font(RunaFonts.body(13)).tracking(3)
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.md)
-                Text("アカウント・データ")
+                Text(L.accountTitle)
                     .font(RunaFonts.heading(34))
                     .foregroundStyle(runaTheme.heading)
                     .padding(.top, RunaSpacing.xs)
@@ -28,7 +28,7 @@ struct AccountView: View {
                     profileSection(state)
                     exportSection(state)
                     divider
-                    actionRow(icon: "rectangle.portrait.and.arrow.right", label: "サインアウト", action: onSignOut)
+                    actionRow(icon: "rectangle.portrait.and.arrow.right", label: L.actionSignOut, action: onSignOut)
                     Spacer().frame(height: RunaSpacing.xl)
                     deleteSection(state)
                 } else {
@@ -42,11 +42,11 @@ struct AccountView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .onAppear { account.loadProfile() }
-        .alert("アカウントを削除しますか？", isPresented: deleteConfirmBinding) {
-            Button("削除する", role: .destructive) { account.confirmDelete() }
-            Button("やめる", role: .cancel) { account.cancelDelete() }
+        .alert(L.accountDeleteConfirmTitle, isPresented: deleteConfirmBinding) {
+            Button(L.actionDelete, role: .destructive) { account.confirmDelete() }
+            Button(L.actionCancel, role: .cancel) { account.cancelDelete() }
         } message: {
-            Text("日記・画像を含むすべてのデータが完全に削除され、元に戻せません。")
+            Text(L.accountDeleteConfirmBody)
         }
     }
 
@@ -73,7 +73,7 @@ struct AccountView: View {
                 get: { state.displayNameDraft },
                 set: { account.onDisplayNameChange($0) }
             )
-            TextField("表示名", text: draft)
+            TextField(L.accountNameLabel, text: draft)
                 .font(RunaFonts.body(16))
                 .foregroundStyle(runaTheme.heading)
                 .padding(12)
@@ -83,14 +83,14 @@ struct AccountView: View {
                 Text(error).font(RunaFonts.body(13)).foregroundStyle(runaTheme.accent)
             }
             HStack(spacing: RunaSpacing.sm) {
-                Button("保存") { account.saveName() }
+                Button(L.accountSave) { account.saveName() }
                     .foregroundStyle(runaTheme.accent).disabled(state.isSavingName)
-                Button("やめる") { account.cancelEditName() }
+                Button(L.actionCancel) { account.cancelEditName() }
                     .foregroundStyle(runaTheme.subtle)
             }
             .padding(.top, RunaSpacing.xs)
         } else {
-            Button("表示名を編集") { account.startEditName() }
+            Button(L.accountEditName) { account.startEditName() }
                 .font(RunaFonts.body(15))
                 .foregroundStyle(runaTheme.accent)
                 .padding(.top, RunaSpacing.sm)
@@ -103,20 +103,20 @@ struct AccountView: View {
 
     @ViewBuilder
     private func exportSection(_ state: AccountUiState) -> some View {
-        actionRow(icon: "square.and.arrow.up", label: "エクスポート") { account.export() }
+        actionRow(icon: "square.and.arrow.up", label: L.accountExport) { account.export() }
         switch onEnum(of: state.export) {
         case .inProgress:
-            Text("エクスポートを準備しています…")
+            Text(L.accountExportPreparing)
                 .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
         case .ready(let ready):
             VStack(alignment: .leading, spacing: RunaSpacing.xs) {
                 ShareLink(item: ready.text) {
-                    Text("テキストで書き出す").font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
+                    Text(L.accountExportText).font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
                 }
                 ShareLink(item: ready.json) {
-                    Text("JSONで書き出す").font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
+                    Text(L.accountExportJson).font(RunaFonts.body(15)).foregroundStyle(runaTheme.accent)
                 }
-                Button("閉じる") { account.clearExport() }
+                Button(L.actionClose) { account.clearExport() }
                     .font(RunaFonts.body(14)).foregroundStyle(runaTheme.subtle)
             }
             .padding(.leading, 36)
@@ -133,7 +133,7 @@ struct AccountView: View {
     @ViewBuilder
     private func deleteSection(_ state: AccountUiState) -> some View {
         let deleting = isInProgress(state.deletion)
-        Text(deleting ? "削除しています…" : "アカウントを削除")
+        Text(deleting ? L.accountDeleting : L.accountDelete)
             .font(RunaFonts.body(15))
             .foregroundStyle(runaTheme.subtle)
             .frame(maxWidth: .infinity)

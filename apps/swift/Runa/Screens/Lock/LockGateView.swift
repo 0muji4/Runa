@@ -47,18 +47,18 @@ private struct LockScreen: View {
         VStack(spacing: 0) {
             Spacer()
             GlowingMoon(diameter: 132)
-            Text("あなたの夜は、\n守られています。")
+            Text(L.lockGateMessage)
                 .font(RunaFonts.heading(22))
                 .foregroundStyle(runaTheme.heading)
                 .multilineTextAlignment(.center)
                 .padding(.top, RunaSpacing.lg)
             if authenticating {
-                Text("確認しています…")
+                Text(L.lockGateAuthenticating)
                     .font(RunaFonts.body(14))
                     .foregroundStyle(runaTheme.subtle)
                     .padding(.top, RunaSpacing.xl)
             } else {
-                Text("ひらく")
+                Text(L.lockGateUnlock)
                     .font(RunaFonts.body(16)).tracking(4)
                     .foregroundStyle(runaTheme.accent)
                     .padding(.horizontal, 40)

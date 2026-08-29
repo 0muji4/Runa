@@ -31,11 +31,19 @@ XCFRAMEWORK := $(KOTLIN_DIR)/shared/build/XCFrameworks/release/Shared.xcframewor
 # ---- 集約 -------------------------------------------------------------------
 
 .PHONY: verify
-verify: check-theme server-verify shared-test android-build ios-build ## 全レイヤーを検証（PR 前の総合チェック / iOS ビルド含むため重い）
+verify: check-theme check-strings server-verify shared-test android-build ios-build ## 全レイヤーを検証（PR 前の総合チェック / iOS ビルド含むため重い）
 
 .PHONY: check-theme
 check-theme: ## テーマトークンの整合を検証（README 正典 ⇔ Android/iOS/colors.xml の色定義。ビルド不要）
 	./hack/check-theme-tokens.sh
+
+.PHONY: check-strings
+check-strings: ## UI 文言の整合を検証（strings.xml ⇔ iOS Strings.swift、iOS に生の文言が無いこと。ビルド不要）
+	./hack/check-ui-strings.sh
+
+.PHONY: ios-strings
+ios-strings: ## iOS: strings.xml から apps/swift/Runa/Strings.swift を再生成（文言を直したら必ず実行）
+	./hack/gen-ios-strings.sh
 
 # ---- Server (Go) ------------------------------------------------------------
 

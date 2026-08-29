@@ -47,14 +47,14 @@ struct TodaysSongView: View {
                     // No nav bar — the header is the page (centered 明朝 label + archive
                     // link), starting at RunaSpacing.lg like the other tabs.
                     ZStack {
-                        Text("きょうの一曲")
+                        Text(L.tabTodaysSong)
                             .font(RunaFonts.heading(16))
                             .tracking(4)
                             .foregroundStyle(runaTheme.subtle)
                         HStack {
                             Spacer()
                             NavigationLink(destination: SongArchiveView()) {
-                                Text("これまでの一曲").foregroundStyle(runaTheme.accent)
+                                Text(L.todaySongOpenArchive).foregroundStyle(runaTheme.accent)
                             }
                         }
                     }
@@ -66,8 +66,8 @@ struct TodaysSongView: View {
                             playerBody(song)
                         } else {
                             RunaEmptyView(
-                                title: "きょうの一曲は、まだ選ばれていません。",
-                                message: "選ばれた一曲は、ここに灯ります。"
+                                title: L.todaySongNone,
+                                message: L.todaySongNoneBody
                             )
                         }
                     }
@@ -120,7 +120,7 @@ struct TodaysSongView: View {
                     .font(.system(size: 56))
                     .foregroundStyle(runaTheme.accent)
             }
-            .accessibilityLabel(isPlaying ? "一時停止" : "再生")
+            .accessibilityLabel(isPlaying ? L.playerPause : L.playerPlay)
         }
         .padding(.horizontal, RunaSpacing.lg)
     }

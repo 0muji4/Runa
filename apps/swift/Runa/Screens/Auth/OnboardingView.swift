@@ -22,7 +22,7 @@ struct OnboardingView: View {
                     .lineSpacing(14)
                     .foregroundStyle(runaTheme.heading)
                 Spacer()
-                Text("すすむ")
+                Text(L.onboardingHint)
                     .font(RunaFonts.body(13))
                     .tracking(6)
                     .foregroundStyle(runaTheme.subtle)
@@ -51,19 +51,19 @@ struct NotificationPermissionView: View {
             VStack(spacing: 0) {
                 Spacer()
                 NotificationMoon(diameter: 156)
-                Text("夜のとばりに、\nそっとお知らせ。")
+                Text(L.notifTitle)
                     .font(RunaFonts.heading(26))
                     .foregroundStyle(runaTheme.heading)
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.lg)
-                Text("やさしい時刻に、今日をふりかえる合図を。\n設定はあとからでも変えられます。")
+                Text(L.notifBody)
                     .font(RunaFonts.body(15))
                     .foregroundStyle(runaTheme.subtle)
                     .multilineTextAlignment(.center)
                     .padding(.top, RunaSpacing.sm)
 
                 Button(action: requestAuthorization) {
-                    Text("許可する")
+                    Text(L.notifAllow)
                         .font(RunaFonts.body(16))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
@@ -73,7 +73,7 @@ struct NotificationPermissionView: View {
                 }
                 .padding(.top, RunaSpacing.lg)
 
-                Text("いまはしない")
+                Text(L.actionSkip)
                     .font(RunaFonts.body(13))
                     .tracking(4)
                     .foregroundStyle(runaTheme.subtle)
@@ -96,6 +96,6 @@ struct NotificationPermissionView: View {
 }
 
 #Preview {
-    OnboardingView(title: "三つの、\n静かな時間。", onNext: {})
+    OnboardingView(title: L.onboarding2Title, onNext: {})
         .preferredColorScheme(.dark)
 }

@@ -14,14 +14,10 @@ struct AccountView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("ACCOUNT")
-                    .font(RunaFonts.body(13)).tracking(3)
-                    .foregroundStyle(runaTheme.subtle)
-                    .padding(.top, RunaSpacing.md)
                 Text(L.accountTitle)
                     .font(RunaFonts.heading(34))
                     .foregroundStyle(runaTheme.heading)
-                    .padding(.top, RunaSpacing.xs)
+                    .padding(.top, RunaSpacing.md)
                     .padding(.bottom, RunaSpacing.lg)
 
                 if let state = account.state {

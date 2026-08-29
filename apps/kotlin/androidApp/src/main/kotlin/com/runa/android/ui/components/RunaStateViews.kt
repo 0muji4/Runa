@@ -107,7 +107,7 @@ fun <T> RunaStateView(
                 onCta = onReauthenticate,
                 modifier = modifier,
             )
-            // Server / unknown share the same quiet "つまずきました" error surface.
+            // Server / unknown share the same quiet 「読み込めませんでした。」 error surface.
             is AppError.Server, is AppError.Unknown -> RunaErrorView(onCta = onRetry, modifier = modifier)
         }
         is UiState.Content -> content(state.data, state.sync)
@@ -190,7 +190,7 @@ fun RunaOfflineView(
 
 /**
  * Error (27): the stumble emblem. Does not apologize — says what happened and how to
- * go on, in the world's voice. Defaults to the generic "つまずきました" copy; the auth
+ * go on, in the world's voice. Defaults to the generic 「読み込めませんでした。」 copy; the auth
  * variant overrides the copy + CTA.
  */
 @Composable

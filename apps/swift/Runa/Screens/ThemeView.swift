@@ -23,14 +23,10 @@ struct ThemeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("THEME")
-                .font(RunaFonts.body(13)).tracking(3)
-                .foregroundStyle(runaTheme.subtle)
-                .padding(.top, RunaSpacing.md)
             Text(L.themeTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.xs)
+                .padding(.top, RunaSpacing.md)
                 .padding(.bottom, RunaSpacing.lg)
 
             ForEach(options) { option in

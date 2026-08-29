@@ -87,7 +87,7 @@ fun AuthFlow(
                     EmailMode.Signup -> authViewModel.signupEmail(email, password, displayName.ifBlank { null })
                 }
             },
-            // No anonymous/guest session exists yet, so "いまはスキップ" gently steps
+            // No anonymous/guest session exists yet, so 「いまはしない」 gently steps
             // back to the intro rather than bypassing the auth gate. Wiring a real
             // guest mode needs shared-auth support (tracked separately).
             onSkip = {

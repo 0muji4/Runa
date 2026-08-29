@@ -88,7 +88,7 @@ class AndroidBiometricAuthenticator(
 
     private companion object {
         const val PROMPT_TITLE = "ロックを解除"
-        const val PROMPT_SUBTITLE = "あなたの夜を、あなただけに。"
+        const val PROMPT_SUBTITLE = "ロックを解除して、記録をひらきます。"
         const val PROMPT_CANCEL = "キャンセル"
     }
 }

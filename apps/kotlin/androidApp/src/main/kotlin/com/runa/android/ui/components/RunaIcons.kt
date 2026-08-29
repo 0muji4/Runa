@@ -275,6 +275,28 @@ object RunaIcons {
         close()
     }
 
+    /** 07 きょうの一曲 の再生。ラベルは持たず、読み上げ用の contentDescription だけを添える。 */
+    val Play: ImageVector = filled("Play") {
+        moveTo(8f, 5f)
+        lineTo(19f, 12f)
+        lineTo(8f, 19f)
+        close()
+    }
+
+    /** 07 きょうの一曲 の一時停止。[Play] と同じ 24x24 の面積で並ぶ 2 本の柱。 */
+    val Pause: ImageVector = filled("Pause") {
+        moveTo(6f, 5f)
+        horizontalLineTo(10f)
+        verticalLineTo(19f)
+        horizontalLineTo(6f)
+        close()
+        moveTo(14f, 5f)
+        horizontalLineTo(18f)
+        verticalLineTo(19f)
+        horizontalLineTo(14f)
+        close()
+    }
+
     private fun filled(name: String, block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit): ImageVector =
         ImageVector.Builder(
             name = name,

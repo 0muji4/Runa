@@ -108,13 +108,13 @@ class InsightViewModel(
 
     /** Quiet, pre-formatted period label shown above the heading. */
     private fun periodLabel(p: InsightPeriod): String = when (p.type) {
-        InsightPeriodType.Monthly -> "${p.start.monthNumber}月のふりかえり"
+        InsightPeriodType.Monthly -> "${p.start.monthNumber}月のうつろい"
         InsightPeriodType.Weekly -> {
             val last = p.endExclusive.minus(1, DateTimeUnit.DAY)
             if (p.start.monthNumber == last.monthNumber) {
-                "${p.start.monthNumber}月${p.start.dayOfMonth}日〜${last.dayOfMonth}日のふりかえり"
+                "${p.start.monthNumber}月${p.start.dayOfMonth}日〜${last.dayOfMonth}日のうつろい"
             } else {
-                "${p.start.monthNumber}月${p.start.dayOfMonth}日〜${last.monthNumber}月${last.dayOfMonth}日のふりかえり"
+                "${p.start.monthNumber}月${p.start.dayOfMonth}日〜${last.monthNumber}月${last.dayOfMonth}日のうつろい"
             }
         }
     }

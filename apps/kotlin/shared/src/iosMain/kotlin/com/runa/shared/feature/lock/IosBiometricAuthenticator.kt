@@ -43,6 +43,6 @@ class IosBiometricAuthenticator : BiometricAuthenticator {
     }
 
     private companion object {
-        const val PROMPT_REASON = "ロックを解除して、あなたの夜をひらきます。"
+        const val PROMPT_REASON = "ロックを解除して、記録をひらきます。"
     }
 }

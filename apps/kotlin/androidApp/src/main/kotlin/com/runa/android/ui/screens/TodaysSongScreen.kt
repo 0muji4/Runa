@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.shared.core.state.UiState
@@ -157,8 +160,14 @@ private fun Player(
     }
 
     Spacer(Modifier.height(16.dp))
-    Button(onClick = onToggle) {
-        Text(stringResource(if (isPlaying) R.string.player_pause else R.string.player_play))
+    // 07 の再生操作はアイコンのみ（iOS と同じ）。文言は読み上げラベルとしてだけ残る。
+    IconButton(onClick = onToggle, modifier = Modifier.size(72.dp)) {
+        Icon(
+            imageVector = if (isPlaying) RunaIcons.Pause else RunaIcons.Play,
+            contentDescription = stringResource(if (isPlaying) R.string.player_pause else R.string.player_play),
+            tint = RunaColors.Accent,
+            modifier = Modifier.size(56.dp),
+        )
     }
 }
 

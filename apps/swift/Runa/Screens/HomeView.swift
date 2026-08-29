@@ -157,6 +157,6 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView(displayName: "Runa", onSignOut: {})
+    HomeView(displayName: "LUNA", onSignOut: {})
         .preferredColorScheme(.dark)
 }

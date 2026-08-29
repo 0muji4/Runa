@@ -111,8 +111,6 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
                         RunaEmptyView(
                             title = stringResource(R.string.gallery_empty_line),
                             body = stringResource(R.string.gallery_empty_body),
-                            ctaLabel = stringResource(R.string.gallery_add),
-                            onCta = launchPicker,
                             modifier = Modifier.fillMaxSize(),
                         )
                     },

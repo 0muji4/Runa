@@ -44,7 +44,7 @@ enum class EmailMode { Login, Signup }
 
 /**
  * Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
- * wordmark and a poetic line, then Apple / Google / メール, with いまはスキップ below.
+ * wordmark and a poetic line, then Apple / Google / メール, with いまはしない below.
  * "メールでつづける" opens a second, still email step rather than crowding the hero.
  */
 @Composable

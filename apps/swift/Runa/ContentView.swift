@@ -36,6 +36,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(displayName: "Runa", onSignOut: {})
+    ContentView(displayName: "LUNA", onSignOut: {})
         .preferredColorScheme(.dark)
 }

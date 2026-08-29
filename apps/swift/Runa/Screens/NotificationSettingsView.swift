@@ -13,14 +13,10 @@ struct NotificationSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("NOTIFICATION")
-                .font(RunaFonts.body(13)).tracking(3)
-                .foregroundStyle(runaTheme.subtle)
-                .padding(.top, RunaSpacing.md)
             Text(L.notifSettingsTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.xs)
+                .padding(.top, RunaSpacing.md)
 
             Toggle(isOn: Binding(
                 get: { obs.enabled },

@@ -63,13 +63,6 @@ fun ThemeScreen(
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            text = stringResource(R.string.theme_eyebrow),
-            color = RunaColors.Subtle,
-            fontSize = 13.sp,
-            letterSpacing = 3.sp,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
             text = stringResource(R.string.theme_title),
             color = RunaColors.Heading,
             fontFamily = ShipporiMincho,

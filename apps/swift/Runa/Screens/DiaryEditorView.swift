@@ -3,7 +3,7 @@ import Shared
 
 /// Diary editor (10) — "書く". A whitespace-first 明朝 canvas: the day's date, a
 /// quiet prompt, then the writing surface (Dynamic Type–aware). The character count
-/// is never shown; autosave is durable with a whisper of an indicator. "とじる"
+/// is never shown; autosave is durable with a whisper of an indicator. 「閉じる」
 /// flushes and leaves. A quiet mood chip row sits under the prompt — one gentle word
 /// for the night, feeding the insight read-back; leaving it unset is natural.
 struct DiaryEditorView: View {

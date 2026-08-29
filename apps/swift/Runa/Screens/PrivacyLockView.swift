@@ -12,14 +12,10 @@ struct PrivacyLockView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("PRIVACY")
-                .font(RunaFonts.body(13)).tracking(3)
-                .foregroundStyle(runaTheme.subtle)
-                .padding(.top, RunaSpacing.md)
             Text(L.lockSettingsTitle)
                 .font(RunaFonts.heading(40))
                 .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.xs)
+                .padding(.top, RunaSpacing.md)
 
             LockEmblem()
                 .frame(maxWidth: .infinity)

@@ -6,7 +6,7 @@
   iOS でしか使わない文言もここに置く（キーのコメントで明示）。
 -->
 <resources>
-    <string name="app_name">Runa</string>
+    <string name="app_name">LUNA</string>
 
     <!-- Bottom navigation tabs + settings entry. -->
     <string name="tab_home">ホーム</string>
@@ -15,14 +15,7 @@
     <string name="tab_gallery">ギャラリー</string>
     <string name="tab_settings">設定</string>
 
-    <!-- Health probe surfaced on Home. -->
-    <string name="health_ok">接続OK</string>
-    <string name="health_error">接続エラー</string>
-
-    <!-- Generic placeholder copy for empty shells. -->
-    <string name="placeholder_coming_soon">準備中</string>
     <string name="action_back">戻る</string>
-    <!-- iOS のみ: 23 のエクスポート結果を閉じる。Android は共有シートを OS が閉じる。 -->
     <string name="action_close">閉じる</string>
 
     <!-- Gallery (13 ひかりの記録 / 14 画像詳細). The display-theme toggle re-grades the
@@ -30,14 +23,11 @@
     <string name="gallery_title">ひかりの記録</string>
     <string name="gallery_theme_monotone">モノトーン</string>
     <string name="gallery_theme_pink">ピンク</string>
-    <string name="gallery_add">写真を追加</string>
     <string name="gallery_empty_line">まだ、ひかりの記録はありません。</string>
     <string name="gallery_empty_body">最初のひかりを、\nそっと残してみませんか。</string>
-    <string name="gallery_close">閉じる</string>
     <string name="gallery_delete">削除</string>
 
     <!-- Brand / splash. The wordmark is set in Cormorant Garamond per the design. -->
-    <string name="brand_name">Runa</string>
     <string name="logo_wordmark">LUNA</string>
     <string name="splash_tagline">月あかりの記録</string>
 
@@ -57,7 +47,7 @@
     <string name="signin_apple">Appleでつづける</string>
     <string name="signin_google">Googleでつづける</string>
     <string name="signin_email_continue">メールでつづける</string>
-    <string name="signin_skip">いまはスキップ</string>
+    <string name="signin_skip">いまはしない</string>
     <string name="signin_email_title">メールではじめる</string>
     <string name="signin_email_label">メールアドレス</string>
     <string name="signin_password_label">パスワード</string>
@@ -66,33 +56,30 @@
     <string name="action_signup">新規登録</string>
     <string name="signin_toggle_to_signup">アカウントをお持ちでない方はこちら</string>
     <string name="signin_toggle_to_login">すでにアカウントをお持ちの方はこちら</string>
-    <string name="signin_error_generic">サインインに失敗しました。</string>
-    <string name="signin_provider_unconfigured">この方法は、いまは選べません。</string>
-    <!-- iOS のみ: プロバイダ側の失敗。内部語（id_token, Apple ID トークン, サインイン URL の
-         生成）は表に出さず、この 2 つに寄せる。 -->
+    <string name="signin_error_generic">サインインできませんでした。</string>
+    <string name="signin_provider_unconfigured">この方法は、現在利用できません。</string>
+    <!-- Provider-side failures. Internal wording (id_token, Apple ID トークン, URL 生成)
+         must never reach the screen — these two cover every provider error. -->
     <string name="signin_error_auth">認証できませんでした。</string>
     <string name="signin_error_prepare">サインインの準備ができませんでした。</string>
 
     <!-- Authenticated home + sign out. -->
-    <string name="home_greeting">こんばんは、%1$sさん</string>
     <string name="action_sign_out">サインアウト</string>
 
     <!-- Diary (screens 09/10/11). -->
     <string name="diary_list_title">日々の記録</string>
-    <string name="diary_new">綴る</string>
     <string name="diary_empty_title">まだ、なにもない夜。</string>
     <string name="diary_empty_body">最初のひとことを、\nそっと綴ってみませんか。</string>
     <string name="diary_empty_cta">綴りはじめる</string>
-    <string name="diary_banner_syncing">同期しています…</string>
 
     <!-- diary_banner_offline / diary_banner_error removed: superseded by the shared
          state_banner_* strings (RunaSyncBanner). -->
-    <string name="diary_editor_prompt">きょう、心にのこったこと。</string>
+    <string name="diary_editor_prompt">今日、心にのこったこと。</string>
     <string name="diary_editor_autosave">静かに、綴る</string>
     <string name="diary_editor_saving">保存しています…</string>
     <string name="diary_editor_saved">保存しました</string>
-    <string name="diary_editor_error">保存に、つまずきました</string>
-    <string name="diary_close">とじる</string>
+    <string name="diary_editor_error">保存できませんでした。</string>
+    <string name="diary_close">閉じる</string>
 
     <string name="diary_detail_back">記録</string>
     <string name="diary_action_edit">編集</string>
@@ -116,7 +103,8 @@
     <string name="insight_empty_title">まだ、しるした夜がありません。</string>
     <string name="insight_empty_body">この期間は、静かなままです。</string>
 
-    <!-- Today (home / player / archive). -->
+    <!-- Today (home / player / archive). 「きょう」は見出し・タブ名・詩的キャプションに、
+         「今日」は日付そのものを指す実用文に使う（07 の見出しと 06 のキャプションは前者）。 -->
     <string name="home_offline_hint">オフライン表示中（月あかりは端末で計算しています）</string>
     <string name="home_no_quote">今日の言葉は、まだ紡がれていません。</string>
     <string name="home_quote_caption">きょうの、ひとこと</string>
@@ -128,18 +116,20 @@
     <string name="song_archive_empty">アーカイブはまだありません。</string>
     <string name="song_archive_empty_body">日々の一曲が、ここに積もっていきます。</string>
     <string name="song_archive_load_more">もっと見る</string>
+    <!-- Player transport: icon-only on both platforms, so these are screen-reader labels. -->
     <string name="player_play">再生</string>
     <string name="player_pause">一時停止</string>
 
-    <!-- Calendar (12 ふりかえり) + its day-records view. -->
-    <string name="diary_open_calendar">ふりかえり</string>
+    <!-- Calendar (12) + its day-records view. 「ふりかえり」は 16 インサイトの
+         「うつろい」と役割が衝突するので、導線ラベルは「カレンダー」にする。 -->
+    <string name="diary_open_calendar">カレンダー</string>
     <string name="calendar_legend">記録のある日に、月あかり</string>
     <string name="calendar_write_on_day">この日を綴る</string>
 
-    <!-- Today\'s Moon (15). %1$s = 月齢 value, %2$s = date; next: %1$s = date, %2$s = phase. -->
+    <!-- Today's Moon (15). age: %1$s = 月齢 value, %2$s = date; next: %1$s = date, %2$s = phase. -->
     <string name="todays_moon_label">今日の月</string>
     <string name="todays_moon_age">月齢 %1$s ・ %2$s</string>
-    <string name="todays_moon_next">next ▸ %1$s　%2$s</string>
+    <string name="todays_moon_next">次は %1$s　%2$s</string>
 
     <!-- Settings top (19). Notification / privacy-lock rows are now live (slice 8). -->
     <string name="settings_title">設定</string>
@@ -149,16 +139,13 @@
     <string name="settings_row_account">アカウント・データ</string>
 
     <!-- Notification settings (21 通知設定 — 夜のリマインダー). -->
-    <string name="notif_settings_eyebrow">NOTIFICATION</string>
     <string name="notif_settings_title">夜のリマインダー</string>
     <string name="notif_settings_toggle">リマインダーを受け取る</string>
     <string name="notif_settings_time_caption">おやすみ前の、しずかな時刻</string>
     <string name="notif_settings_footer">その時刻に、月がそっと\n今日をふりかえるひとことを。</string>
-    <string name="notif_settings_pick_time">時刻を選ぶ</string>
     <string name="notif_value_off">オフ</string>
 
     <!-- Privacy lock (22 プライバシー・ロック). -->
-    <string name="lock_settings_eyebrow">PRIVACY</string>
     <string name="lock_settings_title">ロック</string>
     <string name="lock_settings_caption">あなたの夜を、あなただけに。</string>
     <string name="lock_settings_toggle">ロックする</string>
@@ -170,6 +157,8 @@
     <string name="lock_gate_message">あなたの夜は、\n守られています。</string>
     <string name="lock_gate_unlock">ひらく</string>
     <string name="lock_gate_authenticating">確認しています…</string>
+    <!-- NOT SHOWN YET: AppLockUiState has no Failed case, so a failed unlock renders
+         nothing. Kept as the copy to surface once the gate reports failure. -->
     <string name="lock_gate_failed">もう一度、お試しください。</string>
 
     <!-- Time picker dialog (21). -->
@@ -180,7 +169,6 @@
     <string name="settings_version">LUNA version %1$s</string>
 
     <!-- Theme picker (20). -->
-    <string name="theme_eyebrow">THEME</string>
     <string name="theme_title">テーマ</string>
     <string name="theme_dark_name">夜（ダーク）</string>
     <string name="theme_dark_desc">深い夜色に、月あかり</string>
@@ -189,10 +177,8 @@
     <string name="theme_pink_name">ピンク×ピンク</string>
     <string name="theme_pink_desc">ルナピンクの、灯り</string>
     <string name="theme_footer">あなたの夜に、あわせて。</string>
-    <string name="theme_selected">選択中</string>
 
     <!-- Account・データ (23). -->
-    <string name="account_eyebrow">ACCOUNT</string>
     <string name="account_title">アカウント・データ</string>
     <string name="account_edit_name">表示名を編集</string>
     <string name="account_name_label">表示名</string>
@@ -201,6 +187,7 @@
     <string name="account_export_json">JSONで書き出す</string>
     <string name="account_export_text">テキストで書き出す</string>
     <string name="account_export_preparing">エクスポートを準備しています…</string>
+    <!-- Android only: iOS uses the system share sheet, which has no title of ours. -->
     <string name="account_export_share_title">データのエクスポート</string>
     <string name="account_delete">アカウントを削除</string>
     <string name="account_delete_confirm_title">アカウントを削除しますか？</string>
@@ -215,12 +202,12 @@
     <string name="state_offline_title">雲が、月をかくしています。</string>
     <string name="state_offline_body">接続がありません。\n綴った言葉は、端末に守られています。</string>
     <string name="state_offline_cta">もう一度ためす</string>
-    <string name="state_error_title">すこし、つまずきました。</string>
-    <string name="state_error_body">うまく読み込めませんでした。\nゆっくり、もう一度。</string>
-    <string name="state_error_cta">やりなおす</string>
+    <string name="state_error_title">読み込めませんでした。</string>
+    <string name="state_error_body">ゆっくり、もう一度。</string>
+    <string name="state_error_cta">もう一度ためす</string>
     <string name="state_auth_title">また、ここから。</string>
     <string name="state_auth_body">サインインの有効期限が切れました。</string>
     <string name="state_auth_cta">サインインし直す</string>
     <string name="state_banner_offline">オフライン。記録は端末に守られています。</string>
-    <string name="state_banner_error">同期に、すこしつまずいています。</string>
+    <string name="state_banner_error">同期できませんでした。</string>
 </resources>

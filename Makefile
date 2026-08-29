@@ -20,8 +20,30 @@ GRADLEW    := ./gradlew
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 export ANDROID_HOME
 
+# adb の場所。PATH に無い環境でも動くよう ANDROID_HOME 配下を既定にする。
+ADB ?= $(ANDROID_HOME)/platform-tools/adb
+
 # iOS シミュレータ名。`xcrun simctl list devices available` の値で上書き可。
 IOS_SIM ?= iPhone 17 Pro
+
+# ---- 実機（physical device）向けの設定 --------------------------------------
+# 実機からはホストの localhost / 10.0.2.2 に届かない。同じ LAN のホスト IP
+# (`make lan-ip`) か、デプロイ済みの URL を RUNA_BASE_URL で渡すこと。
+#   make android-run RUNA_BASE_URL=http://192.168.1.10:8080
+#   make ios-run IOS_TEAM=XXXXXXXXXX IOS_DEVICE=00008110-... RUNA_BASE_URL=https://...
+RUNA_BASE_URL ?=
+
+# Apple Developer の Team ID。実機ビルドの署名に必須（Xcode の Signing & Capabilities
+# か Apple Developer の Membership で確認できる 10 文字）。
+IOS_TEAM ?=
+# 対象実機の UDID。`make ios-devices` で確認する。
+IOS_DEVICE ?=
+
+# 実機の bundle id / applicationId（project.yml と androidApp/build.gradle.kts が正）。
+IOS_BUNDLE_ID  := com.runa
+ANDROID_APP_ID := com.runa
+# 実機ビルドの成果物。DerivedData は apps/swift/build/ 配下（gitignore 済み）。
+IOS_DEVICE_APP := $(SWIFT_DIR)/build/device/Build/Products/Debug-iphoneos/Runa.app
 
 # KMP + SKIE が生成する iOS 向けバイナリ。SharedKit/Package.swift が参照する固定パス。
 XCFRAMEWORK := $(KOTLIN_DIR)/shared/build/XCFrameworks/release/Shared.xcframework
@@ -89,7 +111,19 @@ xcframework: ## shared: iOS 向け Shared.xcframework をビルド（Gradle が�
 
 .PHONY: android-build
 android-build: ## Android: デバッグ APK をビルド（shared を含めてコンパイル検証）
-	cd $(KOTLIN_DIR) && $(GRADLEW) :androidApp:assembleDebug
+	cd $(KOTLIN_DIR) && $(GRADLEW) :androidApp:assembleDebug $(if $(RUNA_BASE_URL),-PRUNA_BASE_URL=$(RUNA_BASE_URL),)
+
+.PHONY: android-devices
+android-devices: ## Android: 接続中の実機/エミュレータを一覧（adb devices -l）
+	$(ADB) devices -l
+
+.PHONY: android-install
+android-install: ## Android: 実機にデバッグ APK をビルドしてインストール（USB デバッグ ON。RUNA_BASE_URL 推奨）
+	cd $(KOTLIN_DIR) && $(GRADLEW) :androidApp:installDebug $(if $(RUNA_BASE_URL),-PRUNA_BASE_URL=$(RUNA_BASE_URL),)
+
+.PHONY: android-run
+android-run: android-install ## Android: 実機にインストールしてアプリを起動する
+	$(ADB) shell monkey -p $(ANDROID_APP_ID) -c android.intent.category.LAUNCHER 1
 
 # ---- iOS --------------------------------------------------------------------
 # iOS は shared の XCFramework が先に要る（SharedKit が binaryTarget で参照）。
@@ -103,17 +137,53 @@ xcodeproj: ## iOS: project.yml から Runa.xcodeproj を生成（xcodegen、成�
 ios-build: xcframework xcodeproj ## iOS: シミュレータ向けにビルド（XCFramework とプロジェクト生成を含む）
 	cd $(SWIFT_DIR) && xcodebuild -project Runa.xcodeproj -scheme Runa \
 		-destination 'platform=iOS Simulator,name=$(IOS_SIM)' \
-		-configuration Debug CODE_SIGNING_ALLOWED=NO build
+		-configuration Debug CODE_SIGNING_ALLOWED=NO \
+		$(if $(RUNA_BASE_URL),RUNA_BASE_URL=$(RUNA_BASE_URL),) build
+
+# 実機ターゲットの前提チェック。xcframework の重いビルドより先に落としたいので、
+# レシピの中ではなく最初の前提条件として置く（## を付けない＝ help に出さない）。
+.PHONY: require-ios-team
+require-ios-team:
+	@test -n "$(IOS_TEAM)" || { echo 'IOS_TEAM が未設定: make ios-device-build IOS_TEAM=XXXXXXXXXX （Apple Developer の Membership で確認できる 10 文字）'; exit 1; }
+
+.PHONY: require-ios-device
+require-ios-device:
+	@test -n "$(IOS_DEVICE)" || { echo 'IOS_DEVICE が未設定: make ios-devices で UDID を確認して渡す'; exit 1; }
+
+.PHONY: ios-devices
+ios-devices: ## iOS: 接続中の実機を一覧（UDID を IOS_DEVICE に渡す）
+	xcrun devicectl list devices
+
+.PHONY: ios-device-build
+ios-device-build: require-ios-team xcframework xcodeproj ## iOS: 実機向けに署名してビルド（要 IOS_TEAM）
+	cd $(SWIFT_DIR) && xcodebuild -project Runa.xcodeproj -scheme Runa \
+		-destination 'generic/platform=iOS' -configuration Debug \
+		-derivedDataPath build/device -allowProvisioningUpdates \
+		DEVELOPMENT_TEAM=$(IOS_TEAM) CODE_SIGN_STYLE=Automatic \
+		$(if $(RUNA_BASE_URL),RUNA_BASE_URL=$(RUNA_BASE_URL),) build
+
+.PHONY: ios-install
+ios-install: require-ios-device ios-device-build ## iOS: ビルドした .app を実機へインストール（要 IOS_DEVICE。Xcode 15+/iOS 17+）
+	xcrun devicectl device install app --device $(IOS_DEVICE) $(IOS_DEVICE_APP)
+
+.PHONY: ios-run
+ios-run: ios-install ## iOS: 実機にインストールしてアプリを起動する
+	xcrun devicectl device process launch --device $(IOS_DEVICE) $(IOS_BUNDLE_ID)
 
 # ---- 雑務 -------------------------------------------------------------------
 
+.PHONY: lan-ip
+lan-ip: ## 実機から届くホストの LAN IP を表示（RUNA_BASE_URL の組み立てに使う）
+	@ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null \
+		|| { echo 'LAN IP を取得できなかった。ifconfig で確認する。'; exit 1; }
+
 .PHONY: clean
-clean: ## 生成物を削除（Gradle build / 生成された xcodeproj）
+clean: ## 生成物を削除（Gradle build / 生成された xcodeproj / 実機ビルドの DerivedData）
 	cd $(KOTLIN_DIR) && $(GRADLEW) clean
-	rm -rf $(SWIFT_DIR)/Runa.xcodeproj
+	rm -rf $(SWIFT_DIR)/Runa.xcodeproj $(SWIFT_DIR)/build
 
 .PHONY: help
 help: ## このヘルプを表示
 	@echo 'Runa — make targets:'
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n",$$1,$$2}'
+		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n",$$1,$$2}'

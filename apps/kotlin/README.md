@@ -60,9 +60,12 @@ Requires the Android SDK (compileSdk 34).
   ./gradlew :androidApp:assembleDebug
   ```
 
-The app injects the dev base URL `http://10.0.2.2:8080` (the emulator's alias for
-the host loopback) via `BuildConfig.BASE_URL`. Start the backend locally on
-`:8080` and the Home tab shows **接続OK**; otherwise **接続エラー** with the message.
+The base URL is injected via `BuildConfig.BASE_URL`, which reads the
+`RUNA_BASE_URL` Gradle property (`gradle.properties`). It defaults to the dev
+backend so device and emulator builds both reach a real server. To hit a locally
+running backend on `:8080`, override it: `-PRUNA_BASE_URL=http://10.0.2.2:8080`
+(the emulator's alias for the host loopback) or, on a real device, the host's LAN
+IP.
 
 ## Build — iOS shared framework
 
@@ -73,7 +76,8 @@ Assemble the XCFramework the iOS app links against:
 ```
 
 (The `XCFramework("Shared")` config also produces per-target
-`link*` / `assemble*` tasks. iOS injects `http://localhost:8080` as its base URL.)
+`link*` / `assemble*` tasks. iOS takes its base URL from the same `RUNA_BASE_URL`
+name — a build setting declared in `apps/swift/project.yml`.)
 
 ## API contract
 

@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,8 +12,6 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 	"github.com/0muji4/Runa/apps/go/internal/storage"
 	"github.com/0muji4/Runa/apps/go/internal/storage/memobject"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func galleryConfig() service.GalleryConfig {
@@ -91,15 +90,34 @@ func TestGalleryService_CreateUploadURL(t *testing.T) {
 
 			target, err := svc.CreateUploadURL(context.Background(), userA, tt.contentType, tt.size)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("CreateUploadURL(%q, %d) error = %v, want %v",
+						tt.contentType, tt.size, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.True(t, strings.HasPrefix(target.ObjectKey, "gallery/"+userA+"/"), "object key %q not in the caller's namespace", target.ObjectKey)
-			assert.NotEmpty(t, target.URL)
-			assert.Equal(t, tt.contentType, target.ContentType)
-			assert.Equal(t, cfg.MaxUploadBytes, target.MaxSize)
-			assert.True(t, target.ExpiresAt.Equal(testNow.Add(cfg.UploadURLTTL)))
+			if err != nil {
+				t.Fatalf("CreateUploadURL(%q, %d) error = %v, want nil",
+					tt.contentType, tt.size, err)
+			}
+			if wantPrefix := "gallery/" + userA + "/"; !strings.HasPrefix(target.ObjectKey, wantPrefix) {
+				t.Errorf("CreateUploadURL() object key = %q, want prefix %q (caller's namespace)",
+					target.ObjectKey, wantPrefix)
+			}
+			if target.URL == "" {
+				t.Error("CreateUploadURL() url is empty, want a presigned URL")
+			}
+			if target.ContentType != tt.contentType {
+				t.Errorf("CreateUploadURL() content_type = %q, want %q",
+					target.ContentType, tt.contentType)
+			}
+			if target.MaxSize != cfg.MaxUploadBytes {
+				t.Errorf("CreateUploadURL() max_size = %d, want %d",
+					target.MaxSize, cfg.MaxUploadBytes)
+			}
+			if want := testNow.Add(cfg.UploadURLTTL); !target.ExpiresAt.Equal(want) {
+				t.Errorf("CreateUploadURL() expires_at = %s, want %s", target.ExpiresAt, want)
+			}
 		})
 	}
 }
@@ -198,20 +216,37 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 
 			view, err := svc.RegisterImage(ctx, userA, tt.key, 800, 600, tt.theme)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("RegisterImage(%q, %q) error = %v, want %v",
+						tt.key, tt.theme, err, tt.wantErr)
+				}
 			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.key, view.Image.ObjectKey)
-				assert.Equal(t, tt.theme, view.Image.Theme)
-				assert.Equal(t, 800, view.Image.Width)
-				assert.Equal(t, 600, view.Image.Height)
-				assert.NotEmpty(t, view.ViewURL)
-				assert.True(t, view.ExpiresAt.Equal(testNow.Add(cfg.ViewURLTTL)))
-				_, gerr := gstore.GetImage(ctx, userA, view.Image.ID)
-				assert.NoError(t, gerr)
+				if err != nil {
+					t.Fatalf("RegisterImage(%q, %q) error = %v, want nil", tt.key, tt.theme, err)
+				}
+				want := struct {
+					key, theme string
+					w, h       int
+				}{tt.key, tt.theme, 800, 600}
+				got := struct {
+					key, theme string
+					w, h       int
+				}{view.Image.ObjectKey, view.Image.Theme, view.Image.Width, view.Image.Height}
+				if got != want {
+					t.Errorf("RegisterImage() image = %+v, want %+v", got, want)
+				}
+				if view.ViewURL == "" {
+					t.Error("RegisterImage() view url is empty, want a presigned URL")
+				}
+				if wantExp := testNow.Add(cfg.ViewURLTTL); !view.ExpiresAt.Equal(wantExp) {
+					t.Errorf("RegisterImage() expires_at = %s, want %s", view.ExpiresAt, wantExp)
+				}
+				if _, err := gstore.GetImage(ctx, userA, view.Image.ID); err != nil {
+					t.Errorf("GetImage(%q) after register error = %v, want nil", view.Image.ID, err)
+				}
 			}
-			if tt.wantRemoved {
-				assert.True(t, objects.Removed(tt.key), "object %q was not purged after a rejected register", tt.key)
+			if tt.wantRemoved && !objects.Removed(tt.key) {
+				t.Errorf("object %q was not purged after a rejected register", tt.key)
 			}
 		})
 	}
@@ -272,32 +307,59 @@ func TestGalleryService_List(t *testing.T) {
 				_, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
 					UserID: userA, ObjectKey: fmt.Sprintf("gallery/%s/k%d", userA, i), Width: 1, Height: 1, Theme: "pink",
 				})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("seeding image %d: InsertImage() error = %v, want nil", i, err)
+				}
 			}
 
 			page1, err := svc.List(ctx, userA, tt.limit, nil)
 			if tt.noStorage {
-				assert.ErrorIs(t, err, service.ErrStorageUnavailable)
+				if !errors.Is(err, service.ErrStorageUnavailable) {
+					t.Fatalf("List() without storage error = %v, want %v",
+						err, service.ErrStorageUnavailable)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Len(t, page1.Items, tt.wantPage1)
-			assert.Equal(t, tt.wantCursor, page1.NextCursor != nil)
-			for _, it := range page1.Items {
-				assert.NotEmpty(t, it.ViewURL)
+			if err != nil {
+				t.Fatalf("List(limit=%d) error = %v, want nil", tt.limit, err)
+			}
+			if len(page1.Items) != tt.wantPage1 {
+				t.Errorf("List(limit=%d) page 1 returned %d items, want %d",
+					tt.limit, len(page1.Items), tt.wantPage1)
+			}
+			if got := page1.NextCursor != nil; got != tt.wantCursor {
+				t.Errorf("List(limit=%d) page 1 has a next cursor = %t, want %t",
+					tt.limit, got, tt.wantCursor)
+			}
+			for i, it := range page1.Items {
+				if it.ViewURL == "" {
+					t.Errorf("List() item %d view url is empty, want a presigned URL", i)
+				}
 			}
 			for i := 1; i < len(page1.Items); i++ {
-				assert.False(t, page1.Items[i-1].Image.CreatedAt.Before(page1.Items[i].Image.CreatedAt), "page1 not newest-first at index %d", i)
+				if page1.Items[i-1].Image.CreatedAt.Before(page1.Items[i].Image.CreatedAt) {
+					t.Errorf("List() page 1 is not newest-first at index %d: %s before %s",
+						i, page1.Items[i-1].Image.CreatedAt, page1.Items[i].Image.CreatedAt)
+				}
 			}
 			if !tt.wantCursor {
 				return
 			}
 
 			page2, err := svc.List(ctx, userA, tt.limit, page1.NextCursor)
-			require.NoError(t, err)
-			assert.Len(t, page2.Items, tt.wantPage2)
+			if err != nil {
+				t.Fatalf("List(limit=%d, cursor) error = %v, want nil", tt.limit, err)
+			}
+			if len(page2.Items) != tt.wantPage2 {
+				t.Errorf("List(limit=%d, cursor) page 2 returned %d items, want %d",
+					tt.limit, len(page2.Items), tt.wantPage2)
+			}
 			if len(page2.Items) > 0 {
-				assert.True(t, page2.Items[0].Image.CreatedAt.Before(page1.Items[len(page1.Items)-1].Image.CreatedAt), "pages overlap across the cursor boundary")
+				lastOfPage1 := page1.Items[len(page1.Items)-1].Image.CreatedAt
+				if !page2.Items[0].Image.CreatedAt.Before(lastOfPage1) {
+					t.Errorf("pages overlap across the cursor boundary: page 2 starts at %s, page 1 ended at %s",
+						page2.Items[0].Image.CreatedAt, lastOfPage1)
+				}
 			}
 		})
 	}
@@ -357,7 +419,9 @@ func TestGalleryService_Get(t *testing.T) {
 			img, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
 				UserID: userA, ObjectKey: key, Width: 2, Height: 3, Theme: "pink",
 			})
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("InsertImage(%q) error = %v, want nil", key, err)
+			}
 			id := img.ID
 			if !tt.useRealID {
 				id = "does-not-exist"
@@ -365,13 +429,23 @@ func TestGalleryService_Get(t *testing.T) {
 
 			view, err := svc.Get(ctx, tt.reader, id)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Get(%q, %q) error = %v, want %v", tt.reader, id, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, key, view.Image.ObjectKey)
-			assert.NotEmpty(t, view.ViewURL)
-			assert.True(t, view.ExpiresAt.Equal(testNow.Add(galleryConfig().ViewURLTTL)))
+			if err != nil {
+				t.Fatalf("Get(%q, %q) error = %v, want nil", tt.reader, id, err)
+			}
+			if view.Image.ObjectKey != key {
+				t.Errorf("Get() object key = %q, want %q", view.Image.ObjectKey, key)
+			}
+			if view.ViewURL == "" {
+				t.Error("Get() view url is empty, want a presigned URL")
+			}
+			if want := testNow.Add(galleryConfig().ViewURLTTL); !view.ExpiresAt.Equal(want) {
+				t.Errorf("Get() expires_at = %s, want %s", view.ExpiresAt, want)
+			}
 		})
 	}
 }
@@ -457,7 +531,9 @@ func TestGalleryService_Delete(t *testing.T) {
 			img, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
 				UserID: userA, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
 			})
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("InsertImage(%q) error = %v, want nil", key, err)
+			}
 			if objects != nil {
 				objects.Put(key, storage.ObjectInfo{Size: 1, ContentType: "image/jpeg"})
 			}
@@ -471,19 +547,26 @@ func TestGalleryService_Delete(t *testing.T) {
 				derr = svc.Delete(ctx, tt.deleter, id)
 			}
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, derr, tt.wantErr)
-			} else {
-				assert.NoError(t, derr)
+				if !errors.Is(derr, tt.wantErr) {
+					t.Fatalf("Delete(%q) error = %v, want %v", tt.deleter, derr, tt.wantErr)
+				}
+			} else if derr != nil {
+				t.Fatalf("Delete(%q) error = %v, want nil", tt.deleter, derr)
 			}
 			if objects != nil {
-				assert.Equal(t, tt.wantRemoved, objects.Removed(key))
+				if got := objects.Removed(key); got != tt.wantRemoved {
+					t.Errorf("object %q removed = %t, want %t", key, got, tt.wantRemoved)
+				}
 			}
 
 			_, gerr := gstore.GetImage(ctx, userA, img.ID)
 			if tt.wantGone {
-				assert.ErrorIs(t, gerr, repository.ErrNotFound)
-			} else {
-				assert.NoError(t, gerr)
+				if !errors.Is(gerr, repository.ErrNotFound) {
+					t.Errorf("GetImage(%q) after delete error = %v, want %v",
+						img.ID, gerr, repository.ErrNotFound)
+				}
+			} else if gerr != nil {
+				t.Errorf("GetImage(%q) error = %v, want nil (row must survive)", img.ID, gerr)
 			}
 		})
 	}

@@ -5,8 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRateLimiter_Allow(t *testing.T) {
@@ -97,7 +95,10 @@ func TestRateLimiter_Allow(t *testing.T) {
 
 			for i, s := range tt.steps {
 				now = base.Add(s.advance)
-				assert.Equal(t, s.wantAllowed, rl.Allow("client-1"), "step %d", i)
+				if got := rl.Allow("client-1"); got != s.wantAllowed {
+					t.Errorf("step %d (t+%s): Allow(%q) = %t, want %t",
+						i, s.advance, "client-1", got, s.wantAllowed)
+				}
 			}
 		})
 	}
@@ -154,8 +155,14 @@ func TestRateLimiter_Middleware(t *testing.T) {
 				h.ServeHTTP(rec, req)
 			}
 
-			assert.Equal(t, tt.wantNext, nextCalled)
-			assert.Equal(t, tt.wantStatus, rec.Code)
+			if nextCalled != tt.wantNext {
+				t.Errorf("after %d requests (max %d): next called = %t, want %t",
+					tt.requests, tt.max, nextCalled, tt.wantNext)
+			}
+			if rec.Code != tt.wantStatus {
+				t.Errorf("after %d requests (max %d): status = %d, want %d",
+					tt.requests, tt.max, rec.Code, tt.wantStatus)
+			}
 		})
 	}
 }

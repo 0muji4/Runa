@@ -1,12 +1,9 @@
 package storage
 
 import (
-	"context"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // baseConfig is the two-endpoint docker setup: the server reaches the store on
@@ -24,13 +21,20 @@ func baseConfig() Config {
 	}
 }
 
+// assertURL checks a presigned URL for the substrings that must (and must not)
+// appear in it, reporting the whole URL on failure so the mismatch is diagnosable
+// without re-running.
 func assertURL(t *testing.T, got string, wantContains, wantAbsent []string) {
 	t.Helper()
 	for _, want := range wantContains {
-		assert.Contains(t, got, want)
+		if !strings.Contains(got, want) {
+			t.Errorf("presigned URL = %q, want it to contain %q", got, want)
+		}
 	}
 	for _, absent := range wantAbsent {
-		assert.NotContains(t, got, absent)
+		if strings.Contains(got, absent) {
+			t.Errorf("presigned URL = %q, want it NOT to contain %q", got, absent)
+		}
 	}
 }
 
@@ -62,13 +66,22 @@ func TestNewMinioObjectStore(t *testing.T) {
 			t.Parallel()
 
 			store, err := NewMinioObjectStore(tt.cfg)
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("NewMinioObjectStore(%+v) error = %v, want nil", tt.cfg, err)
+			}
 			if tt.wantNil {
-				assert.Nil(t, store)
+				if store != nil {
+					t.Errorf("NewMinioObjectStore(%+v) = %v, want nil", tt.cfg, store)
+				}
 				return
 			}
-			require.NotNil(t, store)
-			assert.Equal(t, tt.wantBucket, store.bucket)
+			if store == nil {
+				t.Fatalf("NewMinioObjectStore(%+v) = nil, want a store", tt.cfg)
+			}
+			if store.bucket != tt.wantBucket {
+				t.Errorf("NewMinioObjectStore(%+v).bucket = %q, want %q",
+					tt.cfg, store.bucket, tt.wantBucket)
+			}
 		})
 	}
 }
@@ -110,11 +123,17 @@ func TestMinioObjectStore_PresignPut(t *testing.T) {
 			t.Parallel()
 
 			store, err := NewMinioObjectStore(tt.cfg)
-			require.NoError(t, err)
-			require.NotNil(t, store)
+			if err != nil {
+				t.Fatalf("NewMinioObjectStore(%+v) error = %v, want nil", tt.cfg, err)
+			}
+			if store == nil {
+				t.Fatalf("NewMinioObjectStore(%+v) = nil, want a store", tt.cfg)
+			}
 
-			got, err := store.PresignPut(context.Background(), tt.key, tt.ttl)
-			require.NoError(t, err)
+			got, err := store.PresignPut(t.Context(), tt.key, tt.ttl)
+			if err != nil {
+				t.Fatalf("PresignPut(%q, %s) error = %v, want nil", tt.key, tt.ttl, err)
+			}
 			assertURL(t, got, tt.wantContains, tt.wantAbsent)
 		})
 	}
@@ -157,11 +176,17 @@ func TestMinioObjectStore_PresignGet(t *testing.T) {
 			t.Parallel()
 
 			store, err := NewMinioObjectStore(tt.cfg)
-			require.NoError(t, err)
-			require.NotNil(t, store)
+			if err != nil {
+				t.Fatalf("NewMinioObjectStore(%+v) error = %v, want nil", tt.cfg, err)
+			}
+			if store == nil {
+				t.Fatalf("NewMinioObjectStore(%+v) = nil, want a store", tt.cfg)
+			}
 
-			got, err := store.PresignGet(context.Background(), tt.key, tt.ttl)
-			require.NoError(t, err)
+			got, err := store.PresignGet(t.Context(), tt.key, tt.ttl)
+			if err != nil {
+				t.Fatalf("PresignGet(%q, %s) error = %v, want nil", tt.key, tt.ttl, err)
+			}
 			assertURL(t, got, tt.wantContains, tt.wantAbsent)
 		})
 	}

@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdevices"
@@ -100,16 +98,10 @@ func TestDevices_Register(t *testing.T) {
 			res := doDevices(t, r, tt.bearer, tt.body)
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" || tt.wantDetails >= 0 {
-				env := decodeError(t, res)
-				if tt.wantCode != "" {
-					assert.Equal(t, tt.wantCode, env.Error.Code)
-				}
-				if tt.wantDetails >= 0 {
-					assert.Len(t, env.Error.Details, tt.wantDetails)
-				}
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("PUT /devices %s = %d, want %d", tt.body, res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, tt.wantDetails)
 		})
 	}
 }

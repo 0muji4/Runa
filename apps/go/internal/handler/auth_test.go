@@ -4,9 +4,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAuth_Signup(t *testing.T) {
@@ -32,13 +29,7 @@ func TestAuth_Signup(t *testing.T) {
 			wantCode:    "",
 			wantDetails: -1,
 			check: func(t *testing.T, res *http.Response) {
-				got := decodeJSON[authTokensResponse](t, res)
-				assert.NotEmpty(t, got.AccessToken)
-				assert.NotEmpty(t, got.RefreshToken)
-				assert.Equal(t, "Bearer", got.TokenType)
-				require.NotNil(t, got.User)
-				require.NotNil(t, got.User.Email)
-				assert.Equal(t, "a@b.com", *got.User.Email)
+				checkTokensResponse(t, res, "a@b.com")
 			},
 		},
 		{
@@ -80,8 +71,12 @@ func TestAuth_Signup(t *testing.T) {
 			wantDetails: -1,
 			check: func(t *testing.T, res *http.Response) {
 				got := decodeJSON[authTokensResponse](t, res)
-				require.NotNil(t, got.User)
-				assert.Equal(t, "trim", got.User.DisplayName)
+				if got.User == nil {
+					t.Fatal("user = nil, want the created user")
+				}
+				if got.User.DisplayName != "trim" {
+					t.Errorf("user.display_name = %q, want %q", got.User.DisplayName, "trim")
+				}
 			},
 		},
 	}
@@ -98,17 +93,13 @@ func TestAuth_Signup(t *testing.T) {
 			res := postJSON(t, h.Signup, tt.body)
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-			if tt.wantCode != "" || tt.wantDetails >= 0 {
-				env := decodeError(t, res)
-				if tt.wantCode != "" {
-					assert.Equal(t, tt.wantCode, env.Error.Code)
-				}
-				if tt.wantDetails >= 0 {
-					assert.Len(t, env.Error.Details, tt.wantDetails)
-				}
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("POST signup %s = %d, want %d", tt.body, res.StatusCode, tt.wantStatus)
 			}
+			if got, want := res.Header.Get("Content-Type"), "application/json"; got != want {
+				t.Errorf("POST signup Content-Type = %q, want %q", got, want)
+			}
+			checkErrorEnvelope(t, res, tt.wantCode, tt.wantDetails)
 			if tt.check != nil {
 				tt.check(t, res)
 			}
@@ -134,13 +125,7 @@ func TestAuth_Login(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantCode:   "",
 			check: func(t *testing.T, res *http.Response) {
-				got := decodeJSON[authTokensResponse](t, res)
-				assert.NotEmpty(t, got.AccessToken)
-				assert.NotEmpty(t, got.RefreshToken)
-				assert.Equal(t, "Bearer", got.TokenType)
-				require.NotNil(t, got.User)
-				require.NotNil(t, got.User.Email)
-				assert.Equal(t, email, *got.User.Email)
+				checkTokensResponse(t, res, email)
 			},
 		},
 		{
@@ -163,10 +148,10 @@ func TestAuth_Login(t *testing.T) {
 			res := postJSON(t, h.Login, tt.body)
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" {
-				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("POST login %s = %d, want %d", tt.body, res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, -1)
 			if tt.check != nil {
 				tt.check(t, res)
 			}

@@ -6,9 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/storage"
 )
@@ -21,7 +18,7 @@ func TestAccountFlow(t *testing.T) {
 
 	res := do(t, env.r, http.MethodPost, "/api/v1/auth/signup", "",
 		`{"email":"account@example.com","password":"password123","display_name":"Account"}`)
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	checkStatus(t, res, http.StatusCreated)
 	var signed tokens
 	decode(t, res, &signed)
 	token, userID, refresh := signed.AccessToken, signed.User.ID, signed.RefreshToken
@@ -29,35 +26,43 @@ func TestAccountFlow(t *testing.T) {
 	_, _, err := env.diaries.UpsertEntry(ctx, repository.UpsertDiaryParams{
 		UserID: userID, ClientID: "client-1", BodyText: "月がきれい", CreatedAt: time.Now().UTC(),
 	})
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("seeding a diary entry: UpsertEntry() error = %v, want nil", err)
+	}
 	objectKey := "gallery/" + userID + "/img-1"
 	_, err = env.gallery.InsertImage(ctx, repository.InsertGalleryParams{
 		UserID: userID, ObjectKey: objectKey, Width: 100, Height: 200, Theme: "pink",
 	})
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("seeding a gallery image: InsertImage() error = %v, want nil", err)
+	}
 	env.objects.Put(objectKey, storage.ObjectInfo{Size: 10, ContentType: "image/png"})
 
 	res = do(t, env.r, http.MethodPatch, "/api/v1/me", token, `{"display_name":"新しい名前"}`)
-	require.Equal(t, http.StatusOK, res.StatusCode)
+	checkStatus(t, res, http.StatusOK)
 	var updated struct {
 		DisplayName string `json:"display_name"`
 	}
 	decode(t, res, &updated)
-	assert.Equal(t, "新しい名前", updated.DisplayName)
+	if got, want := updated.DisplayName, "新しい名前"; got != want {
+		t.Errorf("PATCH /api/v1/me display_name = %q, want %q", got, want)
+	}
 
 	res = do(t, env.r, http.MethodGet, "/api/v1/me", token, "")
 	var me struct {
 		DisplayName string `json:"display_name"`
 	}
 	decode(t, res, &me)
-	assert.Equal(t, "新しい名前", me.DisplayName)
+	if got, want := me.DisplayName, "新しい名前"; got != want {
+		t.Errorf("GET /api/v1/me display_name = %q, want %q (the update must persist)", got, want)
+	}
 
 	res = do(t, env.r, http.MethodPatch, "/api/v1/me", token, `{"display_name":"   "}`)
-	require.Equal(t, http.StatusBadRequest, res.StatusCode)
+	checkStatus(t, res, http.StatusBadRequest)
 	res.Body.Close()
 
 	res = do(t, env.r, http.MethodGet, "/api/v1/me/export", token, "")
-	require.Equal(t, http.StatusOK, res.StatusCode)
+	checkStatus(t, res, http.StatusOK)
 	var export struct {
 		SchemaVersion int `json:"schema_version"`
 		User          struct {
@@ -72,28 +77,42 @@ func TestAccountFlow(t *testing.T) {
 		} `json:"images"`
 	}
 	decode(t, res, &export)
-	assert.Equal(t, 1, export.SchemaVersion)
-	assert.Equal(t, "新しい名前", export.User.DisplayName)
-	require.Len(t, export.Diaries, 1)
-	assert.Equal(t, "月がきれい", export.Diaries[0].BodyText)
-	require.Len(t, export.Images, 1)
-	assert.NotNil(t, export.Images[0].URL)
+	if export.SchemaVersion != 1 {
+		t.Errorf("export schema_version = %d, want 1", export.SchemaVersion)
+	}
+	if got, want := export.User.DisplayName, "新しい名前"; got != want {
+		t.Errorf("export user.display_name = %q, want %q", got, want)
+	}
+	if len(export.Diaries) != 1 {
+		t.Fatalf("export returned %d diaries, want 1", len(export.Diaries))
+	}
+	if got, want := export.Diaries[0].BodyText, "月がきれい"; got != want {
+		t.Errorf("export diary body_text = %q, want %q", got, want)
+	}
+	if len(export.Images) != 1 {
+		t.Fatalf("export returned %d images, want 1", len(export.Images))
+	}
+	if export.Images[0].URL == nil {
+		t.Error("export image url = nil, want a presigned URL")
+	}
 
 	// 削除はストアのオブジェクトもpurgeする。
 	res = do(t, env.r, http.MethodDelete, "/api/v1/me", token, "")
-	require.Equal(t, http.StatusNoContent, res.StatusCode)
+	checkStatus(t, res, http.StatusNoContent)
 	res.Body.Close()
-	assert.True(t, env.objects.Removed(objectKey))
+	if !env.objects.Removed(objectKey) {
+		t.Errorf("object %q was not purged after account deletion", objectKey)
+	}
 
 	// 削除後は保持していたアクセストークンも解決できない。
 	res = do(t, env.r, http.MethodGet, "/api/v1/me", token, "")
-	require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	checkStatus(t, res, http.StatusUnauthorized)
 	res.Body.Close()
 
 	// refreshトークンもcascadeで失効している。
 	res = do(t, env.r, http.MethodPost, "/api/v1/auth/refresh", "",
 		`{"refresh_token":"`+refresh+`"}`)
-	require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	checkStatus(t, res, http.StatusUnauthorized)
 	res.Body.Close()
 }
 
@@ -128,7 +147,7 @@ func TestAccountRequiresAuth(t *testing.T) {
 			t.Parallel()
 
 			res := do(t, env.r, tt.method, tt.path, "", tt.body)
-			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			checkStatus(t, res, http.StatusUnauthorized)
 			res.Body.Close()
 		})
 	}

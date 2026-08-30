@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 )
 
 var allEnvKeys = []string{
@@ -151,7 +151,9 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// 環境変数を扱うため並列化しない
 			applyEnv(t, tt.env)
-			assert.Equal(t, tt.want, Load())
+			if diff := cmp.Diff(tt.want, Load()); diff != "" {
+				t.Errorf("Load() mismatch (-want +got):\n%s", diff)
+			}
 		})
 	}
 }
@@ -196,7 +198,9 @@ func TestGetenv(t *testing.T) {
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
-			assert.Equal(t, tt.want, getenv(key, tt.fallback))
+			if got := getenv(key, tt.fallback); got != tt.want {
+				t.Errorf("getenv(%q, %q) = %q, want %q", key, tt.fallback, got, tt.want)
+			}
 		})
 	}
 }
@@ -276,7 +280,9 @@ func TestGetbool(t *testing.T) {
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
-			assert.Equal(t, tt.want, getbool(key, tt.fallback))
+			if got := getbool(key, tt.fallback); got != tt.want {
+				t.Errorf("getbool(%q, %t) = %t, want %t", key, tt.fallback, got, tt.want)
+			}
 		})
 	}
 }
@@ -356,7 +362,9 @@ func TestGetint64(t *testing.T) {
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
-			assert.Equal(t, tt.want, getint64(key, tt.fallback))
+			if got := getint64(key, tt.fallback); got != tt.want {
+				t.Errorf("getint64(%q, %d) = %d, want %d", key, tt.fallback, got, tt.want)
+			}
 		})
 	}
 }
@@ -429,7 +437,9 @@ func TestGetduration(t *testing.T) {
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
-			assert.Equal(t, tt.want, getduration(key, tt.fallback))
+			if got := getduration(key, tt.fallback); got != tt.want {
+				t.Errorf("getduration(%q, %s) = %s, want %s", key, tt.fallback, got, tt.want)
+			}
 		})
 	}
 }
@@ -477,7 +487,9 @@ func TestSplitList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, splitList(tt.raw))
+			if diff := cmp.Diff(tt.want, splitList(tt.raw)); diff != "" {
+				t.Errorf("splitList(%q) mismatch (-want +got):\n%s", tt.raw, diff)
+			}
 		})
 	}
 }
@@ -531,7 +543,9 @@ func TestSplitListDefault(t *testing.T) {
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
-			assert.Equal(t, tt.want, splitListDefault(key, fallback))
+			if diff := cmp.Diff(tt.want, splitListDefault(key, fallback)); diff != "" {
+				t.Errorf("splitListDefault(%q, %v) mismatch (-want +got):\n%s", key, fallback, diff)
+			}
 		})
 	}
 }
@@ -574,7 +588,9 @@ func TestSplitOrigins(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, splitOrigins(tt.raw))
+			if diff := cmp.Diff(tt.want, splitOrigins(tt.raw)); diff != "" {
+				t.Errorf("splitOrigins(%q) mismatch (-want +got):\n%s", tt.raw, diff)
+			}
 		})
 	}
 }

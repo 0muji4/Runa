@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/google/go-cmp/cmp"
 )
 
 const testKID = "test-key-1"
@@ -19,7 +19,9 @@ func signedIDToken(t *testing.T, priv *rsa.PrivateKey, claims jwt.MapClaims) str
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	tok.Header["kid"] = testKID
 	signed, err := tok.SignedString(priv)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("SignedString() error = %v, want nil", err)
+	}
 	return signed
 }
 
@@ -54,9 +56,13 @@ func TestOIDCVerifier_Verify(t *testing.T) {
 	t.Parallel()
 
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey() error = %v, want nil", err)
+	}
 	other, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("rsa.GenerateKey() error = %v, want nil", err)
+	}
 	now := time.Now()
 
 	wantIdentity := OIDCIdentity{
@@ -123,11 +129,17 @@ func TestOIDCVerifier_Verify(t *testing.T) {
 
 			id, err := tt.verifier.Verify(context.Background(), tt.token)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Verify() error = %v, want %v", err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantIdentity, id)
+			if err != nil {
+				t.Fatalf("Verify() error = %v, want nil", err)
+			}
+			if diff := cmp.Diff(tt.wantIdentity, id); diff != "" {
+				t.Errorf("Verify() identity mismatch (-want +got):\n%s", diff)
+			}
 		})
 	}
 }

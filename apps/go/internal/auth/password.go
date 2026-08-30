@@ -27,6 +27,14 @@ type Argon2Params struct {
 	KeyLength   uint32 // bytes
 }
 
+// Verification uses the parameters from the stored hash, so these bound the work
+// a corrupt password_hash can cause. Both are far above the defaults below,
+// leaving room to raise the real cost later.
+const (
+	maxArgon2Memory     = 1 << 20 // KiB (1 GiB)
+	maxArgon2Iterations = 16
+)
+
 // DefaultArgon2Params returns the OWASP-recommended argon2id parameters.
 func DefaultArgon2Params() Argon2Params {
 	return Argon2Params{
@@ -102,6 +110,13 @@ func decodeArgon2Hash(encoded string) (Argon2Params, []byte, []byte, error) {
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &p.Memory, &p.Iterations, &p.Parallelism); err != nil {
 		return Argon2Params{}, nil, nil, ErrInvalidHash
 	}
+	// argon2.IDKey panics on t=0 or p=0 rather than returning an error.
+	if p.Iterations < 1 || p.Parallelism < 1 {
+		return Argon2Params{}, nil, nil, ErrInvalidHash
+	}
+	if p.Memory > maxArgon2Memory || p.Iterations > maxArgon2Iterations {
+		return Argon2Params{}, nil, nil, ErrInvalidHash
+	}
 
 	b64 := base64.RawStdEncoding
 	salt, err := b64.DecodeString(parts[4])
@@ -110,6 +125,9 @@ func decodeArgon2Hash(encoded string) (Argon2Params, []byte, []byte, error) {
 	}
 	key, err := b64.DecodeString(parts[5])
 	if err != nil {
+		return Argon2Params{}, nil, nil, ErrInvalidHash
+	}
+	if len(salt) == 0 || len(key) == 0 {
 		return Argon2Params{}, nil, nil, ErrInvalidHash
 	}
 

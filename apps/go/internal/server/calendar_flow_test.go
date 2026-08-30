@@ -3,9 +3,6 @@ package server_test
 import (
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCalendarGroupsByLocalDate(t *testing.T) {
@@ -24,16 +21,24 @@ func TestCalendarGroupsByLocalDate(t *testing.T) {
 			path += "&tz=" + tz
 		}
 		res := do(t, env.r, http.MethodGet, path, token, "")
-		require.Equal(t, http.StatusOK, res.StatusCode)
+		checkStatus(t, res, http.StatusOK)
 		var cal calendarResponse
 		decode(t, res, &cal)
-		require.Len(t, cal.Days, 1)
-		require.Equal(t, 1, cal.Days[0].Count)
+		if len(cal.Days) != 1 {
+			t.Fatalf("calendar (tz=%q) returned %d days, want 1", tz, len(cal.Days))
+		}
+		if cal.Days[0].Count != 1 {
+			t.Fatalf("calendar (tz=%q) day count = %d, want 1", tz, cal.Days[0].Count)
+		}
 		return cal.Days[0].Date
 	}
 
-	assert.Equal(t, "2026-07-03", localDay(t, ""))
-	assert.Equal(t, "2026-07-04", localDay(t, "Asia/Tokyo"))
+	if got, want := localDay(t, ""), "2026-07-03"; got != want {
+		t.Errorf("calendar day with no tz = %q, want %q (UTC)", got, want)
+	}
+	if got, want := localDay(t, "Asia/Tokyo"), "2026-07-04"; got != want {
+		t.Errorf("calendar day with tz=Asia/Tokyo = %q, want %q", got, want)
+	}
 }
 
 func TestCalendarIsScopedAndValidated(t *testing.T) {
@@ -47,7 +52,10 @@ func TestCalendarIsScopedAndValidated(t *testing.T) {
 	res := do(t, env.r, http.MethodGet, "/api/v1/diary/calendar?year=2026&month=7", other, "")
 	var empty calendarResponse
 	decode(t, res, &empty)
-	assert.Empty(t, empty.Days)
+	if len(empty.Days) != 0 {
+		t.Errorf("a stranger's calendar returned %d days, want 0 (entries are owner-scoped)",
+			len(empty.Days))
+	}
 
 	tests := []struct {
 		name, path string
@@ -70,7 +78,7 @@ func TestCalendarIsScopedAndValidated(t *testing.T) {
 			t.Parallel()
 
 			res := do(t, env.r, http.MethodGet, tt.path, owner, "")
-			require.Equal(t, http.StatusBadRequest, res.StatusCode)
+			checkStatus(t, res, http.StatusBadRequest)
 			res.Body.Close()
 		})
 	}

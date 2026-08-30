@@ -65,7 +65,7 @@ push 前に、変更が既存の規約・文書と矛盾しないか確認する
 
 ### 5. 事前検証（コード変更のとき）
 
-- `Server`（Go）を触る PR: `cd apps/backend && go vet ./... && go test ./...`
+- `Server`（Go）を触る PR: `cd apps/go && go vet ./... && go test ./...`
 - `Android` / `iOS` を触る PR: 各クライアントのビルド・テストを実行する。
 
 （コード用 CI は各コードが入る PR で追加する。詳細は CONTRIBUTING.md「コードの CI」。）
@@ -75,7 +75,7 @@ push 前に、変更が既存の規約・文書と矛盾しないか確認する
 論点ごとに次のテンプレートを埋めて出す。`TITLE` は接頭辞付き・ピリオドなし。Issue 番号は自動取得。`<files>` はその論点のファイルだけ（`git add -A` や `.` は使わない。`.gitignore` 除外も尊重）。
 
 ```sh
-cd /Users/motoshi.suzuki/go/src/github.com/0muji4/Runa
+cd /Users/motoshisuzuki/go/src/github.com/0muji4/Runa
 
 TITLE='[カテゴリ] 変更の要約'
 ISSUE_URL=$(gh issue create --title "$TITLE" --body '<Issue 本文>')

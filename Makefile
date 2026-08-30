@@ -69,13 +69,35 @@ ios-strings: ## iOS: strings.xml から apps/swift/Runa/Strings.swift を再生�
 
 # ---- Server (Go) ------------------------------------------------------------
 
+# テストは2層: -short は Postgres / MinIO のコンテナを要するものを飛ばす。CI は全部。
+
 .PHONY: server-verify
-server-verify: ## Go: vet + build + test（go-ci.yaml と同じ内容）
-	cd $(GO_DIR) && go vet ./... && go build ./... && go test ./...
+server-verify: ## Go: vet + build + 全テスト（go-ci.yaml と同じ。要 Docker / -race 込みで遅い）
+	cd $(GO_DIR) && go vet ./... && go build ./... && go test -race -shuffle=on -count=1 ./...
 
 .PHONY: server-test
-server-test: ## Go: テストのみ
-	cd $(GO_DIR) && go test ./...
+server-test: ## Go: 速いテストのみ（-short。Docker 不要。書きながら回す用）
+	cd $(GO_DIR) && go test -short -count=1 ./...
+
+.PHONY: server-test-all
+server-test-all: ## Go: 実 Postgres / MinIO を含む全テスト（要 Docker）
+	cd $(GO_DIR) && go test -count=1 ./...
+
+.PHONY: server-cover
+server-cover: ## Go: 本番コード基準のカバレッジを測る（-coverpkg=./...）。未実行の関数も出す。要 Docker
+	cd $(GO_DIR) && go test -count=1 -coverpkg=./... -coverprofile=cover.out ./...
+	cd $(GO_DIR) && go tool cover -func=cover.out | tail -1
+	@echo '--- 0% の関数（未実行の本番コード） ---'
+	cd $(GO_DIR) && go tool cover -func=cover.out | awk '$$NF == "0.0%"' || true
+
+.PHONY: server-cover-html
+server-cover-html: server-cover ## Go: カバレッジを HTML で開く
+	cd $(GO_DIR) && go tool cover -html=cover.out
+
+.PHONY: server-fuzz
+server-fuzz: ## Go: 手書きパーサ（argon2 PHC / JWKS）を短時間ファジングする
+	cd $(GO_DIR) && go test -run=XXX -fuzz=FuzzDecodeArgon2Hash -fuzztime=30s ./internal/auth/
+	cd $(GO_DIR) && go test -run=XXX -fuzz=FuzzParseJWKS -fuzztime=30s ./internal/auth/
 
 .PHONY: server-fmt
 server-fmt: ## Go: gofmt で整形（-w で上書き）

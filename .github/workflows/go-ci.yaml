@@ -27,5 +27,20 @@ jobs:
         run: go vet ./...
       - name: Build
         run: go build ./...
+      # -coverpkg=./... が無いと、server の flow テストが handler/service を通した分が
+      # 計上されない。契約テストは testcontainers で実 Postgres / MinIO を起動する
+      # （ubuntu-latest は Docker 同梱。無い環境では理由付きで skip される）。
       - name: Test
-        run: go test ./...
+        run: go test -race -shuffle=on -count=1 -coverpkg=./... -coverprofile=cover.out ./...
+      # 閾値による強制はしない。全体値と未実行の関数をログに残すだけ。
+      - name: Coverage summary
+        run: |
+          go tool cover -func=cover.out | tail -1
+          echo '--- 0% の関数（未実行の本番コード） ---'
+          go tool cover -func=cover.out | awk '$NF == "0.0%"' || true
+      - name: Upload coverage profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: apps/go/cover.out
+          retention-days: 14

@@ -1,11 +1,9 @@
 package auth
 
 import (
+	"errors"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTokenIssuer_Issue(t *testing.T) {
@@ -31,12 +29,20 @@ func TestTokenIssuer_Issue(t *testing.T) {
 			ti := NewTokenIssuer("secret", tt.ttl)
 
 			token, expiresIn, err := ti.Issue("user-1")
-			require.NoError(t, err)
-			assert.Equal(t, int(tt.ttl.Seconds()), expiresIn)
+			if err != nil {
+				t.Fatalf("Issue(%q) error = %v, want nil", "user-1", err)
+			}
+			if want := int(tt.ttl.Seconds()); expiresIn != want {
+				t.Errorf("Issue(%q) expiresIn = %d, want %d", "user-1", expiresIn, want)
+			}
 
 			userID, err := ti.Verify(token)
-			require.NoError(t, err)
-			assert.Equal(t, "user-1", userID)
+			if err != nil {
+				t.Fatalf("Verify(Issue(%q)) error = %v, want nil", "user-1", err)
+			}
+			if userID != "user-1" {
+				t.Errorf("Verify(Issue(%q)) = %q, want %q", "user-1", userID, "user-1")
+			}
 		})
 	}
 }
@@ -53,9 +59,12 @@ func TestTokenIssuer_Verify(t *testing.T) {
 		{
 			name: "有効なトークンはsubjectを返す",
 			setup: func(t *testing.T) (*TokenIssuer, string) {
+				t.Helper()
 				ti := NewTokenIssuer("secret", time.Minute)
 				token, _, err := ti.Issue("user-1")
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("Issue(%q) error = %v, want nil", "user-1", err)
+				}
 				return ti, token
 			},
 			wantErr: nil,
@@ -63,10 +72,13 @@ func TestTokenIssuer_Verify(t *testing.T) {
 		{
 			name: "期限切れのトークンはErrTokenExpired",
 			setup: func(t *testing.T) (*TokenIssuer, string) {
+				t.Helper()
 				ti := NewTokenIssuer("secret", time.Minute)
 				ti.now = func() time.Time { return base }
 				token, _, err := ti.Issue("user-1")
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("Issue(%q) error = %v, want nil", "user-1", err)
+				}
 				ti.now = func() time.Time { return base.Add(2 * time.Minute) }
 				return ti, token
 			},
@@ -75,8 +87,11 @@ func TestTokenIssuer_Verify(t *testing.T) {
 		{
 			name: "別のsecretで検証するとErrInvalidToken",
 			setup: func(t *testing.T) (*TokenIssuer, string) {
+				t.Helper()
 				token, _, err := NewTokenIssuer("secret-a", time.Minute).Issue("user-1")
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("Issue(%q) error = %v, want nil", "user-1", err)
+				}
 				return NewTokenIssuer("secret-b", time.Minute), token
 			},
 			wantErr: ErrInvalidToken,
@@ -84,6 +99,7 @@ func TestTokenIssuer_Verify(t *testing.T) {
 		{
 			name: "壊れた文字列はErrInvalidToken",
 			setup: func(t *testing.T) (*TokenIssuer, string) {
+				t.Helper()
 				return NewTokenIssuer("secret", time.Minute), "not.a.jwt"
 			},
 			wantErr: ErrInvalidToken,
@@ -97,11 +113,17 @@ func TestTokenIssuer_Verify(t *testing.T) {
 
 			userID, err := issuer.Verify(token)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Verify(%q) error = %v, want %v", token, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, "user-1", userID)
+			if err != nil {
+				t.Fatalf("Verify(%q) error = %v, want nil", token, err)
+			}
+			if userID != "user-1" {
+				t.Errorf("Verify(%q) = %q, want %q", token, userID, "user-1")
+			}
 		})
 	}
 }

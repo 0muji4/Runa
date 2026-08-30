@@ -5,9 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateRefreshToken(t *testing.T) {
@@ -36,15 +33,24 @@ func TestGenerateRefreshToken(t *testing.T) {
 			seen := make(map[string]bool, tt.count)
 			for i := 0; i < tt.count; i++ {
 				token, err := GenerateRefreshToken()
-				require.NoError(t, err)
-				require.NotEmpty(t, token)
-				assert.Len(t, token, wantLen)
+				if err != nil {
+					t.Fatalf("GenerateRefreshToken() error = %v, want nil", err)
+				}
+				if len(token) != wantLen {
+					t.Errorf("len(GenerateRefreshToken()) = %d, want %d", len(token), wantLen)
+				}
 
 				decoded, err := base64.RawURLEncoding.DecodeString(token)
-				require.NoError(t, err)
-				assert.Len(t, decoded, refreshTokenBytes)
+				if err != nil {
+					t.Fatalf("base64 decode of %q error = %v, want nil", token, err)
+				}
+				if len(decoded) != refreshTokenBytes {
+					t.Errorf("decoded entropy = %d bytes, want %d", len(decoded), refreshTokenBytes)
+				}
 
-				assert.False(t, seen[token], "duplicate token generated: %q", token)
+				if seen[token] {
+					t.Fatalf("GenerateRefreshToken() returned a duplicate token %q at iteration %d", token, i)
+				}
 				seen[token] = true
 			}
 		})
@@ -83,14 +89,16 @@ func TestHashRefreshToken(t *testing.T) {
 			ha := HashRefreshToken(tt.a)
 			hb := HashRefreshToken(tt.b)
 
-			assert.Len(t, ha, wantLen)
-			_, err := hex.DecodeString(ha)
-			assert.NoError(t, err)
+			if len(ha) != wantLen {
+				t.Errorf("len(HashRefreshToken(%q)) = %d, want %d", tt.a, len(ha), wantLen)
+			}
+			if _, err := hex.DecodeString(ha); err != nil {
+				t.Errorf("HashRefreshToken(%q) = %q, want hex-decodable: %v", tt.a, ha, err)
+			}
 
-			if tt.same {
-				assert.Equal(t, ha, hb)
-			} else {
-				assert.NotEqual(t, ha, hb)
+			if got := ha == hb; got != tt.same {
+				t.Errorf("HashRefreshToken(%q) == HashRefreshToken(%q) = %t, want %t",
+					tt.a, tt.b, got, tt.same)
 			}
 		})
 	}

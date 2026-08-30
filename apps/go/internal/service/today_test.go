@@ -2,13 +2,12 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func day(s string) time.Time {
@@ -25,7 +24,9 @@ func seedSong(t *testing.T, svc *service.TodayService, ctx context.Context, date
 		Date: day(date), Title: title, Artist: "月詠",
 		ArtworkURL: "https://x/a.jpg", AudioURL: "https://x/a.mp3",
 	})
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("CreateSong(%q, %q) error = %v, want nil", date, title, err)
+	}
 	return song
 }
 
@@ -77,27 +78,36 @@ func TestTodayService_Today(t *testing.T) {
 			svc := newTodayService()
 			ctx := context.Background()
 			if tt.seedQuote {
-				_, err := svc.CreateQuote(ctx, day(d), "月あかり")
-				require.NoError(t, err)
+				if _, err := svc.CreateQuote(ctx, day(d), "月あかり"); err != nil {
+					t.Fatalf("CreateQuote(%q) error = %v, want nil", d, err)
+				}
 			}
 			if tt.seedSong {
 				seedSong(t, svc, ctx, d, "夜想曲")
 			}
 
 			content, err := svc.Today(ctx, day(d))
-			require.NoError(t, err)
-
-			if tt.wantQuote == nil {
-				assert.Nil(t, content.Quote)
-			} else {
-				require.NotNil(t, content.Quote)
-				assert.Equal(t, *tt.wantQuote, content.Quote.BodyText)
+			if err != nil {
+				t.Fatalf("Today(%q) error = %v, want nil", d, err)
 			}
-			if tt.wantSong == nil {
-				assert.Nil(t, content.Song)
-			} else {
-				require.NotNil(t, content.Song)
-				assert.Equal(t, *tt.wantSong, content.Song.Title)
+
+			switch {
+			case tt.wantQuote == nil && content.Quote != nil:
+				t.Errorf("Today(%q).Quote = %+v, want nil", d, content.Quote)
+			case tt.wantQuote != nil && content.Quote == nil:
+				t.Errorf("Today(%q).Quote = nil, want body_text %q", d, *tt.wantQuote)
+			case tt.wantQuote != nil && content.Quote.BodyText != *tt.wantQuote:
+				t.Errorf("Today(%q).Quote.body_text = %q, want %q",
+					d, content.Quote.BodyText, *tt.wantQuote)
+			}
+			switch {
+			case tt.wantSong == nil && content.Song != nil:
+				t.Errorf("Today(%q).Song = %+v, want nil", d, content.Song)
+			case tt.wantSong != nil && content.Song == nil:
+				t.Errorf("Today(%q).Song = nil, want title %q", d, *tt.wantSong)
+			case tt.wantSong != nil && content.Song.Title != *tt.wantSong:
+				t.Errorf("Today(%q).Song.title = %q, want %q",
+					d, content.Song.Title, *tt.wantSong)
 			}
 		})
 	}
@@ -146,22 +156,45 @@ func TestTodayService_Archive(t *testing.T) {
 			}
 
 			page1, err := svc.Archive(ctx, tt.limit, nil)
-			require.NoError(t, err)
-			assert.Len(t, page1.Songs, tt.wantPage1Len)
-			assert.Equal(t, tt.wantPage1Cursor, page1.NextCursor != nil)
+			if err != nil {
+				t.Fatalf("Archive(limit=%d) error = %v, want nil", tt.limit, err)
+			}
+			if len(page1.Songs) != tt.wantPage1Len {
+				t.Errorf("Archive(limit=%d) page 1 returned %d songs, want %d",
+					tt.limit, len(page1.Songs), tt.wantPage1Len)
+			}
+			if got := page1.NextCursor != nil; got != tt.wantPage1Cursor {
+				t.Errorf("Archive(limit=%d) page 1 has a next cursor = %t, want %t",
+					tt.limit, got, tt.wantPage1Cursor)
+			}
 			for i := 1; i < len(page1.Songs); i++ {
-				assert.False(t, page1.Songs[i-1].Date.Before(page1.Songs[i].Date), "page1 not newest-first at index %d", i)
+				if page1.Songs[i-1].Date.Before(page1.Songs[i].Date) {
+					t.Errorf("Archive() page 1 is not newest-first at index %d: %s before %s",
+						i, page1.Songs[i-1].Date, page1.Songs[i].Date)
+				}
 			}
 			if !tt.wantPage1Cursor {
 				return
 			}
 
 			page2, err := svc.Archive(ctx, tt.limit, page1.NextCursor)
-			require.NoError(t, err)
-			assert.Len(t, page2.Songs, tt.wantPage2Len)
-			assert.Equal(t, tt.wantPage2Cursor, page2.NextCursor != nil)
+			if err != nil {
+				t.Fatalf("Archive(limit=%d, cursor) error = %v, want nil", tt.limit, err)
+			}
+			if len(page2.Songs) != tt.wantPage2Len {
+				t.Errorf("Archive(limit=%d, cursor) page 2 returned %d songs, want %d",
+					tt.limit, len(page2.Songs), tt.wantPage2Len)
+			}
+			if got := page2.NextCursor != nil; got != tt.wantPage2Cursor {
+				t.Errorf("Archive(limit=%d, cursor) page 2 has a next cursor = %t, want %t",
+					tt.limit, got, tt.wantPage2Cursor)
+			}
 			if len(page2.Songs) > 0 {
-				assert.True(t, page2.Songs[0].Date.Before(page1.Songs[len(page1.Songs)-1].Date), "pages overlap across the cursor boundary")
+				lastOfPage1 := page1.Songs[len(page1.Songs)-1].Date
+				if !page2.Songs[0].Date.Before(lastOfPage1) {
+					t.Errorf("pages overlap across the cursor boundary: page 2 starts at %s, page 1 ended at %s",
+						page2.Songs[0].Date, lastOfPage1)
+				}
 			}
 		})
 	}
@@ -204,10 +237,14 @@ func TestTodayService_MarkPlayed(t *testing.T) {
 			// A zero playedAt exercises the default-to-server-clock branch.
 			err := svc.MarkPlayed(ctx, userA, songID, time.Time{})
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("MarkPlayed(%q) error = %v, want %v", songID, err, tt.wantErr)
+				}
 				return
 			}
-			assert.NoError(t, err)
+			if err != nil {
+				t.Fatalf("MarkPlayed(%q) error = %v, want nil", songID, err)
+			}
 		})
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type stubVerifier struct {
@@ -104,10 +102,17 @@ func TestRequireAuth(t *testing.T) {
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, req)
 
-			assert.Equal(t, tt.wantStatus, rec.Code)
-			assert.Equal(t, tt.wantNext, nextCalled)
-			if tt.wantNext {
-				assert.Equal(t, tt.wantCtxID, gotCtxID)
+			if rec.Code != tt.wantStatus {
+				t.Errorf("RequireAuth with %q: status = %d, want %d",
+					tt.authHeader, rec.Code, tt.wantStatus)
+			}
+			if nextCalled != tt.wantNext {
+				t.Errorf("RequireAuth with %q: next called = %t, want %t",
+					tt.authHeader, nextCalled, tt.wantNext)
+			}
+			if tt.wantNext && gotCtxID != tt.wantCtxID {
+				t.Errorf("RequireAuth with %q: UserIDFromContext = %q, want %q",
+					tt.authHeader, gotCtxID, tt.wantCtxID)
 			}
 		})
 	}
@@ -147,8 +152,10 @@ func TestUserIDFromContext(t *testing.T) {
 			t.Parallel()
 
 			id, ok := UserIDFromContext(tt.ctx)
-			assert.Equal(t, tt.wantID, id)
-			assert.Equal(t, tt.wantOK, ok)
+			if id != tt.wantID || ok != tt.wantOK {
+				t.Errorf("UserIDFromContext() = (%q, %t), want (%q, %t)",
+					id, ok, tt.wantID, tt.wantOK)
+			}
 		})
 	}
 }

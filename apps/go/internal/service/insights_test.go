@@ -2,13 +2,13 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/google/go-cmp/cmp"
 )
 
 // moodDist builds the canonical mood distribution (fixed order calm, gentle,
@@ -199,16 +199,25 @@ func TestInsightsService_Insight(t *testing.T) {
 				_, _, err := store.UpsertEntry(ctx, repository.UpsertDiaryParams{
 					UserID: userA, ClientID: clientID(i + 1), BodyText: "entry", Mood: s.mood, CreatedAt: s.at,
 				})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("seeding entry %d: UpsertEntry() error = %v, want nil", i, err)
+				}
 			}
 
 			got, err := svc.Insight(ctx, userA, tt.period, tt.start, tt.loc)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Insight(%q, %s) error = %v, want %v",
+						tt.period, tt.start, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			if err != nil {
+				t.Fatalf("Insight(%q, %s) error = %v, want nil", tt.period, tt.start, err)
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("Insight(%q, %s) mismatch (-want +got):\n%s", tt.period, tt.start, diff)
+			}
 		})
 	}
 }

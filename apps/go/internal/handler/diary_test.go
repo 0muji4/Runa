@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -65,16 +62,10 @@ func TestDiary_Create(t *testing.T) {
 			res := doDiary(t, r, http.MethodPost, "/diary", tt.body)
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" || tt.wantDetails >= 0 {
-				env := decodeError(t, res)
-				if tt.wantCode != "" {
-					assert.Equal(t, tt.wantCode, env.Error.Code)
-				}
-				if tt.wantDetails >= 0 {
-					assert.Len(t, env.Error.Details, tt.wantDetails)
-				}
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("POST /diary %s = %d, want %d", tt.body, res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, tt.wantDetails)
 		})
 	}
 }
@@ -122,12 +113,14 @@ func TestDiary_Get(t *testing.T) {
 			res := doDiary(t, r, http.MethodGet, tt.path(t, r), "")
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" {
-				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("GET diary = %d, want %d", res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, -1)
 			if tt.wantBody != "" {
-				assert.Equal(t, tt.wantBody, decodeJSON[diaryEntryResponse](t, res).BodyText)
+				if got := decodeJSON[diaryEntryResponse](t, res).BodyText; got != tt.wantBody {
+					t.Errorf("GET diary body_text = %q, want %q", got, tt.wantBody)
+				}
 			}
 		})
 	}
@@ -180,12 +173,14 @@ func TestDiary_Update(t *testing.T) {
 			res := doDiary(t, r, http.MethodPatch, tt.path(t, r), tt.body)
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" {
-				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("PATCH diary = %d, want %d", res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, -1)
 			if tt.wantBody != "" {
-				assert.Equal(t, tt.wantBody, decodeJSON[diaryEntryResponse](t, res).BodyText)
+				if got := decodeJSON[diaryEntryResponse](t, res).BodyText; got != tt.wantBody {
+					t.Errorf("PATCH diary body_text = %q, want %q", got, tt.wantBody)
+				}
 			}
 		})
 	}
@@ -214,7 +209,10 @@ func TestDiary_Delete(t *testing.T) {
 				id := createDiaryEntry(t, r, knownClientID, "月を見た").ID
 				first := doDiary(t, r, http.MethodDelete, "/diary/"+id, "")
 				first.Body.Close()
-				require.Equal(t, http.StatusNoContent, first.StatusCode)
+				if first.StatusCode != http.StatusNoContent {
+					t.Fatalf("first DELETE /diary/%s = %d, want %d",
+						id, first.StatusCode, http.StatusNoContent)
+				}
 				return "/diary/" + id
 			},
 			wantStatus: http.StatusNoContent,
@@ -242,10 +240,10 @@ func TestDiary_Delete(t *testing.T) {
 			res := doDiary(t, r, http.MethodDelete, tt.path(t, r), "")
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" {
-				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("DELETE diary = %d, want %d", res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, -1)
 		})
 	}
 }
@@ -282,10 +280,16 @@ func TestDiary_List(t *testing.T) {
 			res := doDiary(t, r, http.MethodGet, "/diary", "")
 			defer res.Body.Close()
 
-			require.Equal(t, http.StatusOK, res.StatusCode)
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("GET /diary = %d, want %d", res.StatusCode, http.StatusOK)
+			}
 			got := decodeJSON[diaryListResponse](t, res)
-			assert.Len(t, got.Entries, tt.wantEntries)
-			assert.Nil(t, got.NextCursor)
+			if len(got.Entries) != tt.wantEntries {
+				t.Errorf("GET /diary returned %d entries, want %d", len(got.Entries), tt.wantEntries)
+			}
+			if got.NextCursor != nil {
+				t.Errorf("GET /diary next_cursor = %q, want nil", *got.NextCursor)
+			}
 		})
 	}
 }
@@ -331,14 +335,19 @@ func TestDiary_Sync(t *testing.T) {
 			res := doDiary(t, r, http.MethodGet, "/diary/sync"+tt.query, "")
 			defer res.Body.Close()
 
-			require.Equal(t, tt.wantStatus, res.StatusCode)
-			if tt.wantCode != "" {
-				assert.Equal(t, tt.wantCode, decodeError(t, res).Error.Code)
+			if res.StatusCode != tt.wantStatus {
+				t.Fatalf("GET /diary/sync%s = %d, want %d", tt.query, res.StatusCode, tt.wantStatus)
 			}
+			checkErrorEnvelope(t, res, tt.wantCode, -1)
 			if tt.wantEntries >= 0 {
 				got := decodeJSON[diarySyncResponse](t, res)
-				assert.Len(t, got.Entries, tt.wantEntries)
-				assert.NotEmpty(t, got.ServerTime)
+				if len(got.Entries) != tt.wantEntries {
+					t.Errorf("GET /diary/sync%s returned %d entries, want %d",
+						tt.query, len(got.Entries), tt.wantEntries)
+				}
+				if got.ServerTime == "" {
+					t.Errorf("GET /diary/sync%s server_time is empty, want a timestamp", tt.query)
+				}
 			}
 		})
 	}

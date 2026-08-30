@@ -2,12 +2,12 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDiaryService_Create(t *testing.T) {
@@ -63,26 +63,44 @@ func TestDiaryService_Create(t *testing.T) {
 			ctx := context.Background()
 
 			first, created, err := svc.Create(ctx, userA, tt.firstInput)
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantFirstNew, created)
+			if err != nil {
+				t.Fatalf("Create(%+v) error = %v, want nil", tt.firstInput, err)
+			}
+			if created != tt.wantFirstNew {
+				t.Errorf("Create(%+v) created = %t, want %t", tt.firstInput, created, tt.wantFirstNew)
+			}
 
 			final := first
 			if tt.secondInput != nil {
 				second, created, err := svc.Create(ctx, userA, *tt.secondInput)
-				require.NoError(t, err)
-				assert.Equal(t, tt.wantSecondNew, created)
-				assert.Equal(t, first.ID, second.ID)
+				if err != nil {
+					t.Fatalf("second Create(%+v) error = %v, want nil", *tt.secondInput, err)
+				}
+				if created != tt.wantSecondNew {
+					t.Errorf("second Create(%+v) created = %t, want %t",
+						*tt.secondInput, created, tt.wantSecondNew)
+				}
+				if second.ID != first.ID {
+					t.Errorf("second Create() id = %q, want the first entry's id %q (upsert, not insert)",
+						second.ID, first.ID)
+				}
 				final = second
 			}
 
-			assert.Equal(t, tt.wantBody, final.BodyText)
-			if tt.wantCreatedAtNonZero {
-				assert.False(t, final.CreatedAt.IsZero())
+			if final.BodyText != tt.wantBody {
+				t.Errorf("entry body_text = %q, want %q", final.BodyText, tt.wantBody)
+			}
+			if tt.wantCreatedAtNonZero && final.CreatedAt.IsZero() {
+				t.Error("entry created_at is zero, want the server clock to fill it in")
 			}
 
 			page, err := svc.List(ctx, userA, 0, nil)
-			require.NoError(t, err)
-			assert.Len(t, page.Entries, tt.wantCount)
+			if err != nil {
+				t.Fatalf("List() error = %v, want nil", err)
+			}
+			if len(page.Entries) != tt.wantCount {
+				t.Errorf("List() returned %d entries, want %d", len(page.Entries), tt.wantCount)
+			}
 		})
 	}
 }
@@ -137,25 +155,47 @@ func TestDiaryService_List(t *testing.T) {
 					BodyText:  "entry",
 					CreatedAt: base.Add(time.Duration(i) * time.Minute),
 				})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("seeding entry %d: Create() error = %v, want nil", i, err)
+				}
 			}
 
 			page1, err := svc.List(ctx, userA, tt.limit, nil)
-			require.NoError(t, err)
-			assert.Len(t, page1.Entries, tt.wantPage1Len)
-			assert.Equal(t, tt.wantCursor, page1.NextCursor != nil)
+			if err != nil {
+				t.Fatalf("List(limit=%d) error = %v, want nil", tt.limit, err)
+			}
+			if len(page1.Entries) != tt.wantPage1Len {
+				t.Errorf("List(limit=%d) page 1 returned %d entries, want %d",
+					tt.limit, len(page1.Entries), tt.wantPage1Len)
+			}
+			if got := page1.NextCursor != nil; got != tt.wantCursor {
+				t.Errorf("List(limit=%d) page 1 has a next cursor = %t, want %t",
+					tt.limit, got, tt.wantCursor)
+			}
 			for i := 1; i < len(page1.Entries); i++ {
-				assert.False(t, page1.Entries[i-1].CreatedAt.Before(page1.Entries[i].CreatedAt), "page1 not newest-first at index %d", i)
+				if page1.Entries[i-1].CreatedAt.Before(page1.Entries[i].CreatedAt) {
+					t.Errorf("List() page 1 is not newest-first at index %d: %s before %s",
+						i, page1.Entries[i-1].CreatedAt, page1.Entries[i].CreatedAt)
+				}
 			}
 			if !tt.wantCursor {
 				return
 			}
 
 			page2, err := svc.List(ctx, userA, tt.limit, page1.NextCursor)
-			require.NoError(t, err)
-			assert.Len(t, page2.Entries, tt.wantPage2Len)
+			if err != nil {
+				t.Fatalf("List(limit=%d, cursor) error = %v, want nil", tt.limit, err)
+			}
+			if len(page2.Entries) != tt.wantPage2Len {
+				t.Errorf("List(limit=%d, cursor) page 2 returned %d entries, want %d",
+					tt.limit, len(page2.Entries), tt.wantPage2Len)
+			}
 			if len(page2.Entries) > 0 {
-				assert.True(t, page2.Entries[0].CreatedAt.Before(page1.Entries[len(page1.Entries)-1].CreatedAt), "pages overlap across the cursor boundary")
+				lastOfPage1 := page1.Entries[len(page1.Entries)-1].CreatedAt
+				if !page2.Entries[0].CreatedAt.Before(lastOfPage1) {
+					t.Errorf("pages overlap across the cursor boundary: page 2 starts at %s, page 1 ended at %s",
+						page2.Entries[0].CreatedAt, lastOfPage1)
+				}
 			}
 		})
 	}
@@ -201,7 +241,9 @@ func TestDiaryService_Get(t *testing.T) {
 			svc := newDiaryService()
 			ctx := context.Background()
 			entry, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "秘密"})
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Create() error = %v, want nil", err)
+			}
 			id := entry.ID
 			if !tt.useRealID {
 				id = "does-not-exist"
@@ -209,11 +251,17 @@ func TestDiaryService_Get(t *testing.T) {
 
 			got, err := svc.Get(ctx, tt.reader, id)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Get(%q, %q) error = %v, want %v", tt.reader, id, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantBody, got.BodyText)
+			if err != nil {
+				t.Fatalf("Get(%q, %q) error = %v, want nil", tt.reader, id, err)
+			}
+			if got.BodyText != tt.wantBody {
+				t.Errorf("Get(%q, %q) body_text = %q, want %q", tt.reader, id, got.BodyText, tt.wantBody)
+			}
 		})
 	}
 }
@@ -270,7 +318,9 @@ func TestDiaryService_Update(t *testing.T) {
 			svc := newDiaryService()
 			ctx := context.Background()
 			entry, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "秘密"})
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Create() error = %v, want nil", err)
+			}
 			id := entry.ID
 			if !tt.useRealID {
 				id = "does-not-exist"
@@ -278,17 +328,32 @@ func TestDiaryService_Update(t *testing.T) {
 
 			updated, err := svc.Update(ctx, tt.updater, id, tt.newBody, tt.newMood)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Update(%q, %q) error = %v, want %v", tt.updater, id, err, tt.wantErr)
+				}
 			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.newBody, updated.BodyText)
-				assert.Equal(t, tt.newMood, updated.Mood)
+				if err != nil {
+					t.Fatalf("Update(%q, %q) error = %v, want nil", tt.updater, id, err)
+				}
+				if updated.BodyText != tt.newBody {
+					t.Errorf("Update() body_text = %q, want %q", updated.BodyText, tt.newBody)
+				}
+				if diff := cmp.Diff(tt.newMood, updated.Mood); diff != "" {
+					t.Errorf("Update() mood mismatch (-want +got):\n%s", diff)
+				}
 			}
 
+			// Re-read as the owner: a rejected update must not have changed anything.
 			owner, err := svc.Get(ctx, userA, entry.ID)
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantOwnerBody, owner.BodyText)
-			assert.Equal(t, tt.wantOwnerMood, owner.Mood)
+			if err != nil {
+				t.Fatalf("Get(owner, %q) error = %v, want nil", entry.ID, err)
+			}
+			if owner.BodyText != tt.wantOwnerBody {
+				t.Errorf("owner's body_text = %q, want %q", owner.BodyText, tt.wantOwnerBody)
+			}
+			if diff := cmp.Diff(tt.wantOwnerMood, owner.Mood); diff != "" {
+				t.Errorf("owner's mood mismatch (-want +got):\n%s", diff)
+			}
 		})
 	}
 }
@@ -345,7 +410,9 @@ func TestDiaryService_Delete(t *testing.T) {
 			svc := newDiaryService()
 			ctx := context.Background()
 			entry, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "消す"})
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Create() error = %v, want nil", err)
+			}
 			id := entry.ID
 			if !tt.useRealID {
 				id = "does-not-exist"
@@ -356,14 +423,23 @@ func TestDiaryService_Delete(t *testing.T) {
 				derr = svc.Delete(ctx, tt.deleter, id)
 			}
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, derr, tt.wantErr)
-			} else {
-				assert.NoError(t, derr)
+				if !errors.Is(derr, tt.wantErr) {
+					t.Fatalf("Delete(%q, %q) x%d error = %v, want %v",
+						tt.deleter, id, tt.deleteCount, derr, tt.wantErr)
+				}
+			} else if derr != nil {
+				t.Fatalf("Delete(%q, %q) x%d error = %v, want nil",
+					tt.deleter, id, tt.deleteCount, derr)
 			}
 
 			page, err := svc.List(ctx, userA, 0, nil)
-			require.NoError(t, err)
-			assert.Len(t, page.Entries, tt.wantOwnerList)
+			if err != nil {
+				t.Fatalf("List() error = %v, want nil", err)
+			}
+			if len(page.Entries) != tt.wantOwnerList {
+				t.Errorf("owner's List() returned %d entries, want %d",
+					len(page.Entries), tt.wantOwnerList)
+			}
 		})
 	}
 }
@@ -379,49 +455,88 @@ func TestDiaryService_Sync(t *testing.T) {
 			name: "エポックからの全同期は生存エントリを返す",
 			run: func(t *testing.T, svc *service.DiaryService, ctx context.Context) {
 				_, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "v1"})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("Create() error = %v, want nil", err)
+				}
 
 				full, err := svc.Sync(ctx, userA, time.Time{})
-				require.NoError(t, err)
-				require.Len(t, full.Entries, 1)
-				assert.Nil(t, full.Entries[0].DeletedAt)
+				if err != nil {
+					t.Fatalf("Sync(epoch) error = %v, want nil", err)
+				}
+				if len(full.Entries) != 1 {
+					t.Fatalf("Sync(epoch) returned %d entries, want 1", len(full.Entries))
+				}
+				if full.Entries[0].DeletedAt != nil {
+					t.Errorf("Sync(epoch) entry deleted_at = %s, want nil (entry is alive)",
+						*full.Entries[0].DeletedAt)
+				}
 			},
 		},
 		{
 			name: "論理削除は差分にトゥームストーンとして乗る",
 			run: func(t *testing.T, svc *service.DiaryService, ctx context.Context) {
 				entry, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "消す"})
-				require.NoError(t, err)
-				require.NoError(t, svc.Delete(ctx, userA, entry.ID))
+				if err != nil {
+					t.Fatalf("Create() error = %v, want nil", err)
+				}
+				if err := svc.Delete(ctx, userA, entry.ID); err != nil {
+					t.Fatalf("Delete(%q) error = %v, want nil", entry.ID, err)
+				}
 
 				delta, err := svc.Sync(ctx, userA, time.Time{})
-				require.NoError(t, err)
-				require.Len(t, delta.Entries, 1)
-				assert.NotNil(t, delta.Entries[0].DeletedAt)
+				if err != nil {
+					t.Fatalf("Sync(epoch) error = %v, want nil", err)
+				}
+				if len(delta.Entries) != 1 {
+					t.Fatalf("Sync(epoch) returned %d entries, want 1 tombstone", len(delta.Entries))
+				}
+				if delta.Entries[0].DeletedAt == nil {
+					t.Error("Sync(epoch) entry deleted_at = nil, want a tombstone timestamp")
+				}
 			},
 		},
 		{
 			name: "ウォーターマーク以降の差分は変更分だけ返す",
 			run: func(t *testing.T, svc *service.DiaryService, ctx context.Context) {
 				entry, _, err := svc.Create(ctx, userA, service.CreateDiaryInput{ClientID: clientID(1), BodyText: "v1"})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("Create() error = %v, want nil", err)
+				}
 
 				full, err := svc.Sync(ctx, userA, time.Time{})
-				require.NoError(t, err)
-				require.Len(t, full.Entries, 1)
+				if err != nil {
+					t.Fatalf("Sync(epoch) error = %v, want nil", err)
+				}
+				if len(full.Entries) != 1 {
+					t.Fatalf("Sync(epoch) returned %d entries, want 1", len(full.Entries))
+				}
 
-				_, err = svc.Update(ctx, userA, entry.ID, "v2", ptr("calm"))
-				require.NoError(t, err)
+				if _, err := svc.Update(ctx, userA, entry.ID, "v2", ptr("calm")); err != nil {
+					t.Fatalf("Update(%q) error = %v, want nil", entry.ID, err)
+				}
 
 				delta, err := svc.Sync(ctx, userA, full.ServerTime)
-				require.NoError(t, err)
-				require.Len(t, delta.Entries, 1)
-				assert.Equal(t, "v2", delta.Entries[0].BodyText)
-				assert.Equal(t, ptr("calm"), delta.Entries[0].Mood)
+				if err != nil {
+					t.Fatalf("Sync(watermark) error = %v, want nil", err)
+				}
+				if len(delta.Entries) != 1 {
+					t.Fatalf("Sync(watermark) returned %d entries, want 1", len(delta.Entries))
+				}
+				if got := delta.Entries[0].BodyText; got != "v2" {
+					t.Errorf("Sync(watermark) entry body_text = %q, want %q", got, "v2")
+				}
+				if diff := cmp.Diff(ptr("calm"), delta.Entries[0].Mood); diff != "" {
+					t.Errorf("Sync(watermark) entry mood mismatch (-want +got):\n%s", diff)
+				}
 
+				// Syncing again from the new watermark must return nothing.
 				after, err := svc.Sync(ctx, userA, delta.ServerTime)
-				require.NoError(t, err)
-				assert.Empty(t, after.Entries)
+				if err != nil {
+					t.Fatalf("Sync(new watermark) error = %v, want nil", err)
+				}
+				if len(after.Entries) != 0 {
+					t.Errorf("Sync(new watermark) returned %d entries, want 0", len(after.Entries))
+				}
 			},
 		},
 	}
@@ -526,12 +641,20 @@ func TestDiaryService_Calendar(t *testing.T) {
 					BodyText:  "entry",
 					CreatedAt: at,
 				})
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("seeding entry at %s: Create() error = %v, want nil", at, err)
+				}
 			}
 
 			days, err := svc.Calendar(ctx, userA, tt.year, tt.month, tt.loc)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, days)
+			if err != nil {
+				t.Fatalf("Calendar(%d, %d, %s) error = %v, want nil",
+					tt.year, tt.month, tt.loc, err)
+			}
+			if diff := cmp.Diff(tt.want, days); diff != "" {
+				t.Errorf("Calendar(%d, %d, %s) mismatch (-want +got):\n%s",
+					tt.year, tt.month, tt.loc, diff)
+			}
 		})
 	}
 }

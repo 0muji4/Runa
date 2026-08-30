@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
@@ -115,7 +113,7 @@ func do(t *testing.T, r http.Handler, method, path, bearer, body string) *http.R
 	}
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
-	return rec.Result()
+	return finish(t, req, []byte(body), rec)
 }
 
 func doAdmin(t *testing.T, r http.Handler, method, path, token, body string) *http.Response {
@@ -127,20 +125,56 @@ func doAdmin(t *testing.T, r http.Handler, method, path, token, body string) *ht
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
-	return rec.Result()
+	return finish(t, req, []byte(body), rec)
+}
+
+// finish turns a recorder into a response and validates the exchange against
+// api/openapi.yaml, which makes every flow test here a contract test too.
+func finish(t *testing.T, req *http.Request, reqBody []byte, rec *httptest.ResponseRecorder) *http.Response {
+	t.Helper()
+	res := rec.Result()
+	res.Request = req
+
+	// Read here, handed back as a fresh reader so the caller sees an unread stream.
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("reading the response body of %s %s: %v",
+			req.Method, req.URL.RequestURI(), err)
+	}
+	res.Body.Close()
+	res.Body = io.NopCloser(bytes.NewReader(resBody))
+
+	checkAgainstSpec(t, req, res, reqBody, resBody)
+	return res
+}
+
+// checkStatus verifies the response status, reporting the request and body on a
+// mismatch so the failure is diagnosable without re-running.
+func checkStatus(t *testing.T, res *http.Response, want int) {
+	t.Helper()
+	if res.StatusCode == want {
+		return
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	t.Fatalf("%s %s = %d, want %d (body: %s)",
+		res.Request.Method, res.Request.URL.RequestURI(), res.StatusCode, want, body)
 }
 
 func decode(t *testing.T, res *http.Response, dst any) {
 	t.Helper()
 	defer res.Body.Close()
-	require.NoError(t, json.NewDecoder(res.Body).Decode(dst))
+	if err := json.NewDecoder(res.Body).Decode(dst); err != nil {
+		t.Fatalf("decoding %T from %s %s: %v",
+			dst, res.Request.Method, res.Request.URL.RequestURI(), err)
+	}
 }
 
 func signupToken(t *testing.T, r http.Handler, email string) string {
 	t.Helper()
 	res := do(t, r, http.MethodPost, "/api/v1/auth/signup", "",
 		`{"email":"`+email+`","password":"password123","display_name":"U"}`)
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	checkStatus(t, res, http.StatusCreated)
 	var tok tokens
 	decode(t, res, &tok)
 	return tok.AccessToken
@@ -150,7 +184,7 @@ func createOn(t *testing.T, r http.Handler, token, clientID, createdAt string) {
 	t.Helper()
 	res := do(t, r, http.MethodPost, "/api/v1/diary", token,
 		`{"body_text":"月あかり","client_id":"`+clientID+`","created_at":"`+createdAt+`"}`)
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	checkStatus(t, res, http.StatusCreated)
 	res.Body.Close()
 }
 
@@ -158,7 +192,7 @@ func createMood(t *testing.T, r http.Handler, token, clientID, createdAt, mood s
 	t.Helper()
 	res := do(t, r, http.MethodPost, "/api/v1/diary", token,
 		`{"body_text":"月あかり","client_id":"`+clientID+`","created_at":"`+createdAt+`","mood":"`+mood+`"}`)
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	checkStatus(t, res, http.StatusCreated)
 	res.Body.Close()
 }
 

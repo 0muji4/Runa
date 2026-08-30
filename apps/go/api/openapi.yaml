@@ -1217,7 +1217,9 @@ components:
                 - provider_verification_failed
                 - rate_limited
                 - not_found
+                - forbidden
                 - internal_error
+                - service_unavailable
             message:
               type: string
             details:

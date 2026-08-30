@@ -2,13 +2,12 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
 	"github.com/0muji4/Runa/apps/go/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type stubVerifier struct {
@@ -77,22 +76,42 @@ func TestAuthService_SignupEmail(t *testing.T) {
 			ctx := context.Background()
 
 			if tt.seedEmail != "" {
-				_, err := svc.SignupEmail(ctx, tt.seedEmail, "password123", "")
-				require.NoError(t, err)
+				if _, err := svc.SignupEmail(ctx, tt.seedEmail, "password123", ""); err != nil {
+					t.Fatalf("seeding %q: SignupEmail() error = %v, want nil", tt.seedEmail, err)
+				}
 			}
 
 			res, err := svc.SignupEmail(ctx, tt.email, tt.password, tt.displayName)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("SignupEmail(%q) error = %v, want %v", tt.email, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.NotEmpty(t, res.Tokens.AccessToken)
-			assert.NotEmpty(t, res.Tokens.RefreshToken)
-			require.NotNil(t, res.User.Email)
-			assert.Equal(t, tt.wantEmail, *res.User.Email)
-			assert.Equal(t, tt.wantProvider, res.User.AuthProvider)
-			assert.Equal(t, tt.wantDisplayName, res.User.DisplayName)
+			if err != nil {
+				t.Fatalf("SignupEmail(%q) error = %v, want nil", tt.email, err)
+			}
+			if res.Tokens.AccessToken == "" {
+				t.Error("SignupEmail() access token is empty, want a token")
+			}
+			if res.Tokens.RefreshToken == "" {
+				t.Error("SignupEmail() refresh token is empty, want a token")
+			}
+			if res.User.Email == nil {
+				t.Fatalf("SignupEmail(%q) user.email = nil, want %q", tt.email, tt.wantEmail)
+			}
+			if *res.User.Email != tt.wantEmail {
+				t.Errorf("SignupEmail(%q) user.email = %q, want %q",
+					tt.email, *res.User.Email, tt.wantEmail)
+			}
+			if res.User.AuthProvider != tt.wantProvider {
+				t.Errorf("SignupEmail(%q) auth_provider = %q, want %q",
+					tt.email, res.User.AuthProvider, tt.wantProvider)
+			}
+			if res.User.DisplayName != tt.wantDisplayName {
+				t.Errorf("SignupEmail(%q, display_name=%q) display_name = %q, want %q",
+					tt.email, tt.displayName, res.User.DisplayName, tt.wantDisplayName)
+			}
 		})
 	}
 }
@@ -132,17 +151,26 @@ func TestAuthService_LoginEmail(t *testing.T) {
 
 			svc := newAuthService(memauth.New(), nil, nil)
 			ctx := context.Background()
-			_, err := svc.SignupEmail(ctx, "user@example.com", "password123", "")
-			require.NoError(t, err)
+			if _, err := svc.SignupEmail(ctx, "user@example.com", "password123", ""); err != nil {
+				t.Fatalf("SignupEmail() error = %v, want nil", err)
+			}
 
 			res, err := svc.LoginEmail(ctx, tt.email, tt.password)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("LoginEmail(%q) error = %v, want %v", tt.email, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.NotEmpty(t, res.Tokens.AccessToken)
-			assert.NotEmpty(t, res.Tokens.RefreshToken)
+			if err != nil {
+				t.Fatalf("LoginEmail(%q) error = %v, want nil", tt.email, err)
+			}
+			if res.Tokens.AccessToken == "" {
+				t.Error("LoginEmail() access token is empty, want a token")
+			}
+			if res.Tokens.RefreshToken == "" {
+				t.Error("LoginEmail() refresh token is empty, want a token")
+			}
 		})
 	}
 }
@@ -157,11 +185,17 @@ func TestAuthService_Refresh(t *testing.T) {
 		svc = newAuthService(memauth.New(), nil, nil)
 		ctx = context.Background()
 		res, err := svc.SignupEmail(ctx, "rot@example.com", "password123", "")
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("SignupEmail() error = %v, want nil", err)
+		}
 		first = res.Tokens.RefreshToken
 		next, err := svc.Refresh(ctx, first)
-		require.NoError(t, err)
-		require.NotEqual(t, first, next.RefreshToken)
+		if err != nil {
+			t.Fatalf("Refresh() error = %v, want nil", err)
+		}
+		if next.RefreshToken == first {
+			t.Fatalf("Refresh() returned the same refresh token %q; it must rotate", first)
+		}
 		return svc, ctx, first, next.RefreshToken
 	}
 
@@ -193,12 +227,17 @@ func TestAuthService_Refresh(t *testing.T) {
 
 			svc, ctx, first, rotated := setup(t)
 
-			_, err := svc.Refresh(ctx, tt.token(first, rotated))
+			token := tt.token(first, rotated)
+			_, err := svc.Refresh(ctx, token)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Refresh(%q) error = %v, want %v", token, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Refresh(%q) error = %v, want nil", token, err)
+			}
 		})
 	}
 }
@@ -230,15 +269,22 @@ func TestAuthService_Logout(t *testing.T) {
 			svc := newAuthService(memauth.New(), nil, nil)
 			ctx := context.Background()
 			res, err := svc.SignupEmail(ctx, "out@example.com", "password123", "")
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("SignupEmail() error = %v, want nil", err)
+			}
 			token := res.Tokens.RefreshToken
 
+			// Logout is idempotent: repeating it must stay a no-op, not an error.
 			for i := 0; i < tt.logoutCount; i++ {
-				assert.NoError(t, svc.Logout(ctx, token))
+				if err := svc.Logout(ctx, token); err != nil {
+					t.Fatalf("Logout() call %d error = %v, want nil", i+1, err)
+				}
 			}
 
-			_, err = svc.Refresh(ctx, token)
-			assert.ErrorIs(t, err, tt.wantRefreshErr)
+			if _, err := svc.Refresh(ctx, token); !errors.Is(err, tt.wantRefreshErr) {
+				t.Errorf("Refresh() after %d logout(s) error = %v, want %v",
+					tt.logoutCount, err, tt.wantRefreshErr)
+			}
 		})
 	}
 }
@@ -270,7 +316,9 @@ func TestAuthService_Me(t *testing.T) {
 			svc := newAuthService(memauth.New(), nil, nil)
 			ctx := context.Background()
 			res, err := svc.SignupEmail(ctx, "me@example.com", "password123", "")
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("SignupEmail() error = %v, want nil", err)
+			}
 
 			userID := res.User.ID
 			if !tt.useRealID {
@@ -279,11 +327,17 @@ func TestAuthService_Me(t *testing.T) {
 
 			got, err := svc.Me(ctx, userID)
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Me(%q) error = %v, want %v", userID, err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, userID, got.ID)
+			if err != nil {
+				t.Fatalf("Me(%q) error = %v, want nil", userID, err)
+			}
+			if got.ID != userID {
+				t.Errorf("Me(%q) id = %q, want %q", userID, got.ID, userID)
+			}
 		})
 	}
 }
@@ -306,9 +360,15 @@ func TestAuthService_LoginApple(t *testing.T) {
 				svc := newAppleService()
 
 				res, err := svc.LoginApple(context.Background(), "id-token", "")
-				require.NoError(t, err)
-				assert.Equal(t, "apple", res.User.AuthProvider)
-				assert.NotNil(t, res.User.AppleSub)
+				if err != nil {
+					t.Fatalf("LoginApple() error = %v, want nil", err)
+				}
+				if res.User.AuthProvider != "apple" {
+					t.Errorf("LoginApple() auth_provider = %q, want %q", res.User.AuthProvider, "apple")
+				}
+				if res.User.AppleSub == nil {
+					t.Error("LoginApple() user.apple_sub = nil, want the provider subject")
+				}
 			},
 		},
 		{
@@ -318,10 +378,17 @@ func TestAuthService_LoginApple(t *testing.T) {
 				ctx := context.Background()
 
 				first, err := svc.LoginApple(ctx, "id-token", "")
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("first LoginApple() error = %v, want nil", err)
+				}
 				second, err := svc.LoginApple(ctx, "id-token", "")
-				require.NoError(t, err)
-				assert.Equal(t, first.User.ID, second.User.ID)
+				if err != nil {
+					t.Fatalf("second LoginApple() error = %v, want nil", err)
+				}
+				if second.User.ID != first.User.ID {
+					t.Errorf("second LoginApple() user id = %q, want the first login's id %q",
+						second.User.ID, first.User.ID)
+				}
 			},
 		},
 	}
@@ -362,12 +429,20 @@ func TestAuthService_LoginGoogle(t *testing.T) {
 
 			res, err := svc.LoginGoogle(context.Background(), "token")
 			if tt.wantErr != nil {
-				assert.ErrorIs(t, err, tt.wantErr)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("LoginGoogle() error = %v, want %v", err, tt.wantErr)
+				}
 				return
 			}
-			require.NoError(t, err)
-			assert.Equal(t, "google", res.User.AuthProvider)
-			assert.NotNil(t, res.User.GoogleSub)
+			if err != nil {
+				t.Fatalf("LoginGoogle() error = %v, want nil", err)
+			}
+			if res.User.AuthProvider != "google" {
+				t.Errorf("LoginGoogle() auth_provider = %q, want %q", res.User.AuthProvider, "google")
+			}
+			if res.User.GoogleSub == nil {
+				t.Error("LoginGoogle() user.google_sub = nil, want the provider subject")
+			}
 		})
 	}
 }

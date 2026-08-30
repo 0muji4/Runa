@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/require"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
@@ -29,13 +28,32 @@ func discardLogger() *slog.Logger {
 func decodeJSON[T any](t *testing.T, res *http.Response) T {
 	t.Helper()
 	var v T
-	require.NoError(t, json.NewDecoder(res.Body).Decode(&v))
+	if err := json.NewDecoder(res.Body).Decode(&v); err != nil {
+		t.Fatalf("decoding %T from the response body: %v", v, err)
+	}
 	return v
 }
 
 func decodeError(t *testing.T, res *http.Response) errorEnvelope {
 	t.Helper()
 	return decodeJSON[errorEnvelope](t, res)
+}
+
+// checkErrorEnvelope verifies the API error envelope in res. wantCode "" skips the
+// code check; wantDetails < 0 skips the details-length check.
+func checkErrorEnvelope(t *testing.T, res *http.Response, wantCode ErrorCode, wantDetails int) {
+	t.Helper()
+	if wantCode == "" && wantDetails < 0 {
+		return
+	}
+	env := decodeError(t, res)
+	if wantCode != "" && env.Error.Code != wantCode {
+		t.Errorf("error code = %q, want %q", env.Error.Code, wantCode)
+	}
+	if wantDetails >= 0 && len(env.Error.Details) != wantDetails {
+		t.Errorf("len(error.details) = %d, want %d (details: %+v)",
+			len(env.Error.Details), wantDetails, env.Error.Details)
+	}
 }
 
 func newAuthHandler() *Auth {
@@ -101,6 +119,34 @@ func createDiaryEntry(t *testing.T, r http.Handler, clientID, bodyText string) d
 	res := doDiary(t, r, http.MethodPost, "/diary",
 		fmt.Sprintf(`{"body_text":%q,"client_id":%q}`, bodyText, clientID))
 	defer res.Body.Close()
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("POST /diary (client_id %q) = %d, want %d",
+			clientID, res.StatusCode, http.StatusCreated)
+	}
 	return decodeJSON[diaryEntryResponse](t, res)
+}
+
+// checkTokensResponse verifies the token envelope returned by signup and login:
+// both tokens present, the fixed token type, and the echoed user email.
+func checkTokensResponse(t *testing.T, res *http.Response, wantEmail string) {
+	t.Helper()
+	got := decodeJSON[authTokensResponse](t, res)
+	if got.AccessToken == "" {
+		t.Error("access_token is empty, want a token")
+	}
+	if got.RefreshToken == "" {
+		t.Error("refresh_token is empty, want a token")
+	}
+	if got.TokenType != "Bearer" {
+		t.Errorf("token_type = %q, want %q", got.TokenType, "Bearer")
+	}
+	if got.User == nil {
+		t.Fatal("user = nil, want the created user")
+	}
+	if got.User.Email == nil {
+		t.Fatalf("user.email = nil, want %q", wantEmail)
+	}
+	if *got.User.Email != wantEmail {
+		t.Errorf("user.email = %q, want %q", *got.User.Email, wantEmail)
+	}
 }

@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRequireAdmin(t *testing.T) {
@@ -76,8 +74,14 @@ func TestRequireAdmin(t *testing.T) {
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, req)
 
-			assert.Equal(t, tt.wantStatus, rec.Code)
-			assert.Equal(t, tt.wantNext, nextCalled)
+			if rec.Code != tt.wantStatus {
+				t.Errorf("RequireAdmin(%q) with header %q: status = %d, want %d",
+					tt.serverToken, tt.presented, rec.Code, tt.wantStatus)
+			}
+			if nextCalled != tt.wantNext {
+				t.Errorf("RequireAdmin(%q) with header %q: next called = %t, want %t",
+					tt.serverToken, tt.presented, nextCalled, tt.wantNext)
+			}
 		})
 	}
 }

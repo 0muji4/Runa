@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.screens.diary.diaryMoonFor
 import com.runa.android.ui.screens.diary.formatDiaryWeekday
 import com.runa.android.ui.theme.RunaColors
@@ -62,21 +63,7 @@ fun DayRecordsScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 20.dp),
     ) {
-        Text(
-            text = "‹ ${stringResource(R.string.action_back)}",
-            style = MaterialTheme.typography.labelLarge,
-            color = RunaColors.Subtle,
-            modifier = Modifier
-                .padding(top = 14.dp)
-                .clickable(onClick = onBack)
-                .padding(vertical = 6.dp, horizontal = 4.dp),
-        )
-        Text(
-            text = viewModel.dateLabel,
-            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 30.sp, lineHeight = 38.sp),
-            color = RunaColors.Heading,
-            modifier = Modifier.padding(top = 12.dp, bottom = 20.dp),
-        )
+        RunaScreenHeader(title = viewModel.dateLabel, onBack = onBack)
 
         LazyColumn(
             modifier = Modifier.weight(1f),

@@ -1,10 +1,10 @@
 package com.runa.android.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,8 +32,8 @@ import coil.compose.AsyncImage
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaIcons
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.shared.core.state.UiState
 import com.runa.shared.feature.today.HomeViewModel
 import com.runa.shared.feature.today.Today
@@ -66,23 +65,18 @@ fun TodaysSongScreen(
             .background(RunaColors.Background),
     ) {
         Column(Modifier.fillMaxSize()) {
-            // No Material app bar — the header is the page, starting at RunaTabHeaderTop
-            // like the other tab roots.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = RunaTabHeaderTop, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            RunaScreenHeader(
+                title = stringResource(R.string.tab_todays_song),
+                modifier = Modifier.padding(horizontal = 24.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.tab_todays_song),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = RunaColors.Heading,
-                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.today_song_open_archive),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = RunaColors.Accent,
+                    modifier = Modifier
+                        .clickable(onClick = onOpenArchive)
+                        .padding(8.dp),
                 )
-                TextButton(onClick = onOpenArchive) {
-                    Text(stringResource(R.string.today_song_open_archive), color = RunaColors.Accent)
-                }
             }
 
             // Player (or empty state) centered in the space below the header.

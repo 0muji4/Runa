@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.core.state.UiState
@@ -59,21 +60,16 @@ fun DiaryDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, vertical = 18.dp),
+                .padding(horizontal = 28.dp, bottom = 18.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "‹ ${stringResource(R.string.diary_detail_back)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = RunaColors.Subtle,
-                    modifier = Modifier
-                        .clickable(onClick = onBack)
-                        .padding(top = 6.dp, bottom = 6.dp, end = 12.dp)
-                        .weight(1f),
-                )
+            // The date is the screen title; the moon and weekday sit under it as meta.
+            RunaScreenHeader(
+                title = entry?.let { formatDiaryDate(it.createdAtEpochMs) },
+                onBack = onBack,
+            ) {
                 Text(
                     text = stringResource(R.string.diary_action_edit),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = RunaColors.Subtle,
                     modifier = Modifier
                         .clickable { onEdit(clientId) }
@@ -81,7 +77,7 @@ fun DiaryDetailScreen(
                 )
                 Text(
                     text = stringResource(R.string.diary_action_delete),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = RunaColors.Accent,
                     modifier = Modifier
                         .clickable { confirmDelete = true }
@@ -91,24 +87,16 @@ fun DiaryDetailScreen(
 
             if (entry != null) {
                 val moon = remember(entry.createdAtEpochMs) { diaryMoonFor(entry.createdAtEpochMs) }
-                Spacer(Modifier.height(18.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     MoonPhaseDisc(illumination = moon.illumination, waxing = moon.waxing, diameter = 44.dp)
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = formatDiaryDate(entry.createdAtEpochMs),
-                            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 26.sp, lineHeight = 32.sp),
-                            color = RunaColors.Heading,
-                        )
-                        Text(
-                            text = "${moon.name}　・　${formatDiaryWeekday(entry.createdAtEpochMs)}",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = RunaColors.Subtle,
-                        )
-                    }
+                    Text(
+                        text = "${moon.name}　・　${formatDiaryWeekday(entry.createdAtEpochMs)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = RunaColors.Subtle,
+                    )
                 }
                 Spacer(Modifier.height(28.dp))
                 Text(

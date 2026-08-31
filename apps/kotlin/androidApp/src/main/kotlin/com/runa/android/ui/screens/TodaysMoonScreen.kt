@@ -1,9 +1,7 @@
 package com.runa.android.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.core.state.UiState
@@ -46,19 +45,15 @@ fun TodaysMoonScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Box(
+    Column(
         Modifier
             .fillMaxSize()
-            .background(RunaColors.Background),
+            .background(RunaColors.Background)
+            .padding(horizontal = 32.dp),
     ) {
-        Text(
-            text = "‹ ${stringResource(R.string.action_back)}",
-            style = MaterialTheme.typography.labelLarge,
-            color = RunaColors.Subtle,
-            modifier = Modifier
-                .padding(top = 14.dp, start = 20.dp)
-                .clickable(onClick = onBack)
-                .padding(vertical = 6.dp, horizontal = 4.dp),
+        RunaScreenHeader(
+            title = stringResource(R.string.todays_moon_label),
+            onBack = onBack,
         )
 
         // Pure local computation: settles to Content synchronously; Loading/Empty/
@@ -70,19 +65,10 @@ fun TodaysMoonScreen(
 @Composable
 private fun MoonContent(moon: TodayMoon) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = stringResource(R.string.todays_moon_label),
-            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 15.sp),
-            color = RunaColors.Subtle,
-        )
-        Spacer(Modifier.height(36.dp))
-
         MoonPhaseDisc(
             illumination = moon.illumination.toFloat(),
             waxing = moonIsWaxing(moon.phaseKey),

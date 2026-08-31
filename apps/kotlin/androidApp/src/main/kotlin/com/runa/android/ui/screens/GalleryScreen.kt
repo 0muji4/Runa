@@ -48,12 +48,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.screens.gallery.ImageNormalizer
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.RunaTabHeaderTop
-import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.ZenKakuGothicNew
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
@@ -146,19 +145,12 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
 
 @Composable
 private fun GalleryHeader(onAdd: () -> Unit) {
-    Box(Modifier.fillMaxWidth().padding(top = RunaTabHeaderTop, bottom = 4.dp)) {
-        Text(
-            text = stringResource(R.string.gallery_title),
-            style = TextStyle(fontFamily = ShipporiMincho, fontSize = 26.sp, letterSpacing = 6.sp),
-            color = RunaColors.Heading,
-            modifier = Modifier.align(Alignment.Center),
-        )
+    RunaScreenHeader(title = stringResource(R.string.gallery_title)) {
         Text(
             text = "＋",
             style = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 24.sp),
             color = RunaColors.Subtle,
             modifier = Modifier
-                .align(Alignment.CenterEnd)
                 .clip(RoundedCornerShape(20.dp))
                 .clickable(onClick = onAdd)
                 .padding(horizontal = 8.dp, vertical = 4.dp),

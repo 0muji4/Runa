@@ -30,6 +30,7 @@ import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaLoadingView
 import com.runa.android.ui.components.RunaOfflineView
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.CormorantGaramond
 import com.runa.android.ui.theme.RunaColors
@@ -67,16 +68,9 @@ fun CalendarScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 20.dp),
     ) {
-        // Slim back affordance (this screen is pushed from the diary tab).
-        Text(
-            text = "‹ ${stringResource(R.string.action_back)}",
-            style = MaterialLabel,
-            color = RunaColors.Subtle,
-            modifier = Modifier
-                .padding(top = 14.dp)
-                .clickable(onClick = onBack)
-                .padding(vertical = 6.dp, horizontal = 4.dp),
-        )
+        // No screen title here — the month stepper below is the heading, so this
+        // screen takes the header's back affordance and top offset only.
+        RunaScreenHeader(onBack = onBack)
 
         // Local-first: the grid is effectively always Loading then Content (a month
         // with no records is all-zero counts). Non-content branches fall back to the
@@ -246,8 +240,6 @@ private fun CalendarLegend(banner: SyncPhase) {
         }
     }
 }
-
-private val MaterialLabel = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 13.sp)
 
 private fun isoDateOf(day: CalendarDay): String =
     "%04d-%02d-%02d".format(day.year, day.month, day.day)

@@ -181,6 +181,28 @@ curl http://localhost:8080/api/v1/healthz
 - **テスト（commonTest）**: `AppErrorTest`（401→Auth / その他 4xx・5xx→Server / 非 ApiException→Offline）、`DiaryListViewModelTest`（Loading→Empty / Content が `SyncPhase` を帯として保持 / オフライン→復帰で本文を落とさず帯だけ切替）。
 - **ローカル検証の限界**: `shared` は `./gradlew :shared:testDebugUnitTest` で green を確認。JDK17/Xcode 不在のため Android/iOS UI は手レビュー。iOS の SKIE 記号（`UiState`/`AppError`/`SyncPhase` のブリッジ、ジェネリック `data` の型）は実 XCFramework ビルドに対して再整合が必要（[apps/swift/README.md](apps/swift/README.md) の方針に従う）。
 
+### 画面ヘッダー（全画面共通の型）
+
+画面上部の「戻る導線 + 画面タイトル + 右アクション」を**単一の型**に統一する。確定デザインはヘッダーを 4 型（左寄せ大見出し / 中央中サイズ / 中央小・淡色 / 見出しなし）に描き分けているが、実装では**すべて左寄せ大見出しの 1 型**に寄せる。ホーム（06）だけは月と引用が主役の画面のため見出しを立てない。
+
+下表を唯一の正典とし、両クライアントで一致させる（`./hack/check-header-tokens.sh` が検証する）。
+
+| トークン | 値 | 用途 |
+| --- | --- | --- |
+| headerTitleSize | 34 | 画面タイトルの文字サイズ |
+| headerTitleLineHeight | 44 | 画面タイトルの行高 |
+| headerLabelSize | 13 | 「‹ 戻る」とヘッダー右アクションの文字サイズ |
+| headerTopTab | 40 | タブルートのヘッダー上端（システムバー inset の内側） |
+| headerTopPushed | 14 | push 画面の「‹ 戻る」上端 |
+| headerBackGap | 24 | 「‹ 戻る」→ タイトルの間隔 |
+| headerBottom | 24 | タイトル → 本文の間隔 |
+
+- **書体と色**: タイトルは見出し書体（Shippori Mincho）＋ `heading`、戻るとアクションは本文書体（Zen Kaku Gothic New）＋ 戻るは `subtle`。**ウェイトは指定しない**（[apps/kotlin/androidApp/.../ui/theme/Type.kt](apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/theme/Type.kt) の方針どおり、強弱はサイズと色で表す）。タイトルに字送り（`letterSpacing` / `tracking`）は付けない。
+- **戻るは両 OS とも自前の「‹ 戻る」**（`action_back`）。Material `TopAppBar` も SwiftUI の標準戻るボタンも使わない。iOS は `.toolbar(.hidden, for: .navigationBar)` で標準バーを隠すため、**設定系 5 画面ではスワイプバックが効かなくなる**（既存の カレンダー / 今日の月 / インサイト / 日別記録 と同じ挙動）。
+- **水平余白はヘッダーが持たない**。各画面のコンテナの水平 padding を継承する（画面ごとの本文余白と必ず揃うようにするため）。
+- **共通コンポーネント**: Android `ui/components/RunaScreenHeader.kt`、iOS `Theme/RunaScreenHeader.swift`。ヘッダーを持つ画面はこれ以外の実装を書かない。
+- **対象画面**: 07 きょうの一曲 / 08 これまでの一曲 / 09 日々の記録 / 11 ダイアリー詳細 / 12 ふりかえりカレンダー（戻るのみ。月ナビはコンテンツ）/ 日別記録 / 13 ギャラリー / 15 今日の月 / 16 インサイト / 19 設定 / 20 テーマ / 21 通知設定 / 22 プライバシー・ロック / 23 アカウント・データ。**対象外**は 06 ホーム（見出しなし）、10 ダイアリー作成、14 画像詳細、01–05 の認証フロー、ロック画面、状態画面。
+
 ### 動作確認
 
 ```sh

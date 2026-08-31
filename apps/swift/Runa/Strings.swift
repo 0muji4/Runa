@@ -60,7 +60,6 @@ enum L {
     static let diaryEditorSaved = "保存しました"
     static let diaryEditorError = "保存できませんでした。"
     static let diaryClose = "閉じる"
-    static let diaryDetailBack = "記録"
     static let diaryActionEdit = "編集"
     static let diaryActionDelete = "削除"
     static let diaryDeleteConfirmTitle = "この記録を削除しますか？"

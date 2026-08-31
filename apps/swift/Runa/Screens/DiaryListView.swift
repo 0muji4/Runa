@@ -70,24 +70,22 @@ struct DiaryListView: View {
 
     private func listBody(entries: [DiaryEntry], sync: SyncPhase) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(L.diaryListTitle)
-                        .font(RunaFonts.heading(34))
-                        .foregroundStyle(runaTheme.heading)
-                    Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                // Outside the spaced stack so the gap below the title is the header's
+                // own, matching every other screen.
+                RunaScreenHeader(title: L.diaryListTitle) {
                     HStack(spacing: 16) {
                         insightLink
                         calendarLink
                     }
                 }
-                .padding(.top, 40)
-                .padding(.bottom, 4)
-                RunaSyncBanner(phase: sync)
-                ForEach(entries, id: \.clientId) { entry in
-                    DiaryCardRow(entry: entry)
-                        .contentShape(Rectangle())
-                        .onTapGesture { path.append(DiaryRoute.detail(clientId: entry.clientId)) }
+                VStack(alignment: .leading, spacing: 16) {
+                    RunaSyncBanner(phase: sync)
+                    ForEach(entries, id: \.clientId) { entry in
+                        DiaryCardRow(entry: entry)
+                            .contentShape(Rectangle())
+                            .onTapGesture { path.append(DiaryRoute.detail(clientId: entry.clientId)) }
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -99,15 +97,13 @@ struct DiaryListView: View {
 
     private func emptyState() -> some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
+            RunaScreenHeader(title: L.diaryListTitle) {
                 HStack(spacing: 16) {
                     insightLink
                     calendarLink
                 }
             }
-            .padding(.top, 40)
-            .padding(.horizontal, RunaSpacing.lg)
+            .padding(.horizontal, 20)
             // Shared empty surface (24) — the diary's own copy over the shared motif.
             RunaEmptyView(
                 title: L.diaryEmptyTitle,
@@ -122,7 +118,7 @@ struct DiaryListView: View {
     private var calendarLink: some View {
         Button { path.append(DiaryRoute.calendar) } label: {
             Text(L.diaryOpenCalendar)
-                .font(RunaFonts.body(13))
+                .font(RunaFonts.headerLabel)
                 .foregroundStyle(runaTheme.accent)
         }
     }
@@ -131,7 +127,7 @@ struct DiaryListView: View {
     private var insightLink: some View {
         Button { path.append(DiaryRoute.insight) } label: {
             Text(L.diaryOpenInsight)
-                .font(RunaFonts.body(13))
+                .font(RunaFonts.headerLabel)
                 .foregroundStyle(runaTheme.accent)
         }
     }

@@ -16,11 +16,9 @@ struct InsightView: View {
             runaTheme.background.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Button { dismiss() } label: {
-                        Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                    }
-                    .padding(.top, 14)
-                    .padding(.vertical, 6)
+                    // The letter title is the screen title, so it shows over every
+                    // state — not just when a letter has been composed.
+                    RunaScreenHeader(title: L.insightLetterTitle, onBack: { dismiss() })
 
                     content
                 }
@@ -113,11 +111,6 @@ struct InsightView: View {
 
     private func letter(_ insight: Insight) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(L.insightLetterTitle)
-                .font(RunaFonts.heading(32))
-                .foregroundStyle(runaTheme.heading)
-                .padding(.top, 16)
-
             Text(insight.narrative.body)
                 .font(RunaFonts.heading(18))
                 .foregroundStyle(runaTheme.body)

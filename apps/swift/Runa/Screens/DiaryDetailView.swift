@@ -18,21 +18,33 @@ struct DiaryDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    topBar
-                    if let entry = model.entry(clientId: clientId) {
+                    let entry = model.entry(clientId: clientId)
+                    // The date is the screen title; the moon and weekday sit under it
+                    // as meta.
+                    RunaScreenHeader(
+                        title: entry.map { DiaryDate.day($0.createdAtEpochMs) },
+                        onBack: { if !path.isEmpty { path.removeLast() } }
+                    ) {
+                        Text(L.diaryActionEdit)
+                            .font(RunaFonts.headerLabel)
+                            .foregroundStyle(runaTheme.subtle)
+                            .padding(8)
+                            .onTapGesture { path.append(DiaryRoute.editor(clientId: clientId)) }
+                        Text(L.diaryActionDelete)
+                            .font(RunaFonts.headerLabel)
+                            .foregroundStyle(runaTheme.accent)
+                            .padding(8)
+                            .onTapGesture { confirmDelete = true }
+                    }
+
+                    if let entry {
                         let moon = DiaryMoonCalc.moon(epochMs: entry.createdAtEpochMs)
                         HStack(spacing: 14) {
                             MoonPhaseDisc(illumination: moon.illumination, waxing: moon.waxing, diameter: 44)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(DiaryDate.day(entry.createdAtEpochMs))
-                                    .font(RunaFonts.heading(26))
-                                    .foregroundStyle(runaTheme.heading)
-                                Text("\(moon.name)　・　\(DiaryDate.weekday(entry.createdAtEpochMs))")
-                                    .font(RunaFonts.body(13))
-                                    .foregroundStyle(runaTheme.subtle)
-                            }
+                            Text("\(moon.name)　・　\(DiaryDate.weekday(entry.createdAtEpochMs))")
+                                .font(RunaFonts.headerLabel)
+                                .foregroundStyle(runaTheme.subtle)
                         }
-                        .padding(.top, RunaSpacing.md)
 
                         Text(entry.bodyText)
                             .font(RunaFonts.heading(18, relativeTo: .body))
@@ -43,7 +55,6 @@ struct DiaryDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, RunaSpacing.md)
-                .padding(.top, RunaSpacing.sm)
             }
         }
         .toolbar(.hidden, for: .navigationBar, .tabBar)
@@ -56,26 +67,5 @@ struct DiaryDetailView: View {
         } message: {
             Text(L.diaryDeleteConfirmBody)
         }
-    }
-
-    private var topBar: some View {
-        HStack(alignment: .center) {
-            Text("‹ " + L.diaryDetailBack)
-                .font(RunaFonts.body(16))
-                .foregroundStyle(runaTheme.subtle)
-                .onTapGesture { if !path.isEmpty { path.removeLast() } }
-            Spacer()
-            Text(L.diaryActionEdit)
-                .font(RunaFonts.body(13))
-                .foregroundStyle(runaTheme.subtle)
-                .padding(8)
-                .onTapGesture { path.append(DiaryRoute.editor(clientId: clientId)) }
-            Text(L.diaryActionDelete)
-                .font(RunaFonts.body(13))
-                .foregroundStyle(runaTheme.accent)
-                .padding(8)
-                .onTapGesture { confirmDelete = true }
-        }
-        .padding(.vertical, 6)
     }
 }

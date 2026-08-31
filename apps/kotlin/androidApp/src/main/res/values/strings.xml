@@ -81,7 +81,6 @@
     <string name="diary_editor_error">保存できませんでした。</string>
     <string name="diary_close">閉じる</string>
 
-    <string name="diary_detail_back">記録</string>
     <string name="diary_action_edit">編集</string>
     <string name="diary_action_delete">削除</string>
     <string name="diary_delete_confirm_title">この記録を削除しますか？</string>

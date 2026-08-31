@@ -32,4 +32,12 @@ enum RunaFonts {
     static func logo(_ size: CGFloat, relativeTo style: Font.TextStyle = .largeTitle) -> Font {
         Font.custom(logoFamily, size: size, relativeTo: style)
     }
+
+    /// The one screen-title style, used by `RunaScreenHeader` and nothing else.
+    /// Pinned by the canon table in README「画面ヘッダー（全画面共通の型）」— it must
+    /// match Android's `headlineLarge` (see `hack/check-header-tokens.sh`).
+    static let screenTitle = heading(34, relativeTo: .largeTitle)
+
+    /// The「‹ 戻る」and header-action style, the label half of the same canon.
+    static let headerLabel = body(13, relativeTo: .footnote)
 }

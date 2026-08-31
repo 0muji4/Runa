@@ -37,37 +37,11 @@ struct SongArchiveView: View {
     var body: some View {
         ZStack {
             runaTheme.background.ignoresSafeArea()
-            List {
-                Section {
-                    ForEach(archive.state?.songs ?? [], id: \.id) { song in
-                        Button {
-                            player.play(song)
-                            dismiss()
-                        } label: {
-                            songRow(song)
-                        }
-                        .listRowBackground(runaTheme.background)
-                    }
-                    if archive.state?.canLoadMore == true {
-                        Button(L.songArchiveLoadMore) { archive.loadNextPage() }
-                            .foregroundStyle(runaTheme.accent)
-                            .listRowBackground(runaTheme.background)
-                    }
-                }
-
-                let history = archive.state?.history ?? []
-                if !history.isEmpty {
-                    Section(L.songArchiveHistory) {
-                        ForEach(history, id: \.id) { entry in
-                            Text("\(entry.title) · \(entry.artist)")
-                                .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                                .listRowBackground(runaTheme.background)
-                        }
-                    }
-                }
+            VStack(spacing: 0) {
+                RunaScreenHeader(title: L.songArchiveTitle, onBack: { dismiss() })
+                    .padding(.horizontal, RunaSpacing.md)
+                archiveList
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
 
             // Empty / initial-loading / load-failure route through the shared state
             // surfaces (over the list, which is offline-tolerant once a page landed).
@@ -75,17 +49,43 @@ struct SongArchiveView: View {
                 stateOverlay
             }
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(L.songArchiveTitle)
-                    .font(RunaFonts.heading(16))
-                    .tracking(4)
-                    .foregroundStyle(runaTheme.subtle)
+    }
+
+    private var archiveList: some View {
+        List {
+            Section {
+                ForEach(archive.state?.songs ?? [], id: \.id) { song in
+                    Button {
+                        player.play(song)
+                        dismiss()
+                    } label: {
+                        songRow(song)
+                    }
+                    .listRowBackground(runaTheme.background)
+                }
+                if archive.state?.canLoadMore == true {
+                    Button(L.songArchiveLoadMore) { archive.loadNextPage() }
+                        .foregroundStyle(runaTheme.accent)
+                        .listRowBackground(runaTheme.background)
+                }
+            }
+
+            let history = archive.state?.history ?? []
+            if !history.isEmpty {
+                Section(L.songArchiveHistory) {
+                    ForEach(history, id: \.id) { entry in
+                        Text("\(entry.title) · \(entry.artist)")
+                            .font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+                            .listRowBackground(runaTheme.background)
+                    }
+                }
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     @ViewBuilder private var stateOverlay: some View {

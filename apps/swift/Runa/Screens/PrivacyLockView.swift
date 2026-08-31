@@ -8,18 +8,15 @@ import Shared
 /// security set up (enabling the lock would then be ineffective).
 struct PrivacyLockView: View {
     @Environment(\.runaTheme) private var runaTheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var obs = AppLockObservable()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(L.lockSettingsTitle)
-                .font(RunaFonts.heading(40))
-                .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.md)
+            RunaScreenHeader(title: L.lockSettingsTitle, onBack: { dismiss() })
 
             LockEmblem()
                 .frame(maxWidth: .infinity)
-                .padding(.top, RunaSpacing.xl)
 
             Text(L.lockSettingsCaption)
                 .font(RunaFonts.heading(18))
@@ -51,8 +48,8 @@ struct PrivacyLockView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }
 }

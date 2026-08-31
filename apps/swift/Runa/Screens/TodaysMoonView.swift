@@ -13,18 +13,11 @@ struct TodaysMoonView: View {
     var body: some View {
         ZStack {
             runaTheme.background.ignoresSafeArea()
-            content
-            VStack {
-                HStack {
-                    Button { dismiss() } label: {
-                        Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                    }
-                    Spacer()
-                }
-                Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                RunaScreenHeader(title: L.todaysMoonLabel, onBack: { dismiss() })
+                content
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
+            .padding(.horizontal, 32)
         }
         .toolbar(.hidden, for: .navigationBar, .tabBar)
     }
@@ -41,11 +34,6 @@ struct TodaysMoonView: View {
     private func moonView(_ moon: TodayMoon) -> some View {
         VStack(spacing: 0) {
             Spacer()
-            Text(L.todaysMoonLabel)
-                .font(RunaFonts.heading(15))
-                .foregroundStyle(runaTheme.subtle)
-            Spacer().frame(height: 36)
-
             MoonPhaseDisc(
                 illumination: CGFloat(moon.illumination),
                 waxing: moonIsWaxing(key: moon.phaseKey),
@@ -74,6 +62,6 @@ struct TodaysMoonView: View {
                 .foregroundStyle(runaTheme.subtle)
                 .padding(.bottom, 40)
         }
-        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)
     }
 }

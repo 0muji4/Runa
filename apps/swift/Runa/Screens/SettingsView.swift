@@ -8,6 +8,7 @@ struct SettingsView: View {
     let onSignOut: () -> Void
 
     @Environment(\.runaTheme) private var runaTheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = ThemeObservable()
     @StateObject private var notification = NotificationSettingsObservable()
     @StateObject private var lock = AppLockObservable()
@@ -15,11 +16,7 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text(L.settingsTitle)
-                    .font(RunaFonts.heading(40))
-                    .foregroundStyle(runaTheme.heading)
-                    .padding(.top, RunaSpacing.md)
-                    .padding(.bottom, RunaSpacing.lg)
+                RunaScreenHeader(title: L.settingsTitle, onBack: { dismiss() })
 
                 NavigationLink { ThemeView() } label: {
                     SettingRow(icon: "moon", label: L.settingsRowTheme, value: themeName(theme.themeId))
@@ -58,8 +55,8 @@ struct SettingsView: View {
             .padding(.horizontal, 28)
         }
         .background(runaTheme.background)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }
 

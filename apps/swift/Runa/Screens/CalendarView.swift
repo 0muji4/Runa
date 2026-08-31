@@ -19,11 +19,9 @@ struct CalendarView: View {
         ZStack(alignment: .top) {
             runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
-                Button { dismiss() } label: {
-                    Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                }
-                .padding(.top, 14)
-                .padding(.vertical, 6)
+                // No screen title here — the month stepper below is the heading, so
+                // this screen takes the header's back affordance and top offset only.
+                RunaScreenHeader(onBack: { dismiss() })
 
                 content
             }

@@ -7,7 +7,8 @@
 # 現在の中身は 3 種類:
 #   1. 日付・曜日・月のフォーマット文字列（Android も DiaryFormat.kt / CalendarScreen.kt に
 #      同じ対称な重複を持つ既存構造。文言ではないので正典には載せない）
-#   2. ナビゲーション記号（‹ › — ・）— Android も同じくコード側のリテラル
+#   2. ナビゲーション記号（‹ › — ・）— Android も同じくコード側のリテラル。
+#      「‹ 戻る」は Theme/RunaScreenHeader.swift の 1 箇所だけ（全画面が共通ヘッダー経由）
 #   3. Diary/DiaryMoon.swift の月相名 — shared の moonPhaseNameJa と重複している。
 #      値は現在一致。寄せるのはロジック変更なので別 PR。
 apps/swift/Runa/Diary/DiaryMoon.swift	三日月
@@ -29,7 +30,6 @@ apps/swift/Runa/Diary/DiaryObservables.swift	金曜
 apps/swift/Runa/Screens/Auth/SignInView.swift	‹ 
 apps/swift/Runa/Screens/CalendarView.swift	\(month.month)月
 apps/swift/Runa/Screens/CalendarView.swift	‹
-apps/swift/Runa/Screens/CalendarView.swift	‹ 
 apps/swift/Runa/Screens/CalendarView.swift	›
 apps/swift/Runa/Screens/CalendarView.swift	土
 apps/swift/Runa/Screens/CalendarView.swift	日
@@ -38,16 +38,13 @@ apps/swift/Runa/Screens/CalendarView.swift	木
 apps/swift/Runa/Screens/CalendarView.swift	水
 apps/swift/Runa/Screens/CalendarView.swift	火
 apps/swift/Runa/Screens/CalendarView.swift	金
-apps/swift/Runa/Screens/DayRecordsView.swift	‹ 
 apps/swift/Runa/Screens/DiaryDetailView.swift	\(moon.name)　・　\(DiaryDate.weekday(entry.createdAtEpochMs))
-apps/swift/Runa/Screens/DiaryDetailView.swift	‹ 
 apps/swift/Runa/Screens/DiaryEditorView.swift	\(DiaryDate.day(dayMs))　\(DiaryDate.weekday(dayMs))
 apps/swift/Runa/Screens/GalleryView.swift	M月d日  HH:mm
 apps/swift/Runa/Screens/HomeView.swift	  —
 apps/swift/Runa/Screens/HomeView.swift	—  
 apps/swift/Runa/Screens/InsightView.swift	‹
-apps/swift/Runa/Screens/InsightView.swift	‹ 
 apps/swift/Runa/Screens/InsightView.swift	›
 apps/swift/Runa/Screens/SongArchiveView.swift	\(entry.title) · \(entry.artist)
 apps/swift/Runa/Screens/SongArchiveView.swift	\(song.artist) · \(song.date)
-apps/swift/Runa/Screens/TodaysMoonView.swift	‹ 
+apps/swift/Runa/Theme/RunaScreenHeader.swift	‹ 

@@ -30,19 +30,11 @@ struct GalleryView: View {
     // MARK: header + toggle
 
     private var header: some View {
-        ZStack {
-            Text(L.galleryTitle)
-                .font(RunaFonts.heading(26))
-                .tracking(6)
-                .foregroundStyle(runaTheme.heading)
-            HStack {
-                Spacer()
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(runaTheme.subtle)
-                }
+        RunaScreenHeader(title: L.galleryTitle) {
+            PhotosPicker(selection: $pickerItem, matching: .images) {
+                Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(runaTheme.subtle)
             }
         }
-        .padding(.top, RunaSpacing.lg)
         .padding(.horizontal, 20)
     }
 

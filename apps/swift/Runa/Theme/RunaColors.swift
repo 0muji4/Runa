@@ -80,6 +80,28 @@ enum RunaSpacing {
     static let xl: CGFloat = 64
 }
 
+/// Header metrics. Every screen header is built from these four values by
+/// `RunaScreenHeader` — screens do not set their own.
+///
+/// They are pinned by the canon table in README「画面ヘッダー（全画面共通の型）」and
+/// must match Android's `RunaHeader`; `hack/check-header-tokens.sh` verifies it.
+/// A dedicated type rather than reuse of `RunaSpacing` is what keeps the two
+/// clients from drifting apart — the tab offset used to be `RunaSpacing.lg` here
+/// and a separate 32dp constant on Android.
+enum RunaHeaderMetrics {
+    /// Top of a bottom-tab root's header, inside the safe area.
+    static let topTab: CGFloat = 40
+
+    /// Top of a pushed screen's「‹ 戻る」row.
+    static let topPushed: CGFloat = 14
+
+    /// 「‹ 戻る」to the title.
+    static let backGap: CGFloat = 24
+
+    /// Title to the body below it.
+    static let bottom: CGFloat = 24
+}
+
 extension Color {
     /// Builds a fully-opaque Color from a 0xRRGGBB integer literal.
     init(hex: UInt32) {

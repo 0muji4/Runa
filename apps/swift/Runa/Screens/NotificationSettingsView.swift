@@ -8,15 +8,13 @@ import Shared
 /// break the screen — the preference is still saved (DoD#3).
 struct NotificationSettingsView: View {
     @Environment(\.runaTheme) private var runaTheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var obs = NotificationSettingsObservable()
     @State private var showPicker = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(L.notifSettingsTitle)
-                .font(RunaFonts.heading(40))
-                .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.md)
+            RunaScreenHeader(title: L.notifSettingsTitle, onBack: { dismiss() })
 
             Toggle(isOn: Binding(
                 get: { obs.enabled },
@@ -62,8 +60,8 @@ struct NotificationSettingsView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showPicker) {
             TimePickerSheet(initial: obs.time) { picked in

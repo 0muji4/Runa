@@ -44,21 +44,14 @@ struct TodaysSongView: View {
             ZStack {
                 runaTheme.background.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    // No nav bar — the header is the page (centered 明朝 label + archive
-                    // link), starting at RunaSpacing.lg like the other tabs.
-                    ZStack {
-                        Text(L.tabTodaysSong)
-                            .font(RunaFonts.heading(16))
-                            .tracking(4)
-                            .foregroundStyle(runaTheme.subtle)
-                        HStack {
-                            Spacer()
-                            NavigationLink(destination: SongArchiveView()) {
-                                Text(L.todaySongOpenArchive).foregroundStyle(runaTheme.accent)
-                            }
+                    // No nav bar — the header is the page, like the other tabs.
+                    RunaScreenHeader(title: L.tabTodaysSong) {
+                        NavigationLink(destination: SongArchiveView()) {
+                            Text(L.todaySongOpenArchive)
+                                .font(RunaFonts.headerLabel)
+                                .foregroundStyle(runaTheme.accent)
                         }
                     }
-                    .padding(.top, RunaSpacing.lg)
                     .padding(.horizontal, RunaSpacing.md)
 
                     ZStack {

@@ -9,16 +9,13 @@ struct AccountView: View {
     let onSignOut: () -> Void
 
     @Environment(\.runaTheme) private var runaTheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var account = AccountObservable()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text(L.accountTitle)
-                    .font(RunaFonts.heading(34))
-                    .foregroundStyle(runaTheme.heading)
-                    .padding(.top, RunaSpacing.md)
-                    .padding(.bottom, RunaSpacing.lg)
+                RunaScreenHeader(title: L.accountTitle, onBack: { dismiss() })
 
                 if let state = account.state {
                     profileSection(state)
@@ -34,8 +31,8 @@ struct AccountView: View {
             .padding(.horizontal, 28)
         }
         .background(runaTheme.background)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .onAppear { account.loadProfile() }
         .alert(L.accountDeleteConfirmTitle, isPresented: deleteConfirmBinding) {

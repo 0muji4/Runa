@@ -21,17 +21,7 @@ struct DayRecordsView: View {
         ZStack {
             runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
-                Button { dismiss() } label: {
-                    Text("‹ " + L.actionBack).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                }
-                .padding(.top, 14)
-                .padding(.vertical, 6)
-
-                Text(model.dateLabel)
-                    .font(RunaFonts.heading(30))
-                    .foregroundStyle(runaTheme.heading)
-                    .padding(.top, 12)
-                    .padding(.bottom, 20)
+                RunaScreenHeader(title: model.dateLabel, onBack: { dismiss() })
 
                 ScrollView {
                     VStack(spacing: 16) {

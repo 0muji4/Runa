@@ -7,6 +7,7 @@ import SwiftUI
 /// keeping the user on this screen.
 struct ThemeView: View {
     @Environment(\.runaTheme) private var runaTheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = ThemeObservable()
 
     private struct Option: Identifiable {
@@ -23,11 +24,7 @@ struct ThemeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(L.themeTitle)
-                .font(RunaFonts.heading(40))
-                .foregroundStyle(runaTheme.heading)
-                .padding(.top, RunaSpacing.md)
-                .padding(.bottom, RunaSpacing.lg)
+            RunaScreenHeader(title: L.themeTitle, onBack: { dismiss() })
 
             ForEach(options) { option in
                 card(option)
@@ -44,8 +41,8 @@ struct ThemeView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
+        // The page draws its own header, so the system bar stays hidden.
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }
 

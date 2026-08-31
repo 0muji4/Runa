@@ -73,8 +73,8 @@ struct HomeView: View {
                 content
             }
             // No nav bar — like the other tabs, the header is the page, so all four
-            // start their content at RunaSpacing.lg below the safe area (the gear rides
-            // on Home's header row).
+            // start their content at RunaHeaderMetrics.topTab below the safe area (the
+            // gear rides on Home's header row).
             .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -98,7 +98,9 @@ struct HomeView: View {
     private func todayView(_ today: Today, offline: Bool) -> some View {
         VStack(spacing: 0) {
             // Header row: drawn moon + date centered (tap → 15 今日の月), settings gear
-            // at the trailing edge. Starts at RunaSpacing.lg, matching the other tabs.
+            // at the trailing edge. Home carries no screen title — the moon and the
+            // quote are the page — but it starts at the shared tab offset so all four
+            // tabs begin at the same height.
             ZStack {
                 NavigationLink {
                     TodaysMoonView()
@@ -125,7 +127,7 @@ struct HomeView: View {
                     .accessibilityLabel(L.tabSettings)
                 }
             }
-            .padding(.top, RunaSpacing.lg)
+            .padding(.top, RunaHeaderMetrics.topTab)
             .padding(.horizontal, RunaSpacing.md)
 
             Spacer()

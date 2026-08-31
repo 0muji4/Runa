@@ -1,7 +1,6 @@
 package com.runa.android.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,14 +18,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.LockEmblem
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.lock.AppLockViewModel
 import org.koin.compose.koinInject
 
@@ -51,23 +49,10 @@ fun PrivacyLockScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 28.dp),
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.action_back),
-            color = RunaColors.Subtle,
-            fontSize = 15.sp,
-            modifier = Modifier.clickable(onClick = onBack),
+        RunaScreenHeader(
+            title = stringResource(R.string.lock_settings_title),
+            onBack = onBack,
         )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.lock_settings_title),
-            color = RunaColors.Heading,
-            fontFamily = ShipporiMincho,
-            fontWeight = FontWeight.Medium,
-            fontSize = 40.sp,
-        )
-
-        Spacer(Modifier.height(48.dp))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             LockEmblem()
         }

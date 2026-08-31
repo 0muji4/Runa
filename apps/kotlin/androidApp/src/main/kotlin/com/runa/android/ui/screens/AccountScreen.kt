@@ -36,15 +36,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.RunaIcons
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.settings.AccountViewModel
 import com.runa.shared.feature.settings.DeletionStatus
 import com.runa.shared.feature.settings.ExportStatus
@@ -123,22 +122,10 @@ fun AccountScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.action_back),
-            color = RunaColors.Subtle,
-            fontSize = 15.sp,
-            modifier = Modifier.clickable(onClick = onBack),
+        RunaScreenHeader(
+            title = stringResource(R.string.account_title),
+            onBack = onBack,
         )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.account_title),
-            color = RunaColors.Heading,
-            fontFamily = ShipporiMincho,
-            fontWeight = FontWeight.Medium,
-            fontSize = 36.sp,
-        )
-        Spacer(Modifier.height(28.dp))
 
         when {
             state.isLoadingProfile && state.profile == null ->

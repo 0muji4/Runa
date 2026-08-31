@@ -23,13 +23,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.android.ui.theme.runaColorsFor
 import com.runa.shared.feature.settings.AppTheme
 import com.runa.shared.feature.settings.ThemeViewModel
@@ -54,22 +53,10 @@ fun ThemeScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 28.dp),
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.action_back),
-            color = RunaColors.Subtle,
-            fontSize = 15.sp,
-            modifier = Modifier.clickable(onClick = onBack),
+        RunaScreenHeader(
+            title = stringResource(R.string.theme_title),
+            onBack = onBack,
         )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.theme_title),
-            color = RunaColors.Heading,
-            fontFamily = ShipporiMincho,
-            fontWeight = FontWeight.Medium,
-            fontSize = 40.sp,
-        )
-        Spacer(Modifier.height(32.dp))
 
         ThemeOptions.forEach { option ->
             ThemeCard(

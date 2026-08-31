@@ -36,6 +36,10 @@ val CormorantGaramond: FontFamily = FontFamily(
  *   - display roles  -> logo (Cormorant Garamond)
  *   - headline/title -> headings (Shippori Mincho)
  *   - body/label     -> body (Zen Kaku Gothic New)
+ *
+ * `headlineLarge` is the single screen-title style every header uses, and
+ * `labelMedium` the「‹ 戻る」/ header-action style. Both are pinned by the canon
+ * table in README「画面ヘッダー（全画面共通の型）」— change them there first.
  */
 val RunaTypography = Typography(
     displayLarge = TextStyle(
@@ -43,6 +47,12 @@ val RunaTypography = Typography(
         fontWeight = FontWeight.Normal,
         fontSize = 40.sp,
         lineHeight = 48.sp,
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = ShipporiMincho,
+        fontWeight = FontWeight.Normal,
+        fontSize = 34.sp,
+        lineHeight = 44.sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = ShipporiMincho,
@@ -71,6 +81,12 @@ val RunaTypography = Typography(
     labelLarge = TextStyle(
         fontFamily = ZenKakuGothicNew,
         fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = ZenKakuGothicNew,
+        fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         lineHeight = 18.sp,
     ),

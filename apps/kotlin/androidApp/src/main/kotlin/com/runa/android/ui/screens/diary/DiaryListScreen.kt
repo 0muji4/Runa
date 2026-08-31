@@ -38,10 +38,10 @@ import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaEmptyView
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.RunaTabHeaderTop
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
@@ -69,22 +69,14 @@ fun DiaryListScreen(
 
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = RunaTabHeaderTop, bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            RunaScreenHeader(
+                title = stringResource(R.string.diary_list_title),
+                modifier = Modifier.padding(horizontal = 24.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.diary_list_title),
-                    style = TextStyle(fontFamily = ShipporiMincho, fontSize = 34.sp, lineHeight = 42.sp),
-                    color = RunaColors.Heading,
-                    modifier = Modifier.weight(1f),
-                )
                 // Quiet links into the retrospective calendar (12) and insight (16).
                 Text(
                     text = stringResource(R.string.diary_open_insight),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = RunaColors.Accent,
                     modifier = Modifier
                         .clickable(onClick = onOpenInsight)
@@ -92,7 +84,7 @@ fun DiaryListScreen(
                 )
                 Text(
                     text = stringResource(R.string.diary_open_calendar),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = RunaColors.Accent,
                     modifier = Modifier
                         .clickable(onClick = onOpenCalendar)

@@ -30,7 +30,7 @@ import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.components.RunaStateView
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.RunaTabHeaderTop
+import com.runa.android.ui.theme.RunaHeader
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.feature.today.HomeViewModel
 import com.runa.shared.feature.today.Today
@@ -42,7 +42,7 @@ import org.koin.compose.koinInject
  * 06 Home. The quiet face of the app: a large 明朝 daily quote centered in
  * generous whitespace, with the day's drawn moon phase + date pinned to the top and
  * a soft glow behind it. No Material app bar — like the other tabs, the header is
- * the page, so all four tabs start their content at [RunaTabHeaderTop]. The settings
+ * the page, so all four tabs start their content at [RunaHeader.TopTab]. The settings
  * gear sits as a quiet top-end overlay. The quote and moon still render offline (the
  * moon is always computed on-device).
  */
@@ -94,7 +94,7 @@ fun HomeScreen(
             onClick = onSettingsClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = RunaTabHeaderTop - 8.dp, end = 8.dp),
+                .padding(top = RunaHeader.TopTab - 8.dp, end = 8.dp),
         ) {
             Icon(
                 RunaIcons.Settings,
@@ -113,7 +113,7 @@ private fun HomeContent(today: Today, offline: Boolean, onOpenTodaysMoon: () -> 
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(RunaTabHeaderTop))
+        Spacer(Modifier.height(RunaHeader.TopTab))
 
         // Drawn moon phase + date + phase name, at the top (tap → 今日の月).
         Row(

@@ -35,6 +35,7 @@ import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaErrorView
 import com.runa.android.ui.components.RunaLoadingView
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.components.RunaSyncBanner
 import com.runa.android.ui.theme.CormorantGaramond
 import com.runa.android.ui.theme.RunaColors
@@ -71,14 +72,11 @@ fun InsightScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
     ) {
-        Text(
-            text = "‹ ${stringResource(R.string.action_back)}",
-            style = MaterialLabel,
-            color = RunaColors.Subtle,
-            modifier = Modifier
-                .padding(top = 14.dp)
-                .clickable(onClick = onBack)
-                .padding(vertical = 6.dp, horizontal = 4.dp),
+        // The letter title is the screen title, so it shows over every state — not
+        // just when a letter has been composed.
+        RunaScreenHeader(
+            title = stringResource(R.string.insight_letter_title),
+            onBack = onBack,
         )
 
         // The period chrome always shows (over content and empty alike); the shared
@@ -142,12 +140,6 @@ private fun PeriodBar(periodLabel: String, periodType: InsightPeriodType, viewMo
 
 @Composable
 private fun LetterContent(insight: Insight) {
-    Text(
-        text = stringResource(R.string.insight_letter_title),
-        style = TextStyle(fontFamily = ShipporiMincho, fontSize = 32.sp, lineHeight = 44.sp),
-        color = RunaColors.Heading,
-        modifier = Modifier.padding(top = 16.dp),
-    )
     Text(
         text = insight.narrative.body,
         style = TextStyle(fontFamily = ShipporiMincho, fontSize = 18.sp, lineHeight = 32.sp),
@@ -296,5 +288,3 @@ private fun Chevron(glyph: String, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
-
-private val MaterialLabel = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 13.sp)

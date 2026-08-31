@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 import com.runa.android.ui.theme.CormorantGaramond
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
-import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.notification.NotificationSettingsViewModel
 import com.runa.shared.feature.notification.ReminderTime
 import org.koin.compose.koinInject
@@ -77,22 +77,10 @@ fun NotificationSettingsScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 28.dp),
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.action_back),
-            color = RunaColors.Subtle,
-            fontSize = 15.sp,
-            modifier = Modifier.clickable(onClick = onBack),
+        RunaScreenHeader(
+            title = stringResource(R.string.notif_settings_title),
+            onBack = onBack,
         )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.notif_settings_title),
-            color = RunaColors.Heading,
-            fontFamily = ShipporiMincho,
-            fontWeight = FontWeight.Medium,
-            fontSize = 40.sp,
-        )
-        Spacer(Modifier.height(36.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),

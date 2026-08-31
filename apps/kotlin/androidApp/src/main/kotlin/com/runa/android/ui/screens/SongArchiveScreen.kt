@@ -1,5 +1,6 @@
 package com.runa.android.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,13 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +33,7 @@ import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaErrorView
 import com.runa.android.ui.components.RunaLoadingView
 import com.runa.android.ui.components.RunaOfflineView
+import com.runa.android.ui.components.RunaScreenHeader
 import com.runa.android.ui.theme.RunaColors
 import com.runa.shared.core.state.AppError
 import com.runa.shared.feature.today.SongArchiveViewModel
@@ -48,7 +46,6 @@ import org.koin.compose.koinInject
  * Tapping a song plays it through the shared [SongPlayerViewModel] and returns to
  * the player (07), recording the play.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongArchiveScreen(
     onPlayAndReturn: () -> Unit,
@@ -58,25 +55,16 @@ fun SongArchiveScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(
-        containerColor = RunaColors.Background,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.song_archive_title), color = RunaColors.Heading) },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("‹", color = RunaColors.Body, style = MaterialTheme.typography.titleLarge)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = RunaColors.Background),
-            )
-        },
-    ) { innerPadding ->
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(RunaColors.Background)
+            .padding(horizontal = 24.dp),
+    ) {
+        RunaScreenHeader(title = stringResource(R.string.song_archive_title), onBack = onBack)
+
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Empty / initial-loading / load-failure all route through the shared

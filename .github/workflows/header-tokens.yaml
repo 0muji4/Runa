@@ -1,0 +1,27 @@
+name: Header tokens
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/theme/Type.kt"
+      - "apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/theme/RunaDimens.kt"
+      - "apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/components/RunaScreenHeader.kt"
+      - "apps/kotlin/androidApp/src/main/kotlin/com/runa/android/ui/screens/**"
+      - "apps/swift/Runa/Theme/RunaFonts.swift"
+      - "apps/swift/Runa/Theme/RunaColors.swift"
+      - "apps/swift/Runa/Theme/RunaScreenHeader.swift"
+      - "apps/swift/Runa/Screens/**"
+      - "hack/check-header-tokens.sh"
+      - ".github/workflows/header-tokens.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check header token parity
+        run: ./hack/check-header-tokens.sh

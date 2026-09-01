@@ -3,7 +3,7 @@
 ## commit / push / PR / Issue を作るとき（最重要）
 
 - IMPORTANT: ローカル変更を push / PR / Issue にするタスクでは、コマンドを自作せず**必ず `runa-pr` スキルを起動する**。「push して」「PR にして」「まとめて」等の短い依頼でも同じ。
-- IMPORTANT: git / gh の**状態変更（branch 作成・commit・push・PR/Issue 作成・merge）は実行しない**。Claude は調査・不整合の修正・**正確なコマンド列の出力**までを担い、実行はユーザーが行う。`git status` / `diff` / `log` などの読み取りは可。
+- IMPORTANT: git / gh の**状態変更（branch 作成・commit・push・PR/Issue 作成・merge）は実行しない**。Claude は調査・不整合の修正・**正確なコマンド列の出力**までを担い、実行はユーザーが行う。`git status` / `diff` / `log` などの読み取りは可。ただし、ユーザーから明示的に宣言があった場合はその限りではない。
 - 規約の唯一の出どころは [CONTRIBUTING.md](CONTRIBUTING.md) と [hack/prefix.yaml](hack/prefix.yaml)。ここに要点を再掲するが、齟齬があれば原典を優先する。
 
 ## 規約の要点（CI が全 PR で強制する）

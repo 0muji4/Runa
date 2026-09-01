@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 30 以下の自動バックアップ規則（android:fullBackupContent）。API 31 以上は
+  data_extraction_rules.xml が使われるので、両方を同じ方針で保つこと。
+
+  <include> を 1 つでも書くと「書いたものだけ」が対象になる（default-deny）。
+  除外を列挙する方式だと、あとで増えたファイルが黙って対象に入ってしまうため
+  こちらを採る。バックアップしてよいのは端末の見た目・通知・ロックの設定だけ。
+
+  対象外にしているもの:
+    - runa.db          … 日記本文・ギャラリー画像の BLOB
+    - runa_secure_prefs … リフレッシュトークン（EncryptedSharedPreferences）
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="runa_settings.xml" />
+</full-backup-content>

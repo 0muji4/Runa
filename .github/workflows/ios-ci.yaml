@@ -1,0 +1,66 @@
+name: iOS CI
+
+# kotlin-ci.yaml と同じくパスで絞らない。必須チェックにパスフィルタを付けると
+# 条件に合わない PR でチェックが報告されず永久に pending になるため。
+on:
+  pull_request:
+  # 既定ブランチでしか Gradle / Kotlin/Native のキャッシュが書き込まれない。
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios-build:
+    runs-on: macos-latest
+    # Kotlin/Native は 3 ターゲット分をコンパイルするため初回が重い。ハングの上限として置く。
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      # XCFramework は Gradle でビルドするので JDK が要る（shared の jvmToolchain(17)）。
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: apps/kotlin
+      # Kotlin/Native のツールチェーンは ~/.konan に置かれ、Gradle のキャッシュ対象外。
+      # 別途キャッシュしないと毎回 1GB 近いダウンロードが走る。キーは Kotlin の
+      # バージョンを含む libs.versions.toml に紐づける。
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('apps/kotlin/gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+      # :shared は com.android.library を適用しているため、XCFramework だけを作る場合でも
+      # Gradle の設定フェーズで Android SDK が要る。macOS ランナーには同梱されていない。
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      # SharedKit/Package.swift が XCFramework を binaryTarget で相対参照するため、
+      # プロジェクト生成より前にビルドしておく必要がある。
+      - name: Build XCFramework
+        working-directory: apps/kotlin
+        run: ./gradlew :shared:assembleSharedReleaseXCFramework
+      # Runa.xcodeproj は生成物（gitignore 対象）なので毎回作る。
+      - name: Generate Xcode project
+        working-directory: apps/swift
+        run: xcodegen generate
+      # Makefile の ios-build は IOS_SIM で実機名を指定するが、CI ではランナーの
+      # シミュレータ構成に依存して壊れる。ビルドだけなら generic 宛先で足りる。
+      - name: Build app
+        working-directory: apps/swift
+        run: |
+          xcodebuild -project Runa.xcodeproj -scheme Runa \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug CODE_SIGNING_ALLOWED=NO build

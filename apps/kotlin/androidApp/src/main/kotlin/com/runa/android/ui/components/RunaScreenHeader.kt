@@ -55,7 +55,7 @@ fun RunaScreenHeader(
                 modifier = Modifier
                     .clickable(onClick = onBack)
                     // Widens the touch target without moving the glyph off the margin.
-                    .padding(vertical = 6.dp, end = 12.dp),
+                    .padding(top = 6.dp, bottom = 6.dp, end = 12.dp),
             )
             if (title != null) Spacer(Modifier.height(RunaHeader.BackGap))
         }

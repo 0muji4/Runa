@@ -60,7 +60,7 @@ fun DiaryDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, bottom = 18.dp),
+                .padding(start = 28.dp, end = 28.dp, bottom = 18.dp),
         ) {
             // The date is the screen title; the moon and weekday sit under it as meta.
             RunaScreenHeader(

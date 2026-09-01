@@ -1,8 +1,7 @@
 package com.runa.shared.feature.lock
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,8 +42,7 @@ sealed interface AppLockUiState {
 class AppLockViewModel(
     private val repository: AppLockRepository,
     private val authenticator: BiometricAuthenticator,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow<AppLockUiState>(
         if (isLockEnabled()) AppLockUiState.Locked else AppLockUiState.Unlocked,
     )
@@ -56,7 +54,7 @@ class AppLockViewModel(
     init {
         // Turning the lock off reveals content at once; turning it on is deferred to
         // the next foreground so enabling it never locks the user out mid-action.
-        scope.launch {
+        viewModelScope.launch {
             repository.observeLockEnabled().collect { enabled ->
                 if (!enabled) _state.value = AppLockUiState.Unlocked
             }
@@ -103,7 +101,7 @@ class AppLockViewModel(
         }
         if (_state.value == AppLockUiState.Authenticating) return
         _state.value = AppLockUiState.Authenticating
-        scope.launch {
+        viewModelScope.launch {
             _state.value = when (authenticator.authenticate()) {
                 BiometricResult.Success -> AppLockUiState.Unlocked
                 BiometricResult.Failed -> AppLockUiState.Locked

@@ -1,10 +1,9 @@
 package com.runa.shared.feature.insight
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.UiState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,15 +43,14 @@ class InsightViewModel(
     private val zone: TimeZone = TimeZone.currentSystemDefault(),
     private val weekStart: DayOfWeek = InsightPeriods.DEFAULT_WEEK_START,
     private val clock: Clock = Clock.System,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val period = MutableStateFlow(InsightPeriods.monthlyContaining(today()))
 
     /** The always-present period chrome (label + week/month mode) shown above the body. */
     val header: StateFlow<InsightHeader> =
         period.map { p -> InsightHeader(periodLabel(p), p.type) }
             .stateIn(
-                scope,
+                viewModelScope,
                 SharingStarted.WhileSubscribed(5_000L),
                 InsightHeader(periodLabel(period.value), period.value.type),
             )
@@ -62,7 +60,7 @@ class InsightViewModel(
             combine(repository.observeInsight(p, zone), repository.syncStatus) { insight, sync ->
                 if (insight.summary.isEmpty) UiState.Empty else UiState.Content(insight, sync)
             }
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Bring other devices' entries in; the local render is already showing.
@@ -101,7 +99,7 @@ class InsightViewModel(
     }
 
     fun refresh() {
-        scope.launch { repository.refresh() }
+        viewModelScope.launch { repository.refresh() }
     }
 
     private fun today(): LocalDate = clock.now().toLocalDateTime(zone).date

@@ -1,9 +1,8 @@
 package com.runa.shared.feature.calendar
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.feature.diary.DiaryEntry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -20,8 +19,7 @@ class DayRecordsViewModel(
     repository: CalendarRepository,
     isoDate: String,
     zone: TimeZone = TimeZone.currentSystemDefault(),
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val date = LocalDate.parse(isoDate)
 
     /** Pre-formatted header label, e.g. "7月4日". */
@@ -29,5 +27,5 @@ class DayRecordsViewModel(
 
     val state: StateFlow<List<DiaryEntry>> =
         repository.observeEntriesOn(date.year, date.monthNumber, date.dayOfMonth, zone)
-            .stateIn(scope, SharingStarted.WhileSubscribed(5_000L), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), emptyList())
 }

@@ -1,9 +1,8 @@
 package com.runa.shared.feature.today
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.toAppError
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,15 +15,14 @@ import kotlinx.coroutines.launch
  */
 class SongArchiveViewModel(
     private val repository: SongRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow(ArchiveUiState(isLoading = true))
     val state: StateFlow<ArchiveUiState> = _state.asStateFlow()
 
     private var nextCursor: String? = null
 
     init {
-        scope.launch {
+        viewModelScope.launch {
             repository.observeSongHistory().collect { history ->
                 _state.value = _state.value.copy(history = history)
             }
@@ -34,7 +32,7 @@ class SongArchiveViewModel(
 
     /** Load the next archive page (or the first page when [reset]). */
     fun loadNextPage(reset: Boolean = false) {
-        scope.launch {
+        viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             _state.value = try {
                 val page = repository.getArchive(PAGE_SIZE, if (reset) null else nextCursor)

@@ -1,9 +1,8 @@
 package com.runa.shared.feature.settings
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.toJaMessage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,8 +20,7 @@ import kotlinx.coroutines.launch
  */
 class AccountViewModel(
     private val repository: SettingsRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow(AccountUiState())
     val state: StateFlow<AccountUiState> = _state.asStateFlow()
 
@@ -33,7 +31,7 @@ class AccountViewModel(
     /** (Re)load the profile. Also resets a stale export status from a prior visit. */
     fun loadProfile() {
         _state.update { it.copy(isLoadingProfile = true, loadError = null, export = ExportStatus.Idle) }
-        scope.launch {
+        viewModelScope.launch {
             repository.getProfile()
                 .onSuccess { user -> _state.update { it.copy(profile = user, isLoadingProfile = false) } }
                 .onFailure { e ->
@@ -67,7 +65,7 @@ class AccountViewModel(
             return
         }
         _state.update { it.copy(isSavingName = true, nameError = null) }
-        scope.launch {
+        viewModelScope.launch {
             repository.updateDisplayName(name)
                 .onSuccess { user ->
                     _state.update { it.copy(profile = user, isEditingName = false, isSavingName = false) }
@@ -82,7 +80,7 @@ class AccountViewModel(
 
     fun export() {
         _state.update { it.copy(export = ExportStatus.InProgress) }
-        scope.launch {
+        viewModelScope.launch {
             repository.exportData()
                 .onSuccess { dto ->
                     val ready = ExportStatus.Ready(
@@ -114,7 +112,7 @@ class AccountViewModel(
 
     fun confirmDelete() {
         _state.update { it.copy(deletion = DeletionStatus.InProgress) }
-        scope.launch {
+        viewModelScope.launch {
             repository.deleteAccount()
                 .onSuccess { _state.update { it.copy(deletion = DeletionStatus.Deleted) } }
                 .onFailure { e ->

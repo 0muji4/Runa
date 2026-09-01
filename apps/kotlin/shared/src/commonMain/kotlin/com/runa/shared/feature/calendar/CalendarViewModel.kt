@@ -1,10 +1,9 @@
 package com.runa.shared.feature.calendar
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.UiState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,9 +31,8 @@ import kotlinx.datetime.toLocalDateTime
 class CalendarViewModel(
     private val repository: CalendarRepository,
     private val zone: TimeZone = TimeZone.currentSystemDefault(),
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val clock: Clock = Clock.System,
-) {
+) : ViewModel() {
     private val month = MutableStateFlow(currentYearMonth())
 
     val state: StateFlow<UiState<CalendarMonth>> =
@@ -50,7 +48,7 @@ class CalendarViewModel(
                     sync,
                 )
             }
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Bring other devices' entries in; the local render is already showing.
@@ -75,7 +73,7 @@ class CalendarViewModel(
 
     fun refresh() {
         val ym = month.value
-        scope.launch { repository.refresh(ym.year, ym.month, zone) }
+        viewModelScope.launch { repository.refresh(ym.year, ym.month, zone) }
     }
 
     private fun currentYearMonth(): YearMonth {

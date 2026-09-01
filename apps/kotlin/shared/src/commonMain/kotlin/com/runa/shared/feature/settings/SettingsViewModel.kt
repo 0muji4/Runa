@@ -1,5 +1,6 @@
 package com.runa.shared.feature.settings
 
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -12,6 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
  */
 class SettingsViewModel(
     themeRepository: ThemeRepository,
-) {
+) : ViewModel() {
     val theme: StateFlow<AppTheme> = themeRepository.observeTheme()
 }

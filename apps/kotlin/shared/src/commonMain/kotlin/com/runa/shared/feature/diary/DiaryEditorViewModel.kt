@@ -1,9 +1,8 @@
 package com.runa.shared.feature.diary
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,9 +22,8 @@ class DiaryEditorViewModel(
     // Backdate for a new entry authored from the calendar's empty day (epoch-ms of
     // that day's local noon); null for a plain new entry dated now.
     private val createdAtEpochMs: Long? = null,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val autosaveDelayMs: Long = 700,
-) {
+) : ViewModel() {
     // Local id of the entry being edited; assigned once the first save creates it.
     private var clientId: String? = clientId
 
@@ -36,7 +34,7 @@ class DiaryEditorViewModel(
 
     init {
         this.clientId?.let { id ->
-            scope.launch {
+            viewModelScope.launch {
                 repository.getEntry(id)?.let { e ->
                     _state.value = DiaryEditorState(bodyText = e.bodyText, mood = e.mood, save = SaveStatus.Saved)
                 }
@@ -57,12 +55,12 @@ class DiaryEditorViewModel(
     /** Flush any pending autosave immediately (call when leaving the screen). */
     fun saveNow() {
         saveJob?.cancel()
-        scope.launch { persist() }
+        viewModelScope.launch { persist() }
     }
 
     private fun scheduleSave() {
         saveJob?.cancel()
-        saveJob = scope.launch {
+        saveJob = viewModelScope.launch {
             delay(autosaveDelayMs)
             persist()
         }

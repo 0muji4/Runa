@@ -7,9 +7,14 @@ import com.runa.shared.network.dto.SongsArchiveResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -36,13 +41,21 @@ private class RecordingSongRepository : SongRepository {
 
 class SongPlayerViewModelTest {
 
+    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
+    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    @BeforeTest
+    fun setUpMain() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @AfterTest
+    fun tearDownMain() = Dispatchers.resetMain()
+
     private val song = SongDto("s1", "2024-12-15", "夜想曲", "月詠", "https://x/a.jpg", "https://x/a.mp3")
 
     @Test
     fun playLoadsTheSongAndRecordsAPlay() = runTest(UnconfinedTestDispatcher()) {
         val audio = FakeAudioPlayer()
         val repo = RecordingSongRepository()
-        val vm = SongPlayerViewModel(audio, repo, scope = backgroundScope)
+        val vm = SongPlayerViewModel(audio, repo)
 
         vm.play(song)
         advanceUntilIdle()
@@ -58,7 +71,7 @@ class SongPlayerViewModelTest {
     fun replayingSameSongDoesNotReloadOrDoubleRecord() = runTest(UnconfinedTestDispatcher()) {
         val audio = FakeAudioPlayer()
         val repo = RecordingSongRepository()
-        val vm = SongPlayerViewModel(audio, repo, scope = backgroundScope)
+        val vm = SongPlayerViewModel(audio, repo)
 
         vm.play(song)
         advanceUntilIdle()

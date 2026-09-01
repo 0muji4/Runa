@@ -1,11 +1,15 @@
 package com.runa.shared.feature.lock
 
 import com.russhwolf.settings.MapSettings
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -25,25 +29,33 @@ private class FakeBiometricAuthenticator(
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppLockViewModelTest {
 
+    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
+    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    @BeforeTest
+    fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
+
+    @AfterTest
+    fun tearDownMain() = Dispatchers.resetMain()
+
     private fun repo(enabled: Boolean): AppLockRepository =
         DefaultAppLockRepository(MapSettings()).apply { setLockEnabled(enabled) }
 
     @Test
     fun startsLockedWhenEnabled() = runTest {
-        val vm = AppLockViewModel(repo(true), FakeBiometricAuthenticator(), scope(this))
+        val vm = AppLockViewModel(repo(true), FakeBiometricAuthenticator())
         assertEquals(AppLockUiState.Locked, vm.state.value)
     }
 
     @Test
     fun startsUnlockedWhenDisabled() = runTest {
-        val vm = AppLockViewModel(repo(false), FakeBiometricAuthenticator(), scope(this))
+        val vm = AppLockViewModel(repo(false), FakeBiometricAuthenticator())
         assertEquals(AppLockUiState.Unlocked, vm.state.value)
     }
 
     @Test
     fun successfulAuthenticationUnlocks() = runTest {
         val auth = FakeBiometricAuthenticator(authResult = BiometricResult.Success)
-        val vm = AppLockViewModel(repo(true), auth, scope(this))
+        val vm = AppLockViewModel(repo(true), auth)
 
         vm.authenticate()
         advanceUntilIdle()
@@ -55,7 +67,7 @@ class AppLockViewModelTest {
     @Test
     fun failedAuthenticationStaysLocked() = runTest {
         val auth = FakeBiometricAuthenticator(authResult = BiometricResult.Failed)
-        val vm = AppLockViewModel(repo(true), auth, scope(this))
+        val vm = AppLockViewModel(repo(true), auth)
 
         vm.authenticate()
         advanceUntilIdle()
@@ -66,7 +78,7 @@ class AppLockViewModelTest {
     @Test
     fun unavailableBiometricYieldsUnavailableState() = runTest {
         val auth = FakeBiometricAuthenticator(availabilityResult = BiometricAvailability.UNAVAILABLE)
-        val vm = AppLockViewModel(repo(true), auth, scope(this))
+        val vm = AppLockViewModel(repo(true), auth)
 
         vm.authenticate()
         advanceUntilIdle()
@@ -79,7 +91,7 @@ class AppLockViewModelTest {
     @Test
     fun disablingTheLockUnlocksImmediately() = runTest {
         val repository = repo(true)
-        val vm = AppLockViewModel(repository, FakeBiometricAuthenticator(), scope(this))
+        val vm = AppLockViewModel(repository, FakeBiometricAuthenticator())
         assertEquals(AppLockUiState.Locked, vm.state.value)
 
         repository.setLockEnabled(false)
@@ -91,7 +103,7 @@ class AppLockViewModelTest {
     @Test
     fun returningFromBackgroundRelocksAndReprompts() = runTest {
         val auth = FakeBiometricAuthenticator(authResult = BiometricResult.Success)
-        val vm = AppLockViewModel(repo(true), auth, scope(this))
+        val vm = AppLockViewModel(repo(true), auth)
 
         vm.authenticate()
         advanceUntilIdle()
@@ -106,6 +118,4 @@ class AppLockViewModelTest {
         assertEquals(2, auth.authenticateCalls)
     }
 
-    private fun scope(test: kotlinx.coroutines.test.TestScope): CoroutineScope =
-        CoroutineScope(StandardTestDispatcher(test.testScheduler))
 }

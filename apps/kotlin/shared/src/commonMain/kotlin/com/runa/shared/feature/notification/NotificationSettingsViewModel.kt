@@ -1,8 +1,7 @@
 package com.runa.shared.feature.notification
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,8 +32,7 @@ data class NotificationUiState(
  */
 class NotificationSettingsViewModel(
     private val repository: NotificationSettingsRepository,
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow(
         NotificationUiState(
             enabled = repository.observeReminderEnabled().value,
@@ -44,7 +42,7 @@ class NotificationSettingsViewModel(
     val state: StateFlow<NotificationUiState> = _state.asStateFlow()
 
     init {
-        scope.launch {
+        viewModelScope.launch {
             combine(
                 repository.observeReminderEnabled(),
                 repository.observeReminderTime(),

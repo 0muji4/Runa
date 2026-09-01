@@ -49,10 +49,10 @@ After that, use `./gradlew ...` for all builds.
 
 ## Build & run — Android
 
-Requires the Android SDK (compileSdk 34).
+Requires the Android SDK (compileSdk 35).
 
 - Open `apps/kotlin/` in **Android Studio** (Giraffe+ / a build compatible with
-  AGP 8.5.2), let it sync, then run the `androidApp` configuration on an
+  AGP 8.7.3), let it sync, then run the `androidApp` configuration on an
   emulator or device.
 - Or from the CLI:
 
@@ -225,10 +225,10 @@ set, not gospel.
 | Component | Version |
 |---|---|
 | Kotlin | 2.0.21 |
-| Android Gradle Plugin | 8.5.2 |
+| Android Gradle Plugin | 8.7.3 |
 | Gradle wrapper | 8.9 |
 | JDK | 17 |
-| compileSdk / minSdk / targetSdk | 34 / 26 / 34 |
+| compileSdk / minSdk / targetSdk | 35 / 26 / 35 |
 | Ktor | 3.0.1 |
 | kotlinx-coroutines | 1.9.0 |
 | kotlinx-serialization-json | 1.7.3 |

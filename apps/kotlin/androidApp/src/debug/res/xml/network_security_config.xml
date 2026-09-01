@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  debug バリアント専用の上書き（リソースオーバーレイ）。ローカルの backend を叩くとき、
+  接続先はエミュレータの 10.0.2.2 だったり実機からの LAN IP だったりで一定しないため、
+  ホストを列挙せず debug 全体で平文を許可する。release には一切影響しない。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

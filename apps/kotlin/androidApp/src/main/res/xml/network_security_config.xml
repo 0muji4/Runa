@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  リリースの既定: 平文 HTTP を許可しない。接続先（dev バックエンド）は HTTPS なので
+  これで足りる。debug ビルドだけ src/debug/res/xml の同名ファイルで上書きされ、
+  エミュレータの 10.0.2.2 や実機からの LAN IP に平文で到達できる。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

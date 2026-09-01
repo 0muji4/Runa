@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 31 以上の抽出規則（android:dataExtractionRules）。方針は backup_rules.xml と同じで、
+  <include> による default-deny。cloud-backup（Google ドライブ）と device-transfer
+  （端末間の直接移行）の両方に同じ制限をかける。
+
+  日記本文とトークンを持ち出さないのは、このアプリが生体認証によるプライバシー・ロックを
+  提供しているため。ロックをかけた日記が Google ドライブ経由で取り出せるのでは筋が通らない。
+
+  device-transfer も絞る副作用として、機種変更時にローカルの日記は移行されない。
+  ただし日記はサーバーと同期しているので、新端末でサインインすれば復元される。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="runa_settings.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="runa_settings.xml" />
+    </device-transfer>
+</data-extraction-rules>

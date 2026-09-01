@@ -1,0 +1,57 @@
+name: Kotlin CI
+
+# パスで絞らない。必須チェックにパスフィルタを付けると、条件に合わない PR では
+# チェックが報告されず永久に pending のままになる。「main は常にコンパイルできる」は
+# 全 PR に課したい不変条件なので、validate_pr.yaml と同じく常時実行にする。
+on:
+  pull_request:
+  # main でも走らせる。gradle/actions/setup-gradle は既定ブランチでしかキャッシュを
+  # 書き込まないため、これが無いと PR 側が常に冷えたキャッシュでビルドすることになる。
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # go-ci.yaml の job も build-test のため、同名にするとチェック名が衝突して
+  # 必須チェックの指定が曖昧になる。レイヤー名を前置する。
+  kotlin-build-test:
+    runs-on: ubuntu-latest
+    # Gradle がハングしたときに既定の 6 時間を使い切らないための上限。
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/kotlin
+    steps:
+      - uses: actions/checkout@v4
+      # shared の jvmToolchain(17) と :androidApp の jvmTarget 17 に合わせる。
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # defaults.run は uses ステップに効かないので、ビルドの場所は明示する。
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: apps/kotlin
+      # commonTest と androidUnitTest の両方がこの 1 タスクで走る（Makefile の shared-test と同じ）。
+      # androidUnitTest は実 SQLDelight スキーマを JVM の in-memory driver に載せるため、
+      # エミュレータを必要としない。
+      - name: Test shared
+        run: ./gradlew :shared:testDebugUnitTest
+      # androidApp のコンパイル検証（Makefile の android-build と同じ）。shared も併せて通る。
+      - name: Build androidApp
+        run: ./gradlew :androidApp:assembleDebug
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-test-reports
+          path: apps/kotlin/shared/build/reports/tests/
+          retention-days: 14

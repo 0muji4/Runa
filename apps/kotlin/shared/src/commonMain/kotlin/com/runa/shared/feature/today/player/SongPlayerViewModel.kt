@@ -1,10 +1,9 @@
 package com.runa.shared.feature.today.player
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.feature.today.SongRepository
 import com.runa.shared.network.dto.SongDto
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +23,7 @@ import kotlinx.datetime.Clock
 class SongPlayerViewModel(
     private val audioPlayer: AudioPlayer,
     private val songRepository: SongRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val currentSong = MutableStateFlow<SongDto?>(null)
 
     val state: StateFlow<PlayerUiState> =
@@ -37,7 +35,7 @@ class SongPlayerViewModel(
                 durationMs = playback.durationMs,
                 isBuffering = playback.isBuffering,
             )
-        }.stateIn(scope, SharingStarted.Eagerly, PlayerUiState())
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, PlayerUiState())
 
     /** Load and play [song]. A different song reloads the engine and records a play. */
     fun play(song: SongDto) {
@@ -45,7 +43,7 @@ class SongPlayerViewModel(
         currentSong.value = song
         if (isNewSong) {
             audioPlayer.load(song.audioUrl)
-            scope.launch { songRepository.markPlayed(song, Clock.System.now().toEpochMilliseconds()) }
+            viewModelScope.launch { songRepository.markPlayed(song, Clock.System.now().toEpochMilliseconds()) }
         }
         audioPlayer.play()
     }

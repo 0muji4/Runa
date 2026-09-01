@@ -27,6 +27,8 @@ navigationCompose = "2.8.3"
 fragment = "1.8.4"
 # lifecycle-viewmodel-compose is NOT part of the Compose BOM, so it is pinned
 # explicitly. Kept in the 2.8.x line to align with navigation-compose 2.8.3.
+# 2.8.x also publishes the KMP artifacts (ios_arm64 / ios_simulator_arm64 /
+# ios_x64) that let commonMain view models extend androidx.lifecycle.ViewModel.
 lifecycle = "2.8.6"
 
 # --- Auth (Android native sign-in + secure storage) ---
@@ -101,6 +103,8 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+# KMP 版。commonMain の ViewModel / viewModelScope はこれが提供する。
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 
 # --- Auth (Android native sign-in + secure storage) ---
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }

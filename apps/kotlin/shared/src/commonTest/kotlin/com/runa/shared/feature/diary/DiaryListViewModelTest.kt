@@ -2,16 +2,19 @@ package com.runa.shared.feature.diary
 
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.Instant
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -27,10 +30,18 @@ import kotlin.test.assertIs
  */
 class DiaryListViewModelTest {
 
+    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
+    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    @BeforeTest
+    fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
+
+    @AfterTest
+    fun tearDownMain() = Dispatchers.resetMain()
+
     @Test
     fun emptyStreamYieldsEmpty() = runTest {
         val repo = FakeDiaryRepository()
-        val vm = DiaryListViewModel(repo, scope(this))
+        val vm = DiaryListViewModel(repo)
         val job = vm.state.launchIn(this)
         advanceUntilIdle()
 
@@ -43,7 +54,7 @@ class DiaryListViewModelTest {
         val repo = FakeDiaryRepository()
         repo.setSync(SyncPhase.Offline)
         repo.setEntries(listOf(entry("a")))
-        val vm = DiaryListViewModel(repo, scope(this))
+        val vm = DiaryListViewModel(repo)
         val job = vm.state.launchIn(this)
         advanceUntilIdle()
 
@@ -58,7 +69,7 @@ class DiaryListViewModelTest {
         val repo = FakeDiaryRepository()
         repo.setEntries(listOf(entry("a")))
         repo.setSync(SyncPhase.Offline)
-        val vm = DiaryListViewModel(repo, scope(this))
+        val vm = DiaryListViewModel(repo)
         val job = vm.state.launchIn(this)
         advanceUntilIdle()
         assertEquals(SyncPhase.Offline, assertIs<UiState.Content<*>>(vm.state.value).sync)
@@ -69,7 +80,6 @@ class DiaryListViewModelTest {
         job.cancel()
     }
 
-    private fun scope(test: TestScope) = CoroutineScope(StandardTestDispatcher(test.testScheduler))
 
     private fun entry(id: String) = DiaryEntry(
         clientId = id,

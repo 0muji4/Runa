@@ -1,5 +1,6 @@
 package com.runa.shared.feature.todaymoon
 
+import androidx.lifecycle.ViewModel
 import com.runa.shared.core.state.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ import kotlinx.datetime.TimeZone
 class TodayMoonViewModel(
     private val repository: TodayMoonRepository,
     private val zone: TimeZone = TimeZone.currentSystemDefault(),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow<UiState<TodayMoon>>(UiState.Loading)
     val state: StateFlow<UiState<TodayMoon>> = _state.asStateFlow()
 

@@ -161,13 +161,15 @@ internal fun sharedModule(baseUrl: String): Module = module {
     }
     single<AppLockRepository> { DefaultAppLockRepository(settings = get()) }
 
-    // `single` (not `factory`): these view models own long-lived CoroutineScopes,
-    // so one shared instance avoids leaking a scope per resolution.
+    // 引き続き `single`。view model 側は viewModelScope を持つようになったが、
+    // :androidApp はまだ koinInject() で解決していて ViewModelStore に載っていないため、
+    // `factory` にすると解決のたびに clear() されないインスタンスが増える。
+    // スコープの見直しは koinViewModel() へ移す Issue #186 とセットで行う。
     single { AuthViewModel(repository = get()) }
     single { HealthzViewModel(apiClient = get()) }
     single { DiaryListViewModel(repository = get()) }
 
-    // The editor is per-entry: `factory` so each open gets a fresh scope/state.
+    // The editor is per-entry: `factory` so each open gets a fresh state.
     // Params are matched by type: an optional clientId (null = new entry) and an
     // optional createdAt epoch-ms (calendar "write on this day" backdate).
     factory { params ->

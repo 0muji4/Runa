@@ -1,8 +1,8 @@
 package com.runa.shared.feature.auth
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -17,8 +17,7 @@ import kotlinx.coroutines.launch
  */
 class AuthViewModel(
     private val repository: AuthRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     val state: StateFlow<AuthState> = repository.authState
 
     init {
@@ -26,27 +25,27 @@ class AuthViewModel(
     }
 
     fun restore() {
-        scope.launch { repository.restoreSession() }
+        viewModelScope.launch { repository.restoreSession() }
     }
 
     fun signupEmail(email: String, password: String, displayName: String?) {
-        scope.launch { repository.signupEmail(email, password, displayName) }
+        viewModelScope.launch { repository.signupEmail(email, password, displayName) }
     }
 
     fun loginEmail(email: String, password: String) {
-        scope.launch { repository.loginEmail(email, password) }
+        viewModelScope.launch { repository.loginEmail(email, password) }
     }
 
     fun loginApple(idToken: String, displayName: String?) {
-        scope.launch { repository.loginApple(idToken, displayName) }
+        viewModelScope.launch { repository.loginApple(idToken, displayName) }
     }
 
     fun loginGoogle(idToken: String) {
-        scope.launch { repository.loginGoogle(idToken) }
+        viewModelScope.launch { repository.loginGoogle(idToken) }
     }
 
     fun logout() {
-        scope.launch { repository.logout() }
+        viewModelScope.launch { repository.logout() }
     }
 
     fun clearError() {

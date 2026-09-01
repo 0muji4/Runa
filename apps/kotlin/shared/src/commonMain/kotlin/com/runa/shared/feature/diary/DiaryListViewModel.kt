@@ -1,9 +1,8 @@
 package com.runa.shared.feature.diary
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.UiState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -21,12 +20,11 @@ import kotlinx.coroutines.launch
  */
 class DiaryListViewModel(
     private val repository: DiaryRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     val state: StateFlow<UiState<List<DiaryEntry>>> =
         combine(repository.observeEntries(), repository.syncStatus) { entries, sync ->
             if (entries.isEmpty()) UiState.Empty else UiState.Content(entries, sync)
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Kick a sync when the list opens; the repository also auto-syncs on
@@ -36,11 +34,11 @@ class DiaryListViewModel(
 
     /** Pull-to-refresh / on-resume entry point. */
     fun refresh() {
-        scope.launch { repository.sync() }
+        viewModelScope.launch { repository.sync() }
     }
 
     /** Soft-delete an entry (used by the detail screen's delete action). */
     fun delete(clientId: String) {
-        scope.launch { repository.deleteEntry(clientId) }
+        viewModelScope.launch { repository.deleteEntry(clientId) }
     }
 }

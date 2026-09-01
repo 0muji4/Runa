@@ -2,10 +2,14 @@ package com.runa.shared.feature.settings
 
 import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.UserDto
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -37,10 +41,18 @@ private class FakeSettingsRepository(
 
 class AccountViewModelTest {
 
+    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
+    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    @BeforeTest
+    fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
+
+    @AfterTest
+    fun tearDownMain() = Dispatchers.resetMain()
+
     @Test
     fun editAndSaveNameUpdatesProfileAndExitsEdit() = runTest {
         val repo = FakeSettingsRepository()
-        val vm = AccountViewModel(repo, CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val vm = AccountViewModel(repo)
         advanceUntilIdle()
 
         vm.startEditName()
@@ -56,7 +68,7 @@ class AccountViewModelTest {
     @Test
     fun emptyNameIsRejectedWithoutSaving() = runTest {
         val repo = FakeSettingsRepository()
-        val vm = AccountViewModel(repo, CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val vm = AccountViewModel(repo)
         advanceUntilIdle()
 
         vm.startEditName()
@@ -71,7 +83,7 @@ class AccountViewModelTest {
     @Test
     fun exportPreparesJsonAndText() = runTest {
         val repo = FakeSettingsRepository()
-        val vm = AccountViewModel(repo, CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val vm = AccountViewModel(repo)
         advanceUntilIdle()
 
         vm.export()
@@ -86,7 +98,7 @@ class AccountViewModelTest {
     @Test
     fun confirmDeleteCallsRepositoryAndReachesDeleted() = runTest {
         val repo = FakeSettingsRepository()
-        val vm = AccountViewModel(repo, CoroutineScope(StandardTestDispatcher(testScheduler)))
+        val vm = AccountViewModel(repo)
         advanceUntilIdle()
 
         vm.requestDelete()

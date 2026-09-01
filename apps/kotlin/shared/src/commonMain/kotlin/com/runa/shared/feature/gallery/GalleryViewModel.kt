@@ -1,9 +1,8 @@
 package com.runa.shared.feature.gallery
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.UiState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,8 +29,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  */
 class GalleryViewModel(
     private val repository: GalleryRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _displayTheme = MutableStateFlow(GalleryDisplayTheme.PINK)
 
     /** The gallery-scoped display treatment (persisted); grid chrome, shown always. */
@@ -40,11 +38,11 @@ class GalleryViewModel(
     val state: StateFlow<UiState<List<GalleryImage>>> =
         combine(repository.observeImages(), repository.syncStatus) { images, sync ->
             if (images.isEmpty()) UiState.Empty else UiState.Content(images, sync)
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
         // Restore the persisted display-theme preference (async; PINK until then).
-        scope.launch {
+        viewModelScope.launch {
             repository.loadDisplayTheme()?.let { saved ->
                 runCatching { GalleryDisplayTheme.valueOf(saved) }.getOrNull()?.let { _displayTheme.value = it }
             }
@@ -56,21 +54,21 @@ class GalleryViewModel(
     /** Switch the gallery-scoped display treatment (persisted). */
     fun setDisplayTheme(theme: GalleryDisplayTheme) {
         _displayTheme.value = theme
-        scope.launch { repository.saveDisplayTheme(theme.name) }
+        viewModelScope.launch { repository.saveDisplayTheme(theme.name) }
     }
 
     /** Add a picked, already-normalized image; it is tagged with the current display
      *  theme as its saved mood. Bytes come from the platform picker (UI layer). */
     fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String) {
-        scope.launch { repository.addImage(bytes, width, height, mimeType, _displayTheme.value.toSavedTheme()) }
+        viewModelScope.launch { repository.addImage(bytes, width, height, mimeType, _displayTheme.value.toSavedTheme()) }
     }
 
     fun deleteImage(clientId: String) {
-        scope.launch { repository.deleteImage(clientId) }
+        viewModelScope.launch { repository.deleteImage(clientId) }
     }
 
     fun refresh() {
-        scope.launch { repository.refresh() }
+        viewModelScope.launch { repository.refresh() }
     }
 }
 

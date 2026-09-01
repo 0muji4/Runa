@@ -34,6 +34,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            // View models extend androidx.lifecycle.ViewModel, so the type is part of
+            // shared's public surface — `api`, not `implementation`, or :androidApp
+            // could not resolve them through koinViewModel() and the iOS framework
+            // would not export the symbol.
+            api(libs.androidx.lifecycle.viewmodel)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)

@@ -1,5 +1,6 @@
 package com.runa.shared.feature.settings
 
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -7,12 +8,13 @@ import kotlinx.coroutines.flow.StateFlow
  * change recolors every screen at once. [theme] re-exports the repository's
  * StateFlow verbatim; [select] persists a new choice (applied immediately).
  *
- * No coroutine scope is needed: persistence is synchronous and observation is a
- * plain StateFlow, so this view model holds no long-lived resources.
+ * Nothing here needs [androidx.lifecycle.viewModelScope]: persistence is synchronous
+ * and observation is a plain StateFlow, so this view model holds no long-lived
+ * resources of its own.
  */
 class ThemeViewModel(
     private val repository: ThemeRepository,
-) {
+) : ViewModel() {
     val theme: StateFlow<AppTheme> = repository.observeTheme()
 
     fun select(theme: AppTheme) {

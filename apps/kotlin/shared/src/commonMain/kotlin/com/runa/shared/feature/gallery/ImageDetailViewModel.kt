@@ -1,8 +1,7 @@
 package com.runa.shared.feature.gallery
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +19,7 @@ import kotlinx.coroutines.launch
 class ImageDetailViewModel(
     private val repository: GalleryRepository,
     startClientId: String,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val focused = MutableStateFlow(startClientId)
 
     val state: StateFlow<ImageDetailUiState> =
@@ -32,7 +30,7 @@ class ImageDetailViewModel(
                 index < 0 -> ImageDetailUiState.Dismissed
                 else -> ImageDetailUiState.Viewing(images, index)
             }
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000L), ImageDetailUiState.Loading)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), ImageDetailUiState.Loading)
 
     /** Update which image is focused (the UI calls this as the pager swipes). */
     fun focus(clientId: String) {
@@ -40,7 +38,7 @@ class ImageDetailViewModel(
     }
 
     fun delete(clientId: String) {
-        scope.launch { repository.deleteImage(clientId) }
+        viewModelScope.launch { repository.deleteImage(clientId) }
     }
 }
 

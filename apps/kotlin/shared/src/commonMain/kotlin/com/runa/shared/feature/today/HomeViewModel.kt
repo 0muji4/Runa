@@ -1,11 +1,10 @@
 package com.runa.shared.feature.today
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
 import com.runa.shared.core.state.toAppError
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,8 +27,7 @@ import kotlinx.datetime.toLocalDateTime
  */
 class HomeViewModel(
     private val repository: TodayRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-) {
+) : ViewModel() {
     private val _state = MutableStateFlow<UiState<Today>>(UiState.Loading)
     val state: StateFlow<UiState<Today>> = _state.asStateFlow()
 
@@ -39,7 +37,7 @@ class HomeViewModel(
 
     /** (Re)load today for the current local date. Offline falls back to cache. */
     fun load() {
-        scope.launch {
+        viewModelScope.launch {
             _state.value = UiState.Loading
             _state.value = try {
                 val zone = TimeZone.currentSystemDefault()

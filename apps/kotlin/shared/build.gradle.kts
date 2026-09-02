@@ -28,6 +28,10 @@ kotlin {
             baseName = "Shared"
             // Expose the whole shared module to Swift as one framework.
             isStatic = true
+            // View models extend androidx.lifecycle.ViewModel and ViewModelOwner takes it
+            // as a parameter, so the type has to be in the framework — otherwise Swift
+            // only sees an unexported opaque type and cannot call own().
+            export(libs.androidx.lifecycle.viewmodel)
             xcf.add(this)
         }
     }

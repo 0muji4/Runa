@@ -22,9 +22,13 @@ final class InsightObservable: ObservableObject {
     private let viewModel: InsightViewModel
     private var collectTask: Task<Void, Never>?
     private var headerTask: Task<Void, Never>?
+    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
+    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    private let owner = ViewModelOwner()
 
     init(viewModel: InsightViewModel = resolveInsightViewModel()) {
         self.viewModel = viewModel
+        owner.own(viewModel: viewModel)
         collectTask = Task { [weak self] in
             guard let self else { return }
             for await value in self.viewModel.state {
@@ -55,5 +59,6 @@ final class InsightObservable: ObservableObject {
     deinit {
         collectTask?.cancel()
         headerTask?.cancel()
+        owner.dispose()
     }
 }

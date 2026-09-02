@@ -24,7 +24,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaEmptyView
@@ -64,7 +64,7 @@ fun DiaryListScreen(
     onOpenInsight: () -> Unit,
     viewModel: DiaryListViewModel = koinInject(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val sync = (state as? UiState.Content<List<DiaryEntry>>)?.sync ?: SyncPhase.Idle
 
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {

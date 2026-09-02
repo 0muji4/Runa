@@ -20,7 +20,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
@@ -52,8 +52,8 @@ fun TodaysSongScreen(
     homeViewModel: HomeViewModel = koinInject(),
     playerViewModel: SongPlayerViewModel = koinInject(),
 ) {
-    val homeState by homeViewModel.state.collectAsState()
-    val playerState by playerViewModel.state.collectAsState()
+    val homeState by homeViewModel.state.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.state.collectAsStateWithLifecycle()
 
     // Offline now rides along on Content (sync = Offline), so both cases are Content.
     val todaySong = (homeState as? UiState.Content<Today>)?.data?.song

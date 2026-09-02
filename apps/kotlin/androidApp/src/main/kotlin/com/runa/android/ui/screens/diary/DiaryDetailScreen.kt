@@ -17,7 +17,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaScreenHeader
@@ -51,7 +51,7 @@ fun DiaryDetailScreen(
     onBack: () -> Unit,
     viewModel: DiaryListViewModel = koinInject(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val entry = (state as? UiState.Content<List<DiaryEntry>>)?.data?.firstOrNull { it.clientId == clientId }
     var confirmDelete by remember { mutableStateOf(false) }
 

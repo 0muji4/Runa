@@ -224,8 +224,8 @@ shared のユニットテスト（401 自動リフレッシュ・再送、トー
 
 ビルドツールチェーンは以下の版で固定して開始する。ローカル環境によっては手元での整合合わせが必要になる点に留意する。
 
-- Kotlin 2.0.21 / Android Gradle Plugin 8.5.2 / Gradle wrapper 8.9 / JDK 17
-- Android compileSdk 34 / minSdk 26 / targetSdk 34
+- Kotlin 2.0.21 / Android Gradle Plugin 8.7.3 / Gradle wrapper 8.9 / JDK 17
+- Android compileSdk 35 / minSdk 26 / targetSdk 35
 - Ktor 3.0.1 / kotlinx-coroutines 1.9.0 / kotlinx-serialization-json 1.7.3 / kotlinx-datetime 0.6.1
 - SQLDelight 2.0.2 / Koin 4.0.0 / multiplatform-settings 1.2.0 / SKIE 0.10.1
 - Jetpack Compose BOM 2024.10.01 / activity-compose 1.9.3 / navigation-compose 2.8.3 / compose plugin 2.0.21

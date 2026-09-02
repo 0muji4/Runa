@@ -1,12 +1,12 @@
 [versions]
 # --- Build tooling (see apps/kotlin/README.md version matrix) ---
 kotlin = "2.0.21"
-agp = "8.5.2"
+agp = "8.7.3"
 
 # --- Android SDK levels ---
-compileSdk = "34"
+compileSdk = "35"
 minSdk = "26"
-targetSdk = "34"
+targetSdk = "35"
 
 # --- Kotlin Multiplatform libraries ---
 ktor = "3.0.1"

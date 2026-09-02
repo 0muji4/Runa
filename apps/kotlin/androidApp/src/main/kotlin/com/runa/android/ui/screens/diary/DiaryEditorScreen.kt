@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.R
 import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
@@ -62,7 +62,7 @@ fun DiaryEditorScreen(
     val viewModel = remember(clientId, createdAtEpochMs) {
         koin.get<DiaryEditorViewModel> { parametersOf(clientId, createdAtEpochMs) }
     }
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     // No created-at in the editor state; the header shows the day being written.
     val dayMs = remember { createdAtEpochMs ?: System.currentTimeMillis() }
 

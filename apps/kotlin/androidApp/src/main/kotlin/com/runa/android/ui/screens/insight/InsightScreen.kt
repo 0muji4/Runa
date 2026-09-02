@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.R
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaErrorView
@@ -62,8 +62,8 @@ fun InsightScreen(
     onBack: () -> Unit,
     viewModel: InsightViewModel = koinInject(),
 ) {
-    val state by viewModel.state.collectAsState()
-    val header by viewModel.header.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val header by viewModel.header.collectAsStateWithLifecycle()
 
     Column(
         Modifier

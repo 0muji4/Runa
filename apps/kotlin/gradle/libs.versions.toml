@@ -105,6 +105,8 @@ androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 # KMP 版。commonMain の ViewModel / viewModelScope はこれが提供する。
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+# collectAsStateWithLifecycle はこちら。Compose BOM には含まれない。
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 
 # --- Auth (Android native sign-in + secure storage) ---
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }

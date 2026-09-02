@@ -11,12 +11,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.ui.components.LocalReauthenticate
 import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.theme.RunaColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -99,7 +99,7 @@ fun diaryWriteOnRoute(isoDate: String): String = "diary/write-on/$isoDate"
  */
 @Composable
 fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
-    val state by authViewModel.state.collectAsState()
+    val state by authViewModel.state.collectAsStateWithLifecycle()
     // Stable identity so providing it (a static CompositionLocal) doesn't recompose the
     // whole tab tree when RunaApp recomposes (e.g. the user profile re-emits).
     val reauthenticate = remember(authViewModel) { { authViewModel.logout() } }

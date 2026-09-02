@@ -3,9 +3,9 @@ package com.runa.android
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.navigation.RunaApp
 import com.runa.android.ui.screens.lock.AppLockGate
 import com.runa.android.ui.theme.RunaTheme
@@ -33,7 +33,7 @@ class MainActivity : FragmentActivity() {
             // The selected theme (persisted in shared) drives the whole app; changing
             // it recomposes every screen against the new palette.
             val themeViewModel: ThemeViewModel = koinInject()
-            val theme by themeViewModel.theme.collectAsState()
+            val theme by themeViewModel.theme.collectAsStateWithLifecycle()
             RunaTheme(theme = theme) {
                 AppLockGate(viewModel = appLockViewModel) {
                     RunaApp()

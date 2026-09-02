@@ -18,7 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,6 +27,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.runa.android.R
 import com.runa.android.ui.components.MoonPhaseDisc
 import com.runa.android.ui.components.RunaScreenHeader
@@ -55,7 +55,7 @@ fun DayRecordsScreen(
 ) {
     val koin = getKoin()
     val viewModel = remember(isoDate) { koin.get<DayRecordsViewModel> { parametersOf(isoDate) } }
-    val entries by viewModel.state.collectAsState()
+    val entries by viewModel.state.collectAsStateWithLifecycle()
 
     Column(
         Modifier

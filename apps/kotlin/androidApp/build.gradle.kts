@@ -73,6 +73,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // collectAsStateWithLifecycle: 画面が背面に回ったら購読を止める。
+    implementation(libs.androidx.lifecycle.runtime.compose)
     // FragmentActivity for MainActivity (BiometricPrompt requirement).
     implementation(libs.androidx.fragment)
 

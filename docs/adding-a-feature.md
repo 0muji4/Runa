@@ -6,12 +6,13 @@
 
 - 1 つの機能は、全レイヤー（backend → shared → Android/iOS UI）を上から下まで貫く 1 本の縦串として実装する。
 - レイヤーごとに機能を横断的に足さない。「backend にだけエンドポイントを増やす」「UI にだけ画面を足す」ではなく、疎通する 1 本を通し切る。
-- OS 固有の関心事（セキュアストレージ・プッシュトークン・生体認証・課金・SQL ドライバ）は `shared` の `expect`/`actual` フレームの背後に閉じ込め、共通ロジックからは `expect` 越しに触る。
+- OS 固有の関心事（セキュアストレージ・生体認証・通知・音声再生・接続監視・SQL ドライバ）は `commonMain` の **interface** で表し、各 OS の実装を `platformModule()` から Koin に束ねる。`expect`/`actual` は DI グラフの配線（`httpClientEngine` / `platformModule`）だけに使う。
 
 ### なぜ
 
 - 各スライスが端から端まで疎通するので、途中のレイヤーだけが宙に浮いた「未接続の実装」を残さない。
-- レイヤー境界（API 契約・`ApiClient`・`expect`/`actual`）が既に決まっているため、機能追加は「境界に沿って埋める」作業になり、設計判断が局所化する。
+- レイヤー境界（API 契約・`ApiClient`・プラットフォーム interface）が既に決まっているため、機能追加は「境界に沿って埋める」作業になり、設計判断が局所化する。
+- 機能の抽象化に `expect class` を使わないのは、コンストラクタで依存を渡せずテスト時の差し替えも効かないため。interface なら Android 実装が `Context` や `Activity` を受け取れ、テストには fake を注げる。
 - 骨組みが薄いうちに型を固定しておくことで、機能が増えても配線の一貫性が保たれる。
 
 ## どこに何を足すか（レイヤー順）
@@ -35,23 +36,27 @@
 | --- | --- | --- |
 | 1 | `network/dto/` | リクエスト/レスポンスの `@Serializable` DTO |
 | 2 | `ApiClient` | 新エンドポイントを叩く `suspend` メソッドを追加 |
-| 3 | `feature/<name>/` | 機能ごとの `ViewModel` と `UiState`（`sealed interface`） |
+| 3 | `feature/<name>/` | 機能ごとの `ViewModel`（`androidx.lifecycle.ViewModel` を継承）と、必要なら feature 固有の状態型 |
 | 4 | `di/Koin.kt` | 追加した `ApiClient` メソッド利用箇所・`ViewModel` を Koin に登録 |
 
-`ViewModel` と `UiState` は `HealthzViewModel` / `HealthzUiState`（`Loading` / `Ok` / `Error`）を手本にする。UI 状態は `StateFlow` で公開し、Android は直接、iOS は SKIE 経由で購読する。
+画面の状態は、まず共通の `core/state/UiState.kt`（`Loading` / `Content(data, sync)` / `Empty` / `Failure(error)`）で表せないかを検討する。両 OS の `RunaStateView` / `RunaStateViews` がこの型を受けて loading・空・オフライン・エラーを振り分けるため、画面ごとに状態画面を作らずに済む。オフラインは `Failure` ではなく `Content.sync` に載せる（本文を隠さない）。表せない場合だけ feature 固有の状態型を作る。
+
+`ViewModel` は `androidx.lifecycle.ViewModel` を継承し、コルーチンは `viewModelScope` で起こす。自前の `CoroutineScope` は持たせない — 破棄経路が無くなり、画面を離れても処理が止まらなくなるため。状態は `StateFlow` で公開し、Android は直接、iOS は SKIE 経由で購読する。
+
+Koin の束縛は寿命で決める。画面ごとに作り直してよいものは `factory`、テーマ・認証ゲート・プライバシーロックのように画面より長生きさせるものは `single` にする。**`single` を `koinViewModel()` で解決してはいけない** — 画面を離れるとき ViewModelStore がその唯一のインスタンスを `clear()` し、以降は破棄済みの `ViewModel` が配られる。
 
 ### 3. androidApp（`apps/kotlin/androidApp/`）
 
 | 追加先 | 役割 |
 | --- | --- |
-| `ui/screens/<Name>Screen.kt` | 共有 `ViewModel` を Koin から解決し、`state` を購読する Compose 画面 |
+| `ui/screens/<Name>Screen.kt` | 共有 `ViewModel` を解決し（`factory` 束縛なら `koinViewModel()`、`single` 束縛なら `koinInject()`）、`collectAsStateWithLifecycle()` で `state` を購読する Compose 画面 |
 | ナビゲーション | `navigation-compose` のルートを 1 つ追加し、タブまたは遷移先に結線する |
 
 ### 4. ios（`apps/swift/`）
 
 | 追加先 | 役割 |
 | --- | --- |
-| `<Name>View.swift` | 共有 `ViewModel`（SKIE でブリッジ）を購読する SwiftUI ビュー |
+| `<Name>View.swift` | 共有 `ViewModel`（SKIE でブリッジ）を購読する SwiftUI ビュー。`factory` 束縛なら観測クラスが `ViewModelOwner` に預け、`deinit` で `dispose()` する |
 | ナビゲーション | タブまたはルートを 1 つ追加する |
 
 ## 具体例: `profile` スライスの雛形（コードなし・パスのみ）
@@ -70,12 +75,11 @@ apps/go/
 apps/kotlin/shared/src/commonMain/kotlin/com/runa/shared/
   network/dto/ProfileDto.kt                     # @Serializable data class
   network/ApiClient.kt                          # suspend fun profile(): ProfileDto を追加
-  feature/profile/ProfileViewModel.kt
-  feature/profile/ProfileUiState.kt             # Loading / Ok / Error
-  di/Koin.kt                                     # ProfileViewModel を登録
+  feature/profile/ProfileViewModel.kt            # ViewModel() を継承、viewModelScope を使う
+  di/Koin.kt                                     # ProfileViewModel を登録（寿命で factory / single を選ぶ）
 
 apps/kotlin/androidApp/src/main/kotlin/com/runa/android/
-  ui/screens/ProfileScreen.kt                   # ProfileViewModel を購読
+  ui/screens/ProfileScreen.kt                   # koinViewModel() で解決し collectAsStateWithLifecycle() で購読
   <nav>                                         # ルートを追加
 
 apps/swift/Runa/Screens/

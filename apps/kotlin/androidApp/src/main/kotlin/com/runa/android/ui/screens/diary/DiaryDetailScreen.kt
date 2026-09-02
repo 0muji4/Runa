@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +54,7 @@ fun DiaryDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val entry = (state as? UiState.Content<List<DiaryEntry>>)?.data?.firstOrNull { it.clientId == clientId }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
     Surface(color = RunaColors.Background) {
         Column(

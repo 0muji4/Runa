@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -15,6 +17,12 @@ import com.runa.shared.feature.auth.AuthViewModel
 import java.util.UUID
 
 private enum class AuthStep { Onboarding1, Onboarding2, Notifications, SignIn }
+
+/** enum を Bundle に入れるための明示的な Saver。名前で保存して valueOf で戻す。 */
+private val AuthStepSaver = Saver<AuthStep, String>(
+    save = { it.name },
+    restore = { AuthStep.valueOf(it) },
+)
 
 /**
  * The unauthenticated flow: onboarding ①② → notification shell → sign-in. Shown
@@ -28,7 +36,8 @@ fun AuthFlow(
     state: AuthState,
     authViewModel: AuthViewModel,
 ) {
-    var step by remember { mutableStateOf(AuthStep.Onboarding1) }
+    // 回転で作り直されると、サインインまで進んでいてもオンボーディング1に巻き戻る。
+    var step by rememberSaveable(stateSaver = AuthStepSaver) { mutableStateOf(AuthStep.Onboarding1) }
     var localError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val appleUnconfigured = stringResource(R.string.signin_provider_unconfigured)

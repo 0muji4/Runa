@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,7 +65,8 @@ fun DiaryEditorScreen(
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
     // No created-at in the editor state; the header shows the day being written.
-    val dayMs = remember { createdAtEpochMs ?: System.currentTimeMillis() }
+    // キー無しの remember だと回転で now を取り直し、ヘッダーの日付が変わり得た。
+    val dayMs = rememberSaveable { createdAtEpochMs ?: System.currentTimeMillis() }
 
     val leave = {
         viewModel.saveNow()

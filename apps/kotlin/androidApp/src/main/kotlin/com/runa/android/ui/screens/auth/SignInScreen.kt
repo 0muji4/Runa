@@ -25,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,12 @@ import com.runa.android.ui.theme.RunaColors
 /** Email sub-mode of the sign-in screen. */
 enum class EmailMode { Login, Signup }
 
+/** enum を Bundle に入れるための明示的な Saver。名前で保存して valueOf で戻す。 */
+private val EmailModeSaver = Saver<EmailMode, String>(
+    save = { it.name },
+    restore = { EmailMode.valueOf(it) },
+)
+
 /**
  * Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
  * wordmark and a poetic line, then Apple / Google / メール, with いまはしない below.
@@ -56,7 +64,7 @@ fun SignInScreen(
     onEmailSubmit: (mode: EmailMode, email: String, password: String, displayName: String) -> Unit,
     onSkip: () -> Unit,
 ) {
-    var showEmail by remember { mutableStateOf(false) }
+    var showEmail by rememberSaveable { mutableStateOf(false) }
 
     Surface(color = RunaColors.Background) {
         if (showEmail) {
@@ -154,10 +162,12 @@ private fun EmailStep(
     onSubmit: (EmailMode, String, String, String) -> Unit,
     onBack: () -> Unit,
 ) {
-    var mode by remember { mutableStateOf(EmailMode.Login) }
-    var email by remember { mutableStateOf("") }
+    var mode by rememberSaveable(stateSaver = EmailModeSaver) { mutableStateOf(EmailMode.Login) }
+    var email by rememberSaveable { mutableStateOf("") }
+    // パスワードだけは rememberSaveable にしない。savedInstanceState は平文で保持され、
+    // プロセス死からの復元のためにディスクへも書かれるため。回転で消えるのは意図的。
     var password by remember { mutableStateOf("") }
-    var displayName by remember { mutableStateOf("") }
+    var displayName by rememberSaveable { mutableStateOf("") }
     val canSubmit = !isBusy && email.isNotBlank() && password.isNotBlank()
 
     Column(

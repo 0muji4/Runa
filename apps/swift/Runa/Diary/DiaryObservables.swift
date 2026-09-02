@@ -58,6 +58,9 @@ final class DiaryEditorObservable: ObservableObject {
 
     private let viewModel: DiaryEditorViewModel
     private var collectTask: Task<Void, Never>?
+    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
+    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    private let owner = ViewModelOwner()
 
     init(clientId: String?) {
         self.viewModel = resolveDiaryEditorViewModel(clientId: clientId)
@@ -72,6 +75,7 @@ final class DiaryEditorObservable: ObservableObject {
     }
 
     private func startCollecting() {
+        owner.own(viewModel: viewModel)
         collectTask = Task { [weak self] in
             guard let self else { return }
             let flow: SkieSwiftStateFlow<DiaryEditorState> = self.viewModel.state
@@ -85,7 +89,10 @@ final class DiaryEditorObservable: ObservableObject {
     func onMoodChange(_ mood: String?) { viewModel.onMoodChange(mood: mood) }
     func saveNow() { viewModel.saveNow() }
 
-    deinit { collectTask?.cancel() }
+    deinit {
+        collectTask?.cancel()
+        owner.dispose()
+    }
 }
 
 // Mood options live in the shared `DiaryMood` (com.runa.shared.feature.diary), the

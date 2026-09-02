@@ -19,9 +19,13 @@ final class CalendarObservable: ObservableObject {
 
     private let viewModel: CalendarViewModel
     private var collectTask: Task<Void, Never>?
+    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
+    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    private let owner = ViewModelOwner()
 
     init(viewModel: CalendarViewModel = resolveCalendarViewModel()) {
         self.viewModel = viewModel
+        owner.own(viewModel: viewModel)
         collectTask = Task { [weak self] in
             guard let self else { return }
             for await value in self.viewModel.state {
@@ -39,7 +43,10 @@ final class CalendarObservable: ObservableObject {
     func showToday() { viewModel.showToday() }
     func refresh() { viewModel.refresh() }
 
-    deinit { collectTask?.cancel() }
+    deinit {
+        collectTask?.cancel()
+        owner.dispose()
+    }
 }
 
 /// The today's-moon page state (pure local computation: loading → content).
@@ -82,9 +89,13 @@ final class DayRecordsObservable: ObservableObject {
 
     private let viewModel: DayRecordsViewModel
     private var collectTask: Task<Void, Never>?
+    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
+    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    private let owner = ViewModelOwner()
 
     init(isoDate: String) {
         self.viewModel = resolveDayRecordsViewModel(isoDate: isoDate)
+        owner.own(viewModel: viewModel)
         self.dateLabel = viewModel.dateLabel
         collectTask = Task { [weak self] in
             guard let self else { return }
@@ -95,5 +106,8 @@ final class DayRecordsObservable: ObservableObject {
         }
     }
 
-    deinit { collectTask?.cancel() }
+    deinit {
+        collectTask?.cancel()
+        owner.dispose()
+    }
 }

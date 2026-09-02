@@ -16,9 +16,10 @@ import kotlinx.coroutines.launch
  * It runs an initial [check] on construction so the Home tab shows a result
  * without any explicit trigger from the UI.
  *
- * Work runs on [androidx.lifecycle.viewModelScope], so it is cancelled when the
- * view model is cleared — on Android by the ViewModelStore, on iOS by the observable
- * calling `clear()` in its `deinit`.
+ * Work runs on [androidx.lifecycle.viewModelScope]. これは Koin で `single` 束縛の
+ * 疎通確認用なのでアプリ寿命で生き続け、破棄されない。画面ごとに捨てたい view model は
+ * `factory` 束縛にしたうえで、Android は koinViewModel()、iOS は
+ * [com.runa.shared.platform.ViewModelOwner] に預けること。
  */
 class HealthzViewModel(
     private val apiClient: ApiClient,

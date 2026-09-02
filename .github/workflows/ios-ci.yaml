@@ -49,9 +49,26 @@ jobs:
         run: brew install xcodegen
       # SharedKit/Package.swift が XCFramework を binaryTarget で相対参照するため、
       # プロジェクト生成より前にビルドしておく必要がある。
+      #
+      # release ではなく debug をビルドする。Kotlin/Native の release は LLVM の最適化が
+      # 入って桁違いに遅く（計測では 3 アーキで 774 秒）、この job の目的である
+      # 「Swift と SKIE ブリッジがコンパイルできるか」の検証に最適化は要らない。
+      # 公開される API 表面は debug でも同じなので、検証能力は落ちない。
       - name: Build XCFramework
         working-directory: apps/kotlin
-        run: ./gradlew :shared:assembleSharedReleaseXCFramework
+        run: ./gradlew :shared:assembleSharedDebugXCFramework
+      # Package.swift の binaryTarget は release のパスを直に指している。CI だけ debug を
+      # 使うので、生成物をそのパスに置き換える。ランナーは使い捨てのため手元のビルドには
+      # 影響しない（make ios-build は従来どおり release をビルドする）。
+      - name: Stage the debug XCFramework where SharedKit expects it
+        run: |
+          src=apps/kotlin/shared/build/XCFrameworks/debug/Shared.xcframework
+          dst=apps/kotlin/shared/build/XCFrameworks/release
+          # 出力パスが変わったら xcodebuild の不可解なエラーではなくここで落とす。
+          test -d "$src" || { echo "XCFramework not found at $src"; exit 1; }
+          mkdir -p "$dst"
+          rm -rf "$dst/Shared.xcframework"
+          cp -R "$src" "$dst/Shared.xcframework"
       # Runa.xcodeproj は生成物（gitignore 対象）なので毎回作る。
       - name: Generate Xcode project
         working-directory: apps/swift

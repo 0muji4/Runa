@@ -42,7 +42,7 @@ import com.runa.shared.feature.calendar.CalendarDay
 import com.runa.shared.feature.calendar.CalendarMonth
 import com.runa.shared.feature.calendar.CalendarViewModel
 import com.runa.shared.feature.today.moon.moonIsWaxing
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 
 private val WEEKDAYS = listOf("日", "月", "火", "水", "木", "金", "土")
 
@@ -58,7 +58,7 @@ fun CalendarScreen(
     onOpenDayRecords: (isoDate: String) -> Unit,
     onWriteOnDay: (isoDate: String) -> Unit,
     onBack: () -> Unit,
-    viewModel: CalendarViewModel = koinInject(),
+    viewModel: CalendarViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 

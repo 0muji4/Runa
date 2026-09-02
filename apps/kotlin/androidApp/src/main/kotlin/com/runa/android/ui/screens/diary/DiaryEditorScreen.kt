@@ -39,7 +39,7 @@ import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.diary.DiaryEditorViewModel
 import com.runa.shared.feature.diary.DiaryMood
 import com.runa.shared.feature.diary.SaveStatus
-import org.koin.compose.getKoin
+import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
@@ -58,10 +58,12 @@ fun DiaryEditorScreen(
     // ISO yyyy-MM-dd day and the header shows it instead of today.
     backdateIsoDate: String? = null,
 ) {
-    val koin = getKoin()
     val createdAtEpochMs = remember(backdateIsoDate) { backdateIsoDate?.let(::isoDateToNoonEpochMs) }
-    val viewModel = remember(clientId, createdAtEpochMs) {
-        koin.get<DiaryEditorViewModel> { parametersOf(clientId, createdAtEpochMs) }
+    // koinViewModel（= ViewModelStore 管理）であることがこの画面では特に重要。
+    // remember で持っていたときは回転でコンポジションごと作り直され、下書きが消えたうえに
+    // clientId が null に戻って persist() が二重に createEntry を呼んでいた。
+    val viewModel: DiaryEditorViewModel = koinViewModel {
+        parametersOf(clientId, createdAtEpochMs)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
     // No created-at in the editor state; the header shows the day being written.

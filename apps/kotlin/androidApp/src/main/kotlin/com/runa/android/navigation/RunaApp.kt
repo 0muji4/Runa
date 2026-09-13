@@ -5,7 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -250,6 +254,12 @@ fun RunaAuthenticatedApp(
  * [Scaffold] used to provide: without this, the top back-affordance would sit under
  * the status bar and bottom content under the gesture bar, since these screens now
  * live in the bottom-bar-less outer NavHost.
+ *
+ * Insets are system bars unioned with the display cutout rather than
+ * `systemBarsPadding()` alone: targetSdk 35 makes edge-to-edge non-optional, so in
+ * landscape on a notched device the cutout would otherwise clip the header. The IME
+ * is deliberately excluded (`safeDrawing` would include it) because the editor
+ * applies its own `imePadding()` — folding it in here would pad twice.
  */
 @Composable
 private fun Pushed(content: @Composable () -> Unit) {
@@ -257,7 +267,7 @@ private fun Pushed(content: @Composable () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(RunaColors.Background)
-            .systemBarsPadding(),
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout)),
     ) {
         content()
     }

@@ -168,7 +168,7 @@ private class FakeCalendarApi : ApiClient {
     override suspend fun deleteDiary(id: String) = error("unused")
     override suspend fun syncDiary(since: String?) = error("unused")
     override suspend fun getToday(date: String?) = error("unused")
-    override suspend fun getSongs(limit: Int?, cursor: String?) = error("unused")
+    override suspend fun getSongs(until: String, limit: Int?, cursor: String?) = error("unused")
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = error("unused")
     override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest) = error("unused")
     override suspend fun createGallery(req: CreateGalleryRequest) = error("unused")

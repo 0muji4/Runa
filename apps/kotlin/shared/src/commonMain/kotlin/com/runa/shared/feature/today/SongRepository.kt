@@ -10,7 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.random.Random
 
 /** One local play-history record (also used as the archive list's "played" feed). */
@@ -42,6 +46,9 @@ interface SongRepository {
 class DefaultSongRepository(
     private val apiClient: ApiClient,
     private val database: RunaDatabase,
+    // The archive ends at the user's local day, so a song registered for
+    // tomorrow does not show up as "これまでの一曲" tonight.
+    private val today: () -> LocalDate = { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date },
 ) : SongRepository {
 
     override fun observeSongHistory(limit: Long): Flow<List<SongHistoryEntry>> =
@@ -58,7 +65,7 @@ class DefaultSongRepository(
             }
 
     override suspend fun getArchive(limit: Int?, cursor: String?): SongsArchiveResponse =
-        apiClient.getSongs(limit, cursor)
+        apiClient.getSongs(until = today().toString(), limit = limit, cursor = cursor)
 
     override suspend fun markPlayed(song: SongDto, playedAtMs: Long) = withContext(Dispatchers.Default) {
         database.todayQueries.insertPlay(

@@ -196,7 +196,7 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun getDiary(id: String): DiaryEntryDto = unused()
     override suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse = unused()
     override suspend fun getToday(date: String?): TodayResponse = unused()
-    override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse = unused()
+    override suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse = unused()
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()
     override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse = unused()
     override suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto = unused()

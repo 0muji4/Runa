@@ -78,8 +78,9 @@ interface ApiClient {
     /** GET /today?date= — the day's curated quote and song (either may be null). */
     suspend fun getToday(date: String?): TodayResponse
 
-    /** GET /songs?limit=&cursor= — the song archive, newest first. */
-    suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse
+    /** GET /songs?until=&limit=&cursor= — the song archive up to [until] (the
+     *  client's local day, ISO yyyy-MM-dd), newest first. */
+    suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse
 
     /** POST /songs/{id}/played — record a play (server clock when playedAt is null). */
     suspend fun markSongPlayed(songId: String, playedAt: String?)
@@ -171,10 +172,11 @@ class KtorApiClient(
             }
         }.decodeOrThrow()
 
-    override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse =
+    override suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse =
         httpClient.get(baseUrl) {
             url {
                 appendPathSegments("api", "v1", "songs")
+                parameters.append("until", until)
                 if (limit != null) parameters.append("limit", limit.toString())
                 if (cursor != null) parameters.append("cursor", cursor)
             }

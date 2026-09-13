@@ -189,7 +189,7 @@ class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
     override suspend fun syncDiary(since: String?): DiarySyncResponse = unused()
     override suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse = unused()
     override suspend fun getToday(date: String?): TodayResponse = unused()
-    override suspend fun getSongs(limit: Int?, cursor: String?): SongsArchiveResponse = unused()
+    override suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse = unused()
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()
 
     private fun unused(): Nothing = error("endpoint not used by the gallery engine")

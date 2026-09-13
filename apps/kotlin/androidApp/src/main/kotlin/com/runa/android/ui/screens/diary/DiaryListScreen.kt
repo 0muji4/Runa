@@ -50,7 +50,7 @@ import com.runa.shared.feature.diary.DiaryListViewModel
 import org.koin.compose.koinInject
 
 /**
- * Diary list (09) — "日々の記録". A large 明朝 heading over a quiet column of record
+ * Diary list (09 ダイアリー). A large 明朝 heading over a quiet column of record
  * cards, each led by its day's moon phase. Pull-to-refresh, a whisper-quiet sync
  * line, a new-moon empty state with a "綴りはじめる" invitation, and a round
  * moonlight-pink FAB into the editor. No Material app bar — the header is the page.

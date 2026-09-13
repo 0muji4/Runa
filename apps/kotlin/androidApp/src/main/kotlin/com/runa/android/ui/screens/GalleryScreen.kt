@@ -69,7 +69,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 13 ギャラリー — "ひかりの記録". A whitespace-rich masonry grid of the user's images
+ * 13 ギャラリー. A whitespace-rich masonry grid of the user's images
  * with a gallery-scoped display-theme toggle (monotone ⇔ pink) that re-grades the
  * whole grid — this is NOT the app-wide theme. Tapping a cell opens the lightbox (14).
  * Everything renders from the local DB; adds queue offline and flush on reconnect.

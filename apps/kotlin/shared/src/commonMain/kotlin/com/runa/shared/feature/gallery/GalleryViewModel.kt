@@ -14,7 +14,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
- * Drives the gallery grid (13 ひかりの記録). Derives the shared [UiState] from the
+ * Drives the gallery grid (13 ギャラリー). Derives the shared [UiState] from the
  * local image stream + sync phase, so it renders instantly from cache and works
  * offline. Local-first means we almost always have [UiState.Content] or
  * [UiState.Empty]; offline/sync ride along as [UiState.Content.sync] rather than

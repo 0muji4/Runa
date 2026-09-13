@@ -2,7 +2,7 @@ import PhotosUI
 import Shared
 import SwiftUI
 
-/// 13 ギャラリー — "ひかりの記録". A whitespace-rich two-column masonry of the user's
+/// 13 ギャラリー. A whitespace-rich two-column masonry of the user's
 /// images with a gallery-scoped display-theme toggle (monotone ⇔ pink) that re-grades
 /// the whole grid — NOT the app-wide theme. Tapping a cell opens the lightbox (14).
 /// Everything renders from the local DB; adds queue offline and flush on reconnect.

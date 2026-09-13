@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -163,7 +164,13 @@ private fun SongRow(song: SongDto, onClick: () -> Unit) {
         )
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(song.title, style = MaterialTheme.typography.titleLarge, color = RunaColors.Heading)
+            Text(
+                song.title,
+                style = MaterialTheme.typography.titleLarge,
+                color = RunaColors.Heading,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text("${song.artist} · ${song.date}", style = MaterialTheme.typography.bodyMedium, color = RunaColors.Subtle)
         }
         Spacer(Modifier.width(12.dp))

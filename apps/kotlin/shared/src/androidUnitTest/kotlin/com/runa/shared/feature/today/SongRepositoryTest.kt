@@ -7,6 +7,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -49,12 +50,17 @@ class SongRepositoryTest {
                        "artwork_url":"https://x/a.jpg","preview_url":"https://x/a.m4a","store_url":"https://music.apple.com/jp/x"}],
              "next_cursor":"CURSOR2"}
         """.trimIndent()
-        val engine = MockEngine {
+        var requestedUntil: String? = null
+        val engine = MockEngine { request ->
+            requestedUntil = request.url.parameters["until"]
             respond(archiveJson, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
         }
-        val repo = DefaultSongRepository(mockApiClient(engine), inMemoryDatabase())
+        val repo = DefaultSongRepository(mockApiClient(engine), inMemoryDatabase(), today = { LocalDate(2024, 12, 15) })
 
         val page = repo.getArchive(limit = 20, cursor = null)
+
+        // The archive stops at the user's local day, so tomorrow's song stays hidden.
+        assertEquals("2024-12-15", requestedUntil)
 
         assertEquals(1, page.songs.size)
         assertEquals("夜想曲", page.songs[0].title)

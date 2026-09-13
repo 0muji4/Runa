@@ -123,7 +123,7 @@ struct SongArchiveView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(song.title).font(RunaFonts.heading(18)).foregroundStyle(runaTheme.heading)
+                Text(song.title).font(RunaFonts.heading(18)).foregroundStyle(runaTheme.heading).lineLimit(2)
                 Text("\(song.artist) · \(song.date)").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
             Spacer()

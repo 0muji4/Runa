@@ -5,11 +5,14 @@
 # calendar day you run it — GET /today matches an exact date.
 #
 # Songs are tracks from Apple's catalog, registered by iTunes track id; the
-# server fetches title/artist/artwork/preview from the iTunes Search API. Find
-# ids with hack/itunes-search.sh and pass them comma-separated in
-# SONG_TRACK_IDS (one per day, in date order). Without it only quotes are seeded.
+# server fetches title/artist/artwork/preview from the iTunes Search API. The
+# default rotation below is 乃木坂46 — Runa takes its name and moon from 林瑠奈
+# (4期生), so the days open with the night, then two 4期生 songs.
+# Override with SONG_TRACK_IDS (comma-separated, one per day, in date order);
+# find ids with hack/itunes-search.sh.
 #
 # Usage:
+#   ADMIN_API_TOKEN=your-token ./hack/seed-today.sh [BASE_URL]
 #   ADMIN_API_TOKEN=your-token SONG_TRACK_IDS=123,456,789 ./hack/seed-today.sh [BASE_URL]
 #
 #   BASE_URL defaults to http://localhost:8080 (host+port only; the script adds
@@ -30,14 +33,21 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-# A small rotation of curated copy; one quote per day starting today.
+# One quote per day starting today, each facing the same way as that day's
+# song (no lyrics — original lines that lead back to writing the day down).
 QUOTES=(
-  "月あかりのはじまり。今日という夜を、そっと開く。"
-  "満ちても欠けても、あなたはあなたのままで。"
-  "静けさの中に、確かな光がある。"
-  "眠る前のひと呼吸を、月に預けて。"
+  "同じ日は、二度と来ない。"
+  "弱音は、夜に置いていける。朝には少し軽くなっている。"
+  "お茶が冷めるのを待つ。そんな時間も、今日のうち。"
+  "書いてみると、見えてくるものがある。"
 )
-IFS=',' read -r -a TRACK_IDS <<< "${SONG_TRACK_IDS:-}"
+# iTunes track ids (country=jp), one per QUOTES entry:
+#   1676590178  さざ波は戻らない              乃木坂46 / 人は夢を二度見る (2023)
+#   1537503194  夜明けまで強がらなくてもいい  乃木坂46 / 24th single (2019)
+#   1584800964  猫舌カモミールティー          乃木坂46 4期生楽曲 / ごめんねFingers crossed (2021)
+#   1537782852  I see...                    乃木坂46 4期生楽曲 / しあわせの保護色 (2020)
+DEFAULT_TRACK_IDS="1676590178,1537503194,1584800964,1537782852"
+IFS=',' read -r -a TRACK_IDS <<< "${SONG_TRACK_IDS:-${DEFAULT_TRACK_IDS}}"
 for id in "${TRACK_IDS[@]}"; do
   if [[ ! "${id}" =~ ^[0-9]+$ ]]; then
     echo "SONG_TRACK_IDS must be comma-separated iTunes track ids (got '${id}')." >&2
@@ -79,7 +89,4 @@ for i in "${!QUOTES[@]}"; do
   fi
 done
 
-if [[ -z "${SONG_TRACK_IDS:-}" ]]; then
-  echo "no songs seeded: set SONG_TRACK_IDS (find ids with ./hack/itunes-search.sh \"曲名 アーティスト\")."
-fi
 echo "done. GET ${API}/today (Bearer) will now return today's quote + song."

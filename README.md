@@ -104,7 +104,7 @@ curl http://localhost:8080/api/v1/healthz
 
 ### きょうの一曲（Apple のカタログの紹介と試聴）
 
-- **曲は Apple のカタログの実在の楽曲**。運営者は iTunes の `trackId` と日付だけで登録し（`POST /admin/songs`、id は `hack/itunes-search.sh` で探す）、曲名・アーティスト名・アートワーク・30 秒の試聴・Apple Music のページはサーバーが iTunes Search API から取得して `daily_songs` に保存する。24 時間より古い行は読み出し時にバックグラウンドで取得し直す。Apple の音源を自前で配信しない理由（原盤権）と Apple の利用条件は [PRD](docs/prd/todays-song-itunes-preview.md)、設計は [DD](docs/dd/todays-song-itunes-preview.md)。
+- **曲は Apple のカタログの実在の楽曲**。運営者は iTunes の `trackId` と日付だけで登録し（`POST /admin/songs`、id は `hack/itunes-search.sh` で探す。`make seed` の既定は 乃木坂46 の 4 曲）、曲名・アーティスト名・アートワーク・30 秒の試聴・Apple Music のページはサーバーが iTunes Search API から取得して `daily_songs` に保存する。24 時間より古い行は読み出し時にバックグラウンドで取得し直す。Apple の音源を自前で配信しない理由（原盤権）と Apple の利用条件は [PRD](docs/prd/todays-song-itunes-preview.md)、設計は [DD](docs/dd/todays-song-itunes-preview.md)。
 - **画面は「紹介」として作る**。07 きょうの一曲 / 08 これまでの一曲は、Apple Music の公式バッジ（`store_url`）を主に置き、試聴は再生・一時停止と進み具合だけ（シーク無し）、"provided courtesy of iTunes" を表示する。試聴の音声はサーバーにもクライアントにも保存・キャッシュしない（Apple の条件）。
 - `ITUNES_BASE_URL`（既定 `https://itunes.apple.com`）でローカルの偽 API に向けられる。
 

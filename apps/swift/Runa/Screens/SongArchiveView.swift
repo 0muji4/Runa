@@ -27,6 +27,9 @@ final class SongArchiveObservable: ObservableObject {
 }
 
 /// 08 これまでの一曲. The song archive (newest first) plus the local play history.
+/// Every row shows Apple's badge and the list carries the iTunes attribution, as
+/// Apple's Promo Content terms require for artwork/previews
+/// (docs/dd/todays-song-itunes-preview.md, Q4); the play history is text only.
 /// Tapping a song plays it through the shared player and returns to the player (07).
 struct SongArchiveView: View {
     @Environment(\.runaTheme) private var runaTheme
@@ -57,6 +60,10 @@ struct SongArchiveView: View {
     private var archiveList: some View {
         List {
             Section {
+                if archive.state?.songs.isEmpty == false {
+                    ITunesCourtesyLine()
+                        .listRowBackground(runaTheme.background)
+                }
                 ForEach(archive.state?.songs ?? [], id: \.id) { song in
                     Button {
                         player.play(song)
@@ -120,6 +127,7 @@ struct SongArchiveView: View {
                 Text("\(song.artist) · \(song.date)").font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
             }
             Spacer()
+            AppleMusicBadge(storeUrl: song.storeUrl, height: 28)
         }
     }
 }

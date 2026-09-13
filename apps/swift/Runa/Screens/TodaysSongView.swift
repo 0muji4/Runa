@@ -23,19 +23,21 @@ final class SongPlayerObservable: ObservableObject {
 
     func play(_ song: SongDto) { viewModel.play(song: song) }
     func togglePlayPause() { viewModel.togglePlayPause() }
-    func seek(_ positionMs: Int64) { viewModel.seekTo(positionMs: positionMs) }
 
     deinit { collectTask?.cancel() }
 }
 
-/// 07 きょうの一曲. A spacious, refined player. Defaults to today's song (from the
-/// shared `HomeViewModel`); once a song is playing (today's or one chosen from the
-/// archive) it reflects the shared `SongPlayerViewModel`'s live state.
+/// 07 きょうの一曲. Introduces the day's track from Apple's catalog: artwork, title,
+/// the Apple Music badge as the main action, and a 30-second preview below it.
+/// Defaults to today's song (from the shared `HomeObservable`); once a preview is
+/// playing (today's or one chosen from the archive) it reflects the shared
+/// `SongPlayerViewModel`'s live state. The layout follows Apple's Promo Content
+/// terms (docs/dd/todays-song-itunes-preview.md, Q4): badge and attribution on
+/// the same screen, no seek.
 struct TodaysSongView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var player = SongPlayerObservable()
     @StateObject private var home = HomeObservable()
-    @State private var scrubbing: Double?
 
     private var song: SongDto? { player.state?.song ?? home.todaySong }
 
@@ -56,7 +58,7 @@ struct TodaysSongView: View {
 
                     ZStack {
                         if let song {
-                            playerBody(song)
+                            introduction(song)
                         } else {
                             RunaEmptyView(
                                 title: L.todaySongNone,
@@ -71,56 +73,58 @@ struct TodaysSongView: View {
         }
     }
 
-    private func playerBody(_ song: SongDto) -> some View {
+    private func introduction(_ song: SongDto) -> some View {
         let ps = player.state
         let isPlaying = ps?.isPlaying ?? false
         let duration = Double(ps?.durationMs ?? 0)
-        let position = scrubbing ?? Double(ps?.positionMs ?? 0)
+        let position = Double(ps?.positionMs ?? 0)
+        let progress = duration > 0 ? min(max(position / duration, 0), 1) : 0
 
-        return VStack(spacing: RunaSpacing.md) {
+        // Artwork is capped so the badge, preview and attribution always fit
+        // above the tab bar on a 4.7"-class screen.
+        return VStack(spacing: RunaSpacing.sm) {
             AsyncImage(url: URL(string: song.artworkUrl)) { image in
                 image.resizable().aspectRatio(1, contentMode: .fit)
             } placeholder: {
                 runaTheme.surface
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: 280)
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            Text(song.title).font(RunaFonts.heading(26)).foregroundStyle(runaTheme.heading)
-            Text(song.artist).font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
+            VStack(spacing: 4) {
+                Text(song.title).font(RunaFonts.heading(26)).foregroundStyle(runaTheme.heading)
+                Text(song.artist).font(RunaFonts.body(16)).foregroundStyle(runaTheme.subtle)
+            }
+            .padding(.top, RunaSpacing.xs)
 
-            if duration > 0 {
-                Slider(
-                    value: Binding(get: { position }, set: { scrubbing = $0 }),
-                    in: 0...duration,
-                    onEditingChanged: { editing in
-                        if !editing, let s = scrubbing { player.seek(Int64(s)); scrubbing = nil }
-                    }
-                )
-                .tint(runaTheme.accent)
-                HStack {
-                    Text(timeLabel(Int64(position))).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
-                    Spacer()
-                    Text(timeLabel(ps?.durationMs ?? 0)).font(RunaFonts.body(13)).foregroundStyle(runaTheme.subtle)
+            // The badge is the screen's main action: the preview below only
+            // introduces the track, so it sits under the badge and cannot be scrubbed.
+            AppleMusicBadge(storeUrl: song.storeUrl, height: 48)
+                .padding(.top, RunaSpacing.sm)
+
+            HStack(spacing: 12) {
+                Button {
+                    if player.state?.song == nil { player.play(song) } else { player.togglePlayPause() }
+                } label: {
+                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(runaTheme.accent)
+                }
+                .accessibilityLabel(isPlaying ? L.playerPause : L.playerPlay)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.songPreviewLabel).font(RunaFonts.body(12)).foregroundStyle(runaTheme.subtle)
+                    ProgressView(value: progress)
+                        .tint(runaTheme.accent)
                 }
             }
+            .padding(.top, RunaSpacing.sm)
 
-            Button {
-                if player.state?.song == nil { player.play(song) } else { player.togglePlayPause() }
-            } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(runaTheme.accent)
-            }
-            .accessibilityLabel(isPlaying ? L.playerPause : L.playerPlay)
+            ITunesCourtesyLine()
+                .padding(.top, RunaSpacing.xs)
         }
         .padding(.horizontal, RunaSpacing.lg)
-    }
-
-    private func timeLabel(_ ms: Int64) -> String {
-        let total = max(ms / 1000, 0)
-        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 

@@ -1,0 +1,37 @@
+import SwiftUI
+
+/// Apple's official "Apple Music で聴く" badge, opening the track's Apple Music
+/// page. Apple's Promo Content terms require it next to any preview or artwork
+/// (docs/prd/todays-song-itunes-preview.md, N1), so 07 and each 08 row carry it.
+/// The asset is Apple's own (Assets.xcassets/AppleMusicBadge, also kept at
+/// design/apple_music_badge_ja.svg), never redrawn.
+struct AppleMusicBadge: View {
+    let storeUrl: String
+    var height: CGFloat = 40
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            if let url = URL(string: storeUrl) { openURL(url) }
+        } label: {
+            Image("AppleMusicBadge")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: height)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.songListenOnAppleMusic)
+    }
+}
+
+/// The attribution Apple's terms require wherever a preview is offered.
+struct ITunesCourtesyLine: View {
+    @Environment(\.runaTheme) private var runaTheme
+
+    var body: some View {
+        Text(L.songCourtesy)
+            .font(RunaFonts.body(11))
+            .foregroundStyle(runaTheme.subtle)
+    }
+}

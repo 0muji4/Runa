@@ -44,10 +44,10 @@ val todayJson = """
     {"date":"2024-12-15",
      "quote":{"id":"q1","date":"2024-12-15","body_text":"月あかり"},
      "song":{"id":"s1","date":"2024-12-15","title":"夜想曲","artist":"月詠",
-             "artwork_url":"https://x/a.jpg","audio_url":"https://x/a.mp3"}}
+             "artwork_url":"https://x/a.jpg","preview_url":"https://x/a.m4a","store_url":"https://music.apple.com/jp/x"}}
 """.trimIndent()
 
 val songSample = com.runa.shared.network.dto.SongDto(
     id = "s1", date = "2024-12-15", title = "夜想曲", artist = "月詠",
-    artworkUrl = "https://x/a.jpg", audioUrl = "https://x/a.mp3",
+    artworkUrl = "https://x/a.jpg", previewUrl = "https://x/a.m4a", storeUrl = "https://music.apple.com/jp/x",
 )

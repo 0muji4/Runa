@@ -1,0 +1,26 @@
+-- Schema 1 → 2: today's song is now a track from Apple's catalog, cached with
+-- its preview stream and Apple Music page, and the play log drops the artwork
+-- (promo content that may only appear next to the store badge). Both tables are
+-- local caches/logs, so they are recreated rather than altered column by column
+-- (SQLite cannot drop a column in place on older Android); the song cache is
+-- refilled by the next GET /today and the play log starts over.
+DROP TABLE today_song;
+DROP TABLE song_history;
+
+CREATE TABLE today_song (
+    date        TEXT NOT NULL PRIMARY KEY,
+    id          TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    artist      TEXT NOT NULL,
+    artwork_url TEXT NOT NULL,
+    preview_url TEXT NOT NULL,
+    store_url   TEXT NOT NULL
+);
+
+CREATE TABLE song_history (
+    id        TEXT    NOT NULL PRIMARY KEY,
+    song_id   TEXT    NOT NULL,
+    title     TEXT    NOT NULL,
+    artist    TEXT    NOT NULL,
+    played_at INTEGER NOT NULL
+);

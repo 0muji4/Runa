@@ -31,8 +31,8 @@ class LocalDataCleanerTest {
         )
         database.galleryQueries.setMeta("display_theme", "pink")
         database.todayQueries.upsertQuote("2026-01-01", "q1", "quote")
-        database.todayQueries.upsertSong("2026-01-01", "s1", "title", "artist", "art", "audio")
-        database.todayQueries.insertPlay("p1", "s1", "title", "artist", "art", 0L)
+        database.todayQueries.upsertSong("2026-01-01", "s1", "title", "artist", "art", "preview", "store")
+        database.todayQueries.insertPlay("p1", "s1", "title", "artist", 0L)
 
         // Sanity: the seed landed.
         assertTrue(database.diaryQueries.selectAll().executeAsList().isNotEmpty())

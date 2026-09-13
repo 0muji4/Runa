@@ -26,6 +26,11 @@ data class QuoteDto(
     @SerialName("body_text") val bodyText: String,
 )
 
+/**
+ * A day's song: a track from Apple's catalog. [previewUrl] is Apple's 30-second
+ * preview, provided only to promote the track — it is streamed, never cached,
+ * and shown next to the Apple Music badge that opens [storeUrl].
+ */
 @Serializable
 data class SongDto(
     val id: String,
@@ -33,7 +38,8 @@ data class SongDto(
     val title: String,
     val artist: String,
     @SerialName("artwork_url") val artworkUrl: String,
-    @SerialName("audio_url") val audioUrl: String,
+    @SerialName("preview_url") val previewUrl: String,
+    @SerialName("store_url") val storeUrl: String,
 )
 
 /** One page of the song archive; [nextCursor] is null on the last page. */

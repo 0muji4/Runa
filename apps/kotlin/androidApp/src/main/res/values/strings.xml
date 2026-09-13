@@ -117,6 +117,11 @@
     <!-- Player transport: icon-only on both platforms, so these are screen-reader labels. -->
     <string name="player_play">再生</string>
     <string name="player_pause">一時停止</string>
+    <!-- Apple の Promo Content 条項が求める表示（docs/prd/todays-song-itunes-preview.md N1）。
+         帰属表示は条項の文言どおり英語のまま。 -->
+    <string name="song_listen_on_apple_music">Apple Music で聴く</string>
+    <string name="song_preview_label">30秒の試聴</string>
+    <string name="song_courtesy">provided courtesy of iTunes</string>
 
     <!-- Calendar (12) + its day-records view. 「ふりかえり」は 16 インサイトの
          「うつろい」と役割が衝突するので、導線ラベルは「カレンダー」にする。 -->

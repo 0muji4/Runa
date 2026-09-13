@@ -15,7 +15,6 @@ import platform.AVFoundation.play
 import platform.AVFoundation.rate
 import platform.AVFoundation.removeTimeObserver
 import platform.AVFoundation.replaceCurrentItemWithPlayerItem
-import platform.AVFoundation.seekToTime
 import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSURL
@@ -24,6 +23,9 @@ import platform.Foundation.NSURL
  * AVPlayer-backed [AudioPlayer] (AVFoundation). AVPlayer is safe to drive from any
  * thread for these basic operations, so calls run directly. Position is sampled
  * via a periodic time observer, which republishes [PlaybackState] as it fires.
+ *
+ * AVPlayerItem streams the URL; nothing here downloads or caches the preview
+ * (Apple's terms — see [AudioPlayer]).
  */
 @OptIn(ExperimentalForeignApi::class)
 class AvAudioPlayer : AudioPlayer {
@@ -48,11 +50,6 @@ class AvAudioPlayer : AudioPlayer {
 
     override fun pause() {
         player.pause()
-        sync()
-    }
-
-    override fun seekTo(positionMs: Long) {
-        player.seekToTime(CMTimeMakeWithSeconds(positionMs / 1000.0, PREFERRED_TIMESCALE))
         sync()
     }
 

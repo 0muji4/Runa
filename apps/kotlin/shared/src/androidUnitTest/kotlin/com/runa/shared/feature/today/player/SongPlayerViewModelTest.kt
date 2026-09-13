@@ -28,7 +28,6 @@ private class FakeAudioPlayer : AudioPlayer {
     override fun load(url: String) { loadedUrl = url; calls += "load" }
     override fun play() { calls += "play"; playbackState.value = playbackState.value.copy(isPlaying = true) }
     override fun pause() { calls += "pause"; playbackState.value = playbackState.value.copy(isPlaying = false) }
-    override fun seekTo(positionMs: Long) { calls += "seek:$positionMs" }
     override fun release() { calls += "release" }
 }
 
@@ -49,7 +48,7 @@ class SongPlayerViewModelTest {
     @AfterTest
     fun tearDownMain() = Dispatchers.resetMain()
 
-    private val song = SongDto("s1", "2024-12-15", "夜想曲", "月詠", "https://x/a.jpg", "https://x/a.mp3")
+    private val song = SongDto("s1", "2024-12-15", "夜想曲", "月詠", "https://x/a.jpg", "https://x/a.m4a", "https://music.apple.com/jp/x")
 
     @Test
     fun playLoadsTheSongAndRecordsAPlay() = runTest(UnconfinedTestDispatcher()) {
@@ -60,7 +59,7 @@ class SongPlayerViewModelTest {
         vm.play(song)
         advanceUntilIdle()
 
-        assertEquals("https://x/a.mp3", audio.loadedUrl)
+        assertEquals("https://x/a.m4a", audio.loadedUrl)
         assertTrue(audio.calls.contains("play"))
         assertEquals(listOf("s1"), repo.played.map { it.first })
         assertEquals(song, vm.state.value.song)

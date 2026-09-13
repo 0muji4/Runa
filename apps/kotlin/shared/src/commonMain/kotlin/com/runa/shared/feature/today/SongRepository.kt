@@ -19,7 +19,6 @@ data class SongHistoryEntry(
     val songId: String,
     val title: String,
     val artist: String,
-    val artworkUrl: String,
     val playedAtMs: Long,
 )
 
@@ -53,7 +52,7 @@ class DefaultSongRepository(
                 rows.map {
                     SongHistoryEntry(
                         id = it.id, songId = it.song_id, title = it.title,
-                        artist = it.artist, artworkUrl = it.artwork_url, playedAtMs = it.played_at,
+                        artist = it.artist, playedAtMs = it.played_at,
                     )
                 }
             }
@@ -67,7 +66,6 @@ class DefaultSongRepository(
             song_id = song.id,
             title = song.title,
             artist = song.artist,
-            artwork_url = song.artworkUrl,
             played_at = playedAtMs,
         )
         // Best-effort server notification; the local record already succeeded.

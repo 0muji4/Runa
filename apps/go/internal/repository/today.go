@@ -13,15 +13,26 @@ type Quote struct {
 	BodyText string
 }
 
-// Song is the persistence model for the daily_songs table (migration 0004): one
-// curated song per calendar day, with the artwork and audio the player needs.
+// Song is the persistence model for the daily_songs table (migrations 0004 +
+// 0007): one curated song per calendar day. ITunesTrackID identifies the track in
+// Apple's catalog and is the source of truth; the SongMetadata was fetched from
+// the iTunes Search API at ResolvedAt and is re-fetched once it goes stale.
 type Song struct {
-	ID         string
-	Date       time.Time
+	ID            string
+	Date          time.Time
+	ITunesTrackID int64
+	SongMetadata
+}
+
+// SongMetadata is what Runa keeps from an iTunes lookup: the display fields, the
+// 30-second preview stream, and the Apple Music page the store badge links to.
+type SongMetadata struct {
 	Title      string
 	Artist     string
 	ArtworkURL string
-	AudioURL   string
+	PreviewURL string
+	StoreURL   string
+	ResolvedAt time.Time
 }
 
 // InsertQuoteParams / InsertSongParams carry the fields for an admin upsert keyed
@@ -32,11 +43,9 @@ type InsertQuoteParams struct {
 }
 
 type InsertSongParams struct {
-	Date       time.Time
-	Title      string
-	Artist     string
-	ArtworkURL string
-	AudioURL   string
+	Date          time.Time
+	ITunesTrackID int64
+	SongMetadata
 }
 
 // ListSongsParams is a keyset page request for the song archive: songs strictly
@@ -74,4 +83,8 @@ type TodayStore interface {
 	// Date replaces the existing row for that day.
 	InsertQuote(ctx context.Context, p InsertQuoteParams) (Quote, error)
 	InsertSong(ctx context.Context, p InsertSongParams) (Song, error)
+
+	// UpdateSongMetadata replaces a song's fetched metadata (a background
+	// re-fetch). It returns ErrNotFound when songID is not a known song.
+	UpdateSongMetadata(ctx context.Context, songID string, m SongMetadata) error
 }

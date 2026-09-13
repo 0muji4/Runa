@@ -15,7 +15,7 @@ import (
 // with scanQuote / scanSong.
 const (
 	quoteColumns = `id, date, body_text`
-	songColumns  = `id, date, title, artist, artwork_url, audio_url`
+	songColumns  = `id, date, itunes_track_id, title, artist, artwork_url, preview_url, store_url, resolved_at`
 )
 
 // fkViolation is the Postgres SQLSTATE for a FK violation (a play against an
@@ -45,7 +45,7 @@ func scanQuote(r row) (Quote, error) {
 
 func scanSong(r row) (Song, error) {
 	var s Song
-	if err := r.Scan(&s.ID, &s.Date, &s.Title, &s.Artist, &s.ArtworkURL, &s.AudioURL); err != nil {
+	if err := r.Scan(&s.ID, &s.Date, &s.ITunesTrackID, &s.Title, &s.Artist, &s.ArtworkURL, &s.PreviewURL, &s.StoreURL, &s.ResolvedAt); err != nil {
 		return Song{}, err
 	}
 	return s, nil
@@ -153,20 +153,42 @@ func (r *TodayRepository) InsertSong(ctx context.Context, p InsertSongParams) (S
 		return Song{}, ErrNoDatabase
 	}
 	const q = `
-		INSERT INTO daily_songs (date, title, artist, artwork_url, audio_url)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO daily_songs (date, itunes_track_id, title, artist, artwork_url, preview_url, store_url, resolved_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (date) DO UPDATE
-			SET title       = EXCLUDED.title,
-			    artist      = EXCLUDED.artist,
-			    artwork_url = EXCLUDED.artwork_url,
-			    audio_url   = EXCLUDED.audio_url
+			SET itunes_track_id = EXCLUDED.itunes_track_id,
+			    title           = EXCLUDED.title,
+			    artist          = EXCLUDED.artist,
+			    artwork_url     = EXCLUDED.artwork_url,
+			    preview_url     = EXCLUDED.preview_url,
+			    store_url       = EXCLUDED.store_url,
+			    resolved_at     = EXCLUDED.resolved_at
 		RETURNING ` + songColumns
 
-	song, err := scanSong(r.pool.QueryRow(ctx, q, p.Date, p.Title, p.Artist, p.ArtworkURL, p.AudioURL))
+	song, err := scanSong(r.pool.QueryRow(ctx, q,
+		p.Date, p.ITunesTrackID, p.Title, p.Artist, p.ArtworkURL, p.PreviewURL, p.StoreURL, p.ResolvedAt))
 	if err != nil {
 		return Song{}, fmt.Errorf("insert song: %w", err)
 	}
 	return song, nil
+}
+
+func (r *TodayRepository) UpdateSongMetadata(ctx context.Context, songID string, m SongMetadata) error {
+	if r.pool == nil {
+		return ErrNoDatabase
+	}
+	const q = `
+		UPDATE daily_songs
+		SET title = $2, artist = $3, artwork_url = $4, preview_url = $5, store_url = $6, resolved_at = $7
+		WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, songID, m.Title, m.Artist, m.ArtworkURL, m.PreviewURL, m.StoreURL, m.ResolvedAt)
+	if err != nil {
+		return fmt.Errorf("update song metadata: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // collectSongs returns a non-nil empty slice for zero rows, so JSON encodes "[]"

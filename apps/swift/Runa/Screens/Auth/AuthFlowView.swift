@@ -58,13 +58,6 @@ struct AuthFlowView: View {
                     } else {
                         auth.loginEmail(email: email, password: password)
                     }
-                },
-                // No anonymous/guest session exists yet, so 「いまはしない」 gently
-                // steps back to the intro rather than bypassing the auth gate.
-                onSkip: {
-                    localError = nil
-                    auth.clearError()
-                    step = .onboarding1
                 }
             )
         }

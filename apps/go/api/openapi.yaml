@@ -619,10 +619,20 @@ paths:
       description: |
         Newest first (by date), keyset pagination. Pass the previous page's
         `next_cursor` as `cursor` to fetch the next page; a null `next_cursor`
-        means the last page.
+        means the last page. Only songs dated `until` or earlier are listed, so
+        days registered ahead of time stay out of the archive.
       security:
         - bearerAuth: []
       parameters:
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: |
+            The client's local calendar day (YYYY-MM-DD); the newest day the
+            archive may include. Defaults to the server's UTC day.
         - name: limit
           in: query
           required: false

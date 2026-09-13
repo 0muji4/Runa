@@ -175,14 +175,16 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 		f := newFixture(t)
 		ctx := t.Context()
 
-		dates := []time.Time{day(2026, 7, 9), day(2026, 7, 10), day(2026, 7, 11)}
+		// 07-12 is registered ahead of time: with Until = 07-11 it must stay out.
+		dates := []time.Time{day(2026, 7, 9), day(2026, 7, 10), day(2026, 7, 11), day(2026, 7, 12)}
 		for i, d := range dates {
 			if _, err := f.Today.InsertSong(ctx, songParams(d, int64(1000+i), d.Format("2006-01-02"))); err != nil {
 				t.Fatalf("InsertSong(%s) error = %v, want nil", d, err)
 			}
 		}
+		until := day(2026, 7, 11)
 
-		page1, err := f.Today.ListSongs(ctx, repository.ListSongsParams{Limit: 2})
+		page1, err := f.Today.ListSongs(ctx, repository.ListSongsParams{Until: until, Limit: 2})
 		if err != nil {
 			t.Fatalf("ListSongs(page 1) error = %v, want nil", err)
 		}
@@ -192,7 +194,7 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 
 		last := page1[len(page1)-1]
 		page2, err := f.Today.ListSongs(ctx, repository.ListSongsParams{
-			Limit: 2, Cursor: &repository.SongCursor{Date: last.Date, ID: last.ID},
+			Until: until, Limit: 2, Cursor: &repository.SongCursor{Date: last.Date, ID: last.ID},
 		})
 		if err != nil {
 			t.Fatalf("ListSongs(page 2) error = %v, want nil", err)

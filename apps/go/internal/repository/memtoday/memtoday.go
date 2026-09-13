@@ -66,6 +66,9 @@ func (s *Store) ListSongs(_ context.Context, p repository.ListSongsParams) ([]re
 
 	out := make([]repository.Song, 0, len(s.songs))
 	for _, song := range s.songs {
+		if dayKey(song.Date) > dayKey(p.Until) {
+			continue
+		}
 		if p.Cursor != nil && !olderThanCursor(song, *p.Cursor) {
 			continue
 		}

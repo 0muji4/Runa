@@ -212,6 +212,12 @@ func TestNilPoolReportsErrNoDatabase(t *testing.T) {
 			},
 		},
 		{
+			name: "TodayStore/UpdateSongMetadata",
+			call: func(t *testing.T) error {
+				return today.UpdateSongMetadata(t.Context(), "id", repository.SongMetadata{})
+			},
+		},
+		{
 			name: "DeviceStore/UpsertDevice",
 			call: func(t *testing.T) error {
 				_, err := devices.UpsertDevice(t.Context(), repository.UpsertDeviceParams{})

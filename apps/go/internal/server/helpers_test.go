@@ -7,11 +7,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
+	"github.com/0muji4/Runa/apps/go/internal/itunes"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdevices"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdiary"
@@ -32,6 +36,70 @@ type testEnv struct {
 	gallery *memgallery.Store
 	today   *memtoday.Store
 	devices *memdevices.Store
+	apple   *appleFake
+}
+
+// appleFake stands in for the iTunes Search API behind the real itunes.Client:
+// /lookup answers from tracks (ids handed out by add) and the artwork path
+// accepts the 600px HEAD check. down makes every request fail with 503.
+type appleFake struct {
+	srv    *httptest.Server
+	mu     sync.Mutex
+	tracks map[int64]string // id → title
+	nextID int64
+	down   bool
+}
+
+func newAppleFake(t *testing.T) *appleFake {
+	t.Helper()
+	f := &appleFake{tracks: make(map[int64]string), nextID: 1000}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/lookup", func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		if f.down {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		var results []map[string]any
+		for _, raw := range strings.Split(r.URL.Query().Get("id"), ",") {
+			id, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				continue
+			}
+			title, ok := f.tracks[id]
+			if !ok {
+				continue
+			}
+			results = append(results, map[string]any{
+				"kind": "song", "trackId": id, "trackName": title, "artistName": "月詠",
+				"artworkUrl100": f.srv.URL + "/art/100x100bb.jpg",
+				"previewUrl":    "https://cdn.example/" + title + ".m4a",
+				"trackViewUrl":  "https://music.apple.com/jp/x?i=" + strconv.FormatInt(id, 10),
+			})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"resultCount": len(results), "results": results})
+	})
+	mux.HandleFunc("/art/", func(w http.ResponseWriter, _ *http.Request) {})
+	f.srv = httptest.NewTLSServer(mux)
+	t.Cleanup(f.srv.Close)
+	return f
+}
+
+// add registers a track titled title and returns its id.
+func (f *appleFake) add(title string) int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nextID++
+	f.tracks[f.nextID] = title
+	return f.nextID
+}
+
+func (f *appleFake) setDown(down bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.down = down
 }
 
 func newRouter(t *testing.T) *testEnv {
@@ -45,6 +113,7 @@ func newRouter(t *testing.T) *testEnv {
 	todayStore := memtoday.New()
 	devices := memdevices.New()
 	objects := memobject.New()
+	apple := newAppleFake(t)
 
 	authSvc := service.NewAuthService(service.AuthConfig{
 		Store:          users,
@@ -57,7 +126,9 @@ func newRouter(t *testing.T) *testEnv {
 	dh := handler.NewDiary(service.NewDiaryService(diaries, nil), logger)
 	ih := handler.NewInsights(service.NewInsightsService(diaries), logger)
 
-	th := handler.NewToday(service.NewTodayService(todayStore, nil), logger)
+	th := handler.NewToday(service.NewTodayService(todayStore, itunes.NewClient(apple.srv.URL, apple.srv.Client()), nil,
+		service.WithTodayBackgroundRunner(func(f func()) { f() }),
+		service.WithTodayLogger(logger)), logger)
 
 	gs := service.NewGalleryService(gallery, objects, service.GalleryConfig{
 		UploadURLTTL:        15 * time.Minute,
@@ -98,6 +169,7 @@ func newRouter(t *testing.T) *testEnv {
 		gallery: gallery,
 		today:   todayStore,
 		devices: devices,
+		apple:   apple,
 	}
 }
 
@@ -293,13 +365,23 @@ type songResp struct {
 	Title      string `json:"title"`
 	Artist     string `json:"artist"`
 	ArtworkURL string `json:"artwork_url"`
-	AudioURL   string `json:"audio_url"`
+	PreviewURL string `json:"preview_url"`
+	StoreURL   string `json:"store_url"`
 }
 
 type todayResp struct {
 	Date  string     `json:"date"`
 	Quote *quoteResp `json:"quote"`
 	Song  *songResp  `json:"song"`
+}
+
+// errorResp is the shared error envelope (handler.ErrorResponse) as decoded
+// by a flow test.
+type errorResp struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 type songsResp struct {

@@ -29,6 +29,14 @@ info:
     home works fully offline. GET /songs is the newest-first song archive and
     POST /songs/{id}/played records play history.
 
+    The song is a track from Apple's catalog, registered by its iTunes track id
+    (POST /admin/songs). Its title/artist/artwork/preview/store URL are fetched
+    from the iTunes Search API on registration and refreshed in the background
+    once they are older than 24h. preview_url is Apple's 30-second preview and
+    is only to promote the track: clients stream it (never cache it), show it
+    next to an Apple Music badge linking to store_url, and attribute it as
+    "provided courtesy of iTunes" (docs/dd/todays-song-itunes-preview.md).
+
     Gallery (presigned-URL scheme): image BYTES never traverse this API. To add an
     image the client (1) POSTs /gallery/upload-url to get a short-lived presigned
     PUT URL + a server-generated object_key, (2) PUTs the bytes DIRECTLY to the
@@ -705,10 +713,12 @@ paths:
   /api/v1/admin/songs:
     post:
       operationId: adminCreateSong
-      summary: Upsert a day's curated song (admin)
+      summary: Register a day's song by its iTunes track id (admin)
       description: |
         As POST /admin/quotes, for the daily song. Gated by `X-Admin-Token`;
-        upserts by date.
+        upserts by date. The server looks the track up in the iTunes Search API
+        (country=jp) and stores the fetched metadata; a track Apple does not
+        know or cannot preview is rejected with 422 and nothing is stored.
       security:
         - adminAuth: []
       requestBody:
@@ -728,6 +738,10 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/TrackUnavailable"
+        "502":
+          $ref: "#/components/responses/UpstreamError"
 
   /api/v1/gallery/upload-url:
     post:
@@ -992,6 +1006,33 @@ components:
             error:
               code: service_unavailable
               message: image storage is unavailable
+    TrackUnavailable:
+      description: |
+        The iTunes track id is not in Apple's Japanese catalog, or the track has
+        no preview. Nothing is stored; `details[0].field` is `itunes_track_id`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: validation_error
+              message: track unavailable
+              details:
+                - field: itunes_track_id
+                  message: has no preview
+    UpstreamError:
+      description: |
+        The iTunes Search API did not answer (timeout or non-2xx). Nothing is
+        stored; retry the registration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: upstream_error
+              message: the Apple catalog did not answer
 
   schemas:
     HealthzResponse:
@@ -1220,6 +1261,7 @@ components:
                 - forbidden
                 - internal_error
                 - service_unavailable
+                - upstream_error
             message:
               type: string
             details:
@@ -1424,7 +1466,8 @@ components:
         - title
         - artist
         - artwork_url
-        - audio_url
+        - preview_url
+        - store_url
       properties:
         id:
           type: string
@@ -1438,8 +1481,15 @@ components:
           type: string
         artwork_url:
           type: string
-        audio_url:
+          description: Album artwork from Apple (600px when available, else 100px).
+        preview_url:
           type: string
+          description: |
+            Apple's 30-second preview stream. Stream only — never download or
+            cache it — and show it next to the Apple Music badge (store_url).
+        store_url:
+          type: string
+          description: The track's Apple Music page; the store badge links here.
 
     TodayResponse:
       type: object
@@ -1499,27 +1549,19 @@ components:
       type: object
       required:
         - date
-        - title
-        - artist
-        - artwork_url
-        - audio_url
+        - itunes_track_id
       properties:
         date:
           type: string
           format: date
-        title:
-          type: string
-          minLength: 1
-        artist:
-          type: string
-          minLength: 1
-        artwork_url:
-          type: string
-          minLength: 1
-        audio_url:
-          type: string
-          minLength: 1
-          description: Send this back as the next `since` (last_synced_at).
+        itunes_track_id:
+          type: integer
+          format: int64
+          minimum: 1
+          description: |
+            The track's id in the iTunes Search API (`trackId`; find it with
+            hack/itunes-search.sh). The server fetches the metadata from Apple
+            before storing the row.
 
     GalleryUploadURLRequest:
       type: object

@@ -41,13 +41,17 @@ type quoteResponse struct {
 	BodyText string `json:"body_text"`
 }
 
+// songResponse is the song as the clients see it: display fields, the 30-second
+// preview stream, and the Apple Music page the badge links to. The Apple track
+// id and the fetch time stay server-side.
 type songResponse struct {
 	ID         string `json:"id"`
 	Date       string `json:"date"`
 	Title      string `json:"title"`
 	Artist     string `json:"artist"`
 	ArtworkURL string `json:"artwork_url"`
-	AudioURL   string `json:"audio_url"`
+	PreviewURL string `json:"preview_url"`
+	StoreURL   string `json:"store_url"`
 }
 
 type todayResponse struct {
@@ -71,11 +75,8 @@ type createQuoteRequest struct {
 }
 
 type createSongRequest struct {
-	Date       string `json:"date"`
-	Title      string `json:"title"`
-	Artist     string `json:"artist"`
-	ArtworkURL string `json:"artwork_url"`
-	AudioURL   string `json:"audio_url"`
+	Date          string `json:"date"`
+	ITunesTrackID int64  `json:"itunes_track_id"`
 }
 
 // Today handles GET /api/v1/today?date=YYYY-MM-DD. An absent date uses the
@@ -207,20 +208,27 @@ func (t *Today) CreateSong(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if details := validateCreateSong(req); len(details) > 0 {
-		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed", details, t.logger)
+	if req.ITunesTrackID <= 0 {
+		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
+			[]FieldError{{Field: "itunes_track_id", Message: "must be a positive integer"}}, t.logger)
 		return
 	}
 
-	song, err := t.svc.CreateSong(r.Context(), repository.InsertSongParams{
-		Date:       date,
-		Title:      req.Title,
-		Artist:     req.Artist,
-		ArtworkURL: req.ArtworkURL,
-		AudioURL:   req.AudioURL,
-	})
+	song, err := t.svc.CreateSong(r.Context(), date, req.ITunesTrackID)
 	if err != nil {
-		t.internal(w, r, err)
+		switch {
+		case errors.Is(err, service.ErrTrackNotFound):
+			writeError(w, http.StatusUnprocessableEntity, CodeValidation, "track unavailable",
+				[]FieldError{{Field: "itunes_track_id", Message: "not found in the Apple catalog (country=jp)"}}, t.logger)
+		case errors.Is(err, service.ErrTrackNoPreview):
+			writeError(w, http.StatusUnprocessableEntity, CodeValidation, "track unavailable",
+				[]FieldError{{Field: "itunes_track_id", Message: "has no preview"}}, t.logger)
+		case errors.Is(err, service.ErrTrackLookupFailed):
+			t.logger.WarnContext(r.Context(), "track lookup failed", slog.Any("error", err))
+			writeError(w, http.StatusBadGateway, CodeUpstream, "the Apple catalog did not answer", nil, t.logger)
+		default:
+			t.internal(w, r, err)
+		}
 		return
 	}
 	writeJSON(w, http.StatusCreated, toSongResponse(song), t.logger)
@@ -332,21 +340,6 @@ func (t *Today) internal(w http.ResponseWriter, r *http.Request, err error) {
 	writeError(w, http.StatusInternalServerError, CodeInternal, "an unexpected error occurred", nil, t.logger)
 }
 
-func validateCreateSong(req createSongRequest) []FieldError {
-	var details []FieldError
-	for _, f := range []struct{ field, value string }{
-		{"title", req.Title},
-		{"artist", req.Artist},
-		{"artwork_url", req.ArtworkURL},
-		{"audio_url", req.AudioURL},
-	} {
-		if strings.TrimSpace(f.value) == "" {
-			details = append(details, FieldError{Field: f.field, Message: "must not be empty"})
-		}
-	}
-	return details
-}
-
 // encodeSongCursor packs an archive keyset boundary into an opaque base64url
 // token of "<date YYYY-MM-DD>|<id>". Clients treat it as opaque and echo it back.
 func encodeSongCursor(c repository.SongCursor) string {
@@ -381,7 +374,8 @@ func toSongResponse(s repository.Song) songResponse {
 		Title:      s.Title,
 		Artist:     s.Artist,
 		ArtworkURL: s.ArtworkURL,
-		AudioURL:   s.AudioURL,
+		PreviewURL: s.PreviewURL,
+		StoreURL:   s.StoreURL,
 	}
 }
 

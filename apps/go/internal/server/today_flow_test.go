@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -17,10 +18,13 @@ func songDates(page songsResp) []string {
 	return dates
 }
 
-func seedSong(t *testing.T, r http.Handler, date, title string) songResp {
+// seedSong registers a track titled title with the fake Apple and creates the
+// day's song from it through the admin endpoint.
+func seedSong(t *testing.T, env *testEnv, date, title string) songResp {
 	t.Helper()
-	res := doAdmin(t, r, http.MethodPost, "/api/v1/admin/songs", adminToken,
-		`{"date":"`+date+`","title":"`+title+`","artist":"月詠","artwork_url":"https://x/a.jpg","audio_url":"https://x/a.mp3"}`)
+	id := env.apple.add(title)
+	res := doAdmin(t, env.r, http.MethodPost, "/api/v1/admin/songs", adminToken,
+		`{"date":"`+date+`","itunes_track_id":`+strconv.FormatInt(id, 10)+`}`)
 	checkStatus(t, res, http.StatusCreated)
 	var s songResp
 	decode(t, res, &s)
@@ -37,7 +41,15 @@ func TestTodayFlow(t *testing.T) {
 		`{"date":"2026-07-11","body_text":"月あかりのはじまり"}`)
 	checkStatus(t, res, http.StatusCreated)
 	res.Body.Close()
-	july11 := seedSong(t, env.r, "2026-07-11", "夜想曲")
+	july11 := seedSong(t, env, "2026-07-11", "夜想曲")
+	// The row carries what Apple returned: the 600px artwork (the fake confirms
+	// it), the preview stream, and the store page for the badge.
+	if july11.ArtworkURL != env.apple.srv.URL+"/art/600x600bb.jpg" {
+		t.Errorf("registered song artwork_url = %q, want the 600px rendition", july11.ArtworkURL)
+	}
+	if july11.PreviewURL != "https://cdn.example/夜想曲.m4a" || july11.StoreURL == "" {
+		t.Errorf("registered song preview/store = (%q, %q), want Apple's URLs", july11.PreviewURL, july11.StoreURL)
+	}
 
 	res = do(t, env.r, http.MethodGet, "/api/v1/today?date=2026-07-11", token, "")
 	checkStatus(t, res, http.StatusOK)
@@ -67,8 +79,8 @@ func TestTodayFlow(t *testing.T) {
 	}
 
 	// アーカイブは新しい順にページングする。
-	seedSong(t, env.r, "2026-07-10", "薄明")
-	seedSong(t, env.r, "2026-07-09", "残響")
+	seedSong(t, env, "2026-07-10", "薄明")
+	seedSong(t, env, "2026-07-09", "残響")
 
 	res = do(t, env.r, http.MethodGet, "/api/v1/songs?limit=2", token, "")
 	var page1 songsResp
@@ -140,6 +152,65 @@ func TestAdminRequiresToken(t *testing.T) {
 			res := doAdmin(t, env.r, http.MethodPost, "/api/v1/admin/quotes", tt.token, body)
 			checkStatus(t, res, http.StatusForbidden)
 			res.Body.Close()
+		})
+	}
+}
+
+func TestAdminCreateSongRejectsUnusableTracks(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		body       func(env *testEnv) string
+		appleDown  bool
+		wantStatus int
+		wantCode   string
+	}{
+		{
+			name:       "track idが無いのは400",
+			body:       func(*testEnv) string { return `{"date":"2026-07-11"}` },
+			wantStatus: http.StatusBadRequest,
+			wantCode:   "validation_error",
+		},
+		{
+			name:       "Appleに無いtrack idは422",
+			body:       func(*testEnv) string { return `{"date":"2026-07-11","itunes_track_id":424242}` },
+			wantStatus: http.StatusUnprocessableEntity,
+			wantCode:   "validation_error",
+		},
+		{
+			name: "Appleが応答しなければ502",
+			body: func(env *testEnv) string {
+				return `{"date":"2026-07-11","itunes_track_id":` + strconv.FormatInt(env.apple.add("夜想曲"), 10) + `}`
+			},
+			appleDown:  true,
+			wantStatus: http.StatusBadGateway,
+			wantCode:   "upstream_error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			env := newRouter(t)
+			token := signupToken(t, env.r, "admin-song@example.com")
+			env.apple.setDown(tt.appleDown)
+
+			res := doAdmin(t, env.r, http.MethodPost, "/api/v1/admin/songs", adminToken, tt.body(env))
+			checkStatus(t, res, tt.wantStatus)
+			var body errorResp
+			decode(t, res, &body)
+			if body.Error.Code != tt.wantCode {
+				t.Errorf("error code = %q, want %q", body.Error.Code, tt.wantCode)
+			}
+
+			// A rejected registration leaves the day empty.
+			res = do(t, env.r, http.MethodGet, "/api/v1/today?date=2026-07-11", token, "")
+			var today todayResp
+			decode(t, res, &today)
+			if today.Song != nil {
+				t.Errorf("today song after a rejected registration = %+v, want nil", today.Song)
+			}
 		})
 	}
 }

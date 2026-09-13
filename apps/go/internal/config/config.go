@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/0muji4/Runa/apps/go/internal/itunes"
 )
 
 // Config holds all runtime configuration for the API server.
@@ -43,6 +45,9 @@ type Config struct {
 	// /admin/songs) via the X-Admin-Token header. Empty (the default) DISABLES
 	// the admin surface entirely — it must be set to seed content.
 	AdminAPIToken string
+	// ITunesBaseURL is the iTunes Search API host today's song metadata is
+	// fetched from. Overridable for local fakes; the default is Apple's.
+	ITunesBaseURL string
 
 	// S3Endpoint is the host the SERVER reaches the object store on (e.g.
 	// "minio:9000" inside docker). Empty (the default) DISABLES the gallery
@@ -89,6 +94,7 @@ func Load() Config {
 		AppleClientIDs:     splitList(getenv("APPLE_CLIENT_IDS", "")),
 		GoogleClientIDs:    splitList(getenv("GOOGLE_CLIENT_IDS", "")),
 		AdminAPIToken:      getenv("ADMIN_API_TOKEN", ""),
+		ITunesBaseURL:      getenv("ITUNES_BASE_URL", itunes.DefaultBaseURL),
 
 		S3Endpoint:       getenv("S3_ENDPOINT", ""),
 		S3PublicEndpoint: getenv("S3_PUBLIC_ENDPOINT", ""),

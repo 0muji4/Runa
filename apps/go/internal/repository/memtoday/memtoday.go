@@ -112,11 +112,9 @@ func (s *Store) InsertSong(_ context.Context, p repository.InsertSongParams) (re
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	song := repository.Song{
-		Date:       p.Date,
-		Title:      p.Title,
-		Artist:     p.Artist,
-		ArtworkURL: p.ArtworkURL,
-		AudioURL:   p.AudioURL,
+		Date:          p.Date,
+		ITunesTrackID: p.ITunesTrackID,
+		SongMetadata:  p.SongMetadata,
 	}
 	// Upsert keyed by day: replace an existing song for that date, keeping its id.
 	for id, existing := range s.songs {
@@ -129,6 +127,18 @@ func (s *Store) InsertSong(_ context.Context, p repository.InsertSongParams) (re
 	song.ID = newID()
 	s.songs[song.ID] = song
 	return song, nil
+}
+
+func (s *Store) UpdateSongMetadata(_ context.Context, songID string, m repository.SongMetadata) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	song, ok := s.songs[songID]
+	if !ok {
+		return repository.ErrNotFound
+	}
+	song.SongMetadata = m
+	s.songs[songID] = song
+	return nil
 }
 
 // dayKey normalizes a timestamp to its UTC calendar day, so lookups match the

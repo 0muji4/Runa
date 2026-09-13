@@ -24,6 +24,7 @@ const (
 	CodeForbidden            ErrorCode = "forbidden"
 	CodeInternal             ErrorCode = "internal_error"
 	CodeServiceUnavailable   ErrorCode = "service_unavailable"
+	CodeUpstream             ErrorCode = "upstream_error"
 )
 
 // FieldError describes one field that failed validation.

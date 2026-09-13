@@ -28,6 +28,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/config"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
+	"github.com/0muji4/Runa/apps/go/internal/itunes"
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/server"
 	"github.com/0muji4/Runa/apps/go/internal/service"
@@ -49,6 +50,10 @@ const (
 	// migrationsPath is the golang-migrate file source. Migrations are copied
 	// next to the binary in the container image (see Dockerfile).
 	migrationsPath = "file://migrations"
+
+	// itunesTimeout bounds one iTunes lookup (plus its artwork check). Admin
+	// registration waits on it; background refreshes never block a reader.
+	itunesTimeout = 5 * time.Second
 
 	// shutdownTimeout bounds graceful shutdown before forced close.
 	shutdownTimeout = 10 * time.Second
@@ -92,9 +97,11 @@ func main() {
 	diaryHandler := handler.NewDiary(diaryService, logger)
 
 	// Today wiring (daily quote + song, archive, play log). Same nil-pool
-	// tolerance as the other features.
+	// tolerance as the other features. Song metadata comes from the iTunes
+	// Search API at registration and is refreshed in the background on read.
 	todayRepo := repository.NewTodayRepository(pool)
-	todayService := service.NewTodayService(todayRepo, nil)
+	todayService := service.NewTodayService(todayRepo, itunes.NewClient(cfg.ITunesBaseURL, &http.Client{Timeout: itunesTimeout}), nil,
+		service.WithTodayLogger(logger))
 	todayHandler := handler.NewToday(todayService, logger)
 
 	// Insights wiring: the auxiliary server-side aggregation reads the same diary

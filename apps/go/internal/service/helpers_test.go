@@ -1,10 +1,15 @@
 package service_test
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/0muji4/Runa/apps/go/internal/auth"
+	"github.com/0muji4/Runa/apps/go/internal/itunes"
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdiary"
@@ -51,8 +56,103 @@ func newAuthService(store repository.AuthStore, apple, google auth.IDTokenVerifi
 	})
 }
 
-func newTodayService() *service.TodayService {
-	return service.NewTodayService(memtoday.New(), nil)
+// fakeLookup is an in-memory TrackLookup. Tracks are added by title and get
+// sequential ids; err, when set, fails every Lookup (an Apple outage). calls
+// records the id batches Lookup received, so a test can assert how many
+// requests a read triggered.
+type fakeLookup struct {
+	mu     sync.Mutex
+	tracks map[int64]itunes.Track
+	nextID int64
+	err    error
+	calls  [][]int64
+}
+
+func newFakeLookup() *fakeLookup {
+	return &fakeLookup{tracks: make(map[int64]itunes.Track), nextID: 1000}
+}
+
+func (f *fakeLookup) add(title string) int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nextID++
+	id := f.nextID
+	f.tracks[id] = itunes.Track{
+		TrackID: id, Title: title, Artist: "月詠",
+		ArtworkURL: "https://x/" + title + ".jpg",
+		PreviewURL: "https://x/" + title + ".m4a",
+		StoreURL:   "https://music.apple.com/jp/x?i=" + title,
+	}
+	return id
+}
+
+func (f *fakeLookup) set(id int64, track itunes.Track) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.tracks[id] = track
+}
+
+func (f *fakeLookup) setErr(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.err = err
+}
+
+func (f *fakeLookup) Lookup(_ context.Context, ids []int64) ([]itunes.Track, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, append([]int64(nil), ids...))
+	if f.err != nil {
+		return nil, f.err
+	}
+	out := make([]itunes.Track, 0, len(ids))
+	for _, id := range ids {
+		if t, ok := f.tracks[id]; ok {
+			out = append(out, t)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeLookup) callCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.calls)
+}
+
+func (f *fakeLookup) lastCall() []int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.calls[len(f.calls)-1]
+}
+
+// todayClock is a settable clock for the refresh-TTL tests.
+type todayClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *todayClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *todayClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
+}
+
+// newTodayService wires an in-memory store, a fake Apple, and an inline
+// background runner so a refresh's effect is visible right after the read.
+func newTodayService() (*service.TodayService, *fakeLookup, *todayClock) {
+	lookup := newFakeLookup()
+	clock := &todayClock{now: testNow}
+	svc := service.NewTodayService(memtoday.New(), lookup, clock.Now,
+		service.WithTodayBackgroundRunner(syncBackground),
+		service.WithTodayLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
+	return svc, lookup, clock
 }
 
 func newAccountService(objects storage.ObjectStore) (*service.AccountService, *memauth.Store, *memdiary.Store, *memgallery.Store) {

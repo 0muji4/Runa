@@ -207,9 +207,13 @@ func TestDeleteUserCascades(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding a device error = %v, want nil", err)
 	}
+	songDate := time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC)
 	song, err := f.Today.InsertSong(ctx, repository.InsertSongParams{
-		Date: time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC), Title: "夜想曲", Artist: "月詠",
-		ArtworkURL: "https://x/a.jpg", AudioURL: "https://x/a.mp3",
+		Date: songDate, ITunesTrackID: 1001,
+		SongMetadata: repository.SongMetadata{
+			Title: "夜想曲", Artist: "月詠", ArtworkURL: "https://x/a.jpg",
+			PreviewURL: "https://x/a.m4a", StoreURL: "https://music.apple.com/jp/x", ResolvedAt: songDate,
+		},
 	})
 	if err != nil {
 		t.Fatalf("seeding a song error = %v, want nil", err)

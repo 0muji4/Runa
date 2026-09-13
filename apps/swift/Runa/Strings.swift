@@ -90,7 +90,7 @@ enum L {
     static let playerPlay = "再生"
     static let playerPause = "一時停止"
     static let songListenOnAppleMusic = "Apple Music で聴く"
-    static let songPreviewLabel = "30秒の試聴"
+    static let songPreviewLabel = "試聴（30秒）"
     static let songCourtesy = "provided courtesy of iTunes"
     static let diaryOpenCalendar = "カレンダー"
     static let calendarLegend = "記録のある日に、月あかり"

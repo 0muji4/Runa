@@ -56,7 +56,12 @@ class ExoAudioPlayer(context: Context) : AudioPlayer {
         syncState()
     }
 
-    override fun play() = onMain { player.play() }
+    override fun play() = onMain {
+        // After the preview ran to its end, play() alone would stay in STATE_ENDED;
+        // restart from the top instead. (Not a user-facing seek — the screen has none.)
+        if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+        player.play()
+    }
 
     override fun pause() = onMain { player.pause() }
 

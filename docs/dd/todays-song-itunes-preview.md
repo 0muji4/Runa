@@ -123,6 +123,8 @@ PRD は、きょうの一曲を Apple のカタログの楽曲の紹介と 30 �
 
 `audio_url` は削除し、`preview_url` に置き換える。`itunes_track_id` と `resolved_at` はクライアントに返さない（表示にも再生にも使わない）。shared の `SongDto` と SQLDelight の曲テーブルを同じ形にし、`openapi.yaml` を更新する。
 
+`GET /songs` には `until`（クライアントの現地日、YYYY-MM-DD）を足し、その日以前の曲だけを返す。運営者は先の日付まで登録しておくので、絞らないと「これまでの一曲」に明日以降の曲が並ぶ。省略時はサーバーの UTC 日。
+
 `preview_url` は `AudioPlayer.load` にそのまま渡す。ExoPlayer は `CacheDataSource` を使っておらず、AVPlayer はストリーミング再生のみなので、音声はどちらの OS でもディスクに残らない。この状態を保つことを `AudioPlayer` の doc コメントに明記する。アートワークは Coil / `AsyncImage` の既定のキャッシュのままでよい（N2 の対象外）。
 
 **根拠**: 名前を `preview_url` にすると、クライアントの実装者がこれを全曲の音源として扱う余地がなくなる。`store_url` を必須の列にすると、バッジの無い画面が作れない（N1 の前提）。音声のキャッシュを足さないことを契約の側に書くことで、N2 が両 OS の実装に残る。

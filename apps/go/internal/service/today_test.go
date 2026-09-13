@@ -156,7 +156,7 @@ func TestTodayService_Archive(t *testing.T) {
 				seedSong(t, svc, lookup, ctx, d, d)
 			}
 
-			page1, err := svc.Archive(ctx, tt.limit, nil)
+			page1, err := svc.Archive(ctx, day("2026-12-31"), tt.limit, nil)
 			if err != nil {
 				t.Fatalf("Archive(limit=%d) error = %v, want nil", tt.limit, err)
 			}
@@ -178,7 +178,7 @@ func TestTodayService_Archive(t *testing.T) {
 				return
 			}
 
-			page2, err := svc.Archive(ctx, tt.limit, page1.NextCursor)
+			page2, err := svc.Archive(ctx, day("2026-12-31"), tt.limit, page1.NextCursor)
 			if err != nil {
 				t.Fatalf("Archive(limit=%d, cursor) error = %v, want nil", tt.limit, err)
 			}
@@ -498,7 +498,7 @@ func TestTodayService_RefreshBackoffAndBatching(t *testing.T) {
 		base := lookup.callCount()
 
 		clock.Advance(service.RefreshTTL)
-		if _, err := svc.Archive(ctx, 10, nil); err != nil {
+		if _, err := svc.Archive(ctx, day("2026-12-31"), 10, nil); err != nil {
 			t.Fatalf("Archive() error = %v, want nil", err)
 		}
 		if got := lookup.callCount() - base; got != 1 {

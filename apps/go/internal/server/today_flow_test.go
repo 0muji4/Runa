@@ -78,11 +78,12 @@ func TestTodayFlow(t *testing.T) {
 		t.Errorf("today song for an unseeded date = %+v, want nil", today.Song)
 	}
 
-	// アーカイブは新しい順にページングする。
+	// アーカイブは新しい順にページングし、until より先の日（先に登録した曲）は含めない。
 	seedSong(t, env, "2026-07-10", "薄明")
 	seedSong(t, env, "2026-07-09", "残響")
+	seedSong(t, env, "2026-07-12", "明日の曲")
 
-	res = do(t, env.r, http.MethodGet, "/api/v1/songs?limit=2", token, "")
+	res = do(t, env.r, http.MethodGet, "/api/v1/songs?until=2026-07-11&limit=2", token, "")
 	var page1 songsResp
 	decode(t, res, &page1)
 	if len(page1.Songs) != 2 {
@@ -95,7 +96,7 @@ func TestTodayFlow(t *testing.T) {
 		t.Errorf("songs page 1 dates mismatch (-want +got):\n%s", diff)
 	}
 
-	res = do(t, env.r, http.MethodGet, "/api/v1/songs?limit=2&cursor="+*page1.NextCursor, token, "")
+	res = do(t, env.r, http.MethodGet, "/api/v1/songs?until=2026-07-11&limit=2&cursor="+*page1.NextCursor, token, "")
 	var page2 songsResp
 	decode(t, res, &page2)
 	if len(page2.Songs) != 1 {

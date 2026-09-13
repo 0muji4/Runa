@@ -96,17 +96,18 @@ func (r *TodayRepository) ListSongs(ctx context.Context, p ListSongsParams) ([]S
 		const q = `
 			SELECT ` + songColumns + `
 			FROM daily_songs
+			WHERE date <= $1
 			ORDER BY date DESC, id DESC
-			LIMIT $1`
-		rows, err = r.pool.Query(ctx, q, p.Limit)
+			LIMIT $2`
+		rows, err = r.pool.Query(ctx, q, p.Until, p.Limit)
 	} else {
 		const q = `
 			SELECT ` + songColumns + `
 			FROM daily_songs
-			WHERE (date, id) < ($1, $2)
+			WHERE date <= $1 AND (date, id) < ($2, $3)
 			ORDER BY date DESC, id DESC
-			LIMIT $3`
-		rows, err = r.pool.Query(ctx, q, p.Cursor.Date, p.Cursor.ID, p.Limit)
+			LIMIT $4`
+		rows, err = r.pool.Query(ctx, q, p.Until, p.Cursor.Date, p.Cursor.ID, p.Limit)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("list songs: %w", err)

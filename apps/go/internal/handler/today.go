@@ -109,12 +109,18 @@ func (t *Today) Today(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp, t.logger)
 }
 
-// Songs handles GET /api/v1/songs?limit=&cursor= (archive, newest first).
+// Songs handles GET /api/v1/songs?until=&limit=&cursor= (archive, newest
+// first). until is the client's local day; days after it — songs registered
+// ahead of time — are not part of the archive. Absent, the server's UTC day.
 func (t *Today) Songs(w http.ResponseWriter, r *http.Request) {
 	if _, ok := t.userID(w, r); !ok {
 		return
 	}
 
+	until, ok := t.parseDateParam(w, r, "until")
+	if !ok {
+		return
+	}
 	limit, ok := t.parseLimit(w, r)
 	if !ok {
 		return
@@ -124,7 +130,7 @@ func (t *Today) Songs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := t.svc.Archive(r.Context(), limit, cursor)
+	page, err := t.svc.Archive(r.Context(), until, limit, cursor)
 	if err != nil {
 		t.internal(w, r, err)
 		return
@@ -265,20 +271,29 @@ func (t *Today) decodeAllowEmpty(w http.ResponseWriter, r *http.Request, dst any
 }
 
 func (t *Today) parseDateQuery(w http.ResponseWriter, r *http.Request) (time.Time, bool) {
-	raw := r.URL.Query().Get("date")
+	return t.parseDateParam(w, r, "date")
+}
+
+// parseDateParam reads a YYYY-MM-DD query parameter, defaulting an absent one to
+// the server's current UTC calendar day.
+func (t *Today) parseDateParam(w http.ResponseWriter, r *http.Request, name string) (time.Time, bool) {
+	raw := r.URL.Query().Get(name)
 	if raw == "" {
-		// Absent date: the server's current UTC calendar day.
 		now := time.Now().UTC()
 		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), true
 	}
-	return t.parseRequiredDate(w, raw)
+	return t.parseDate(w, name, raw)
 }
 
 func (t *Today) parseRequiredDate(w http.ResponseWriter, raw string) (time.Time, bool) {
+	return t.parseDate(w, "date", raw)
+}
+
+func (t *Today) parseDate(w http.ResponseWriter, field, raw string) (time.Time, bool) {
 	d, err := time.Parse(dateLayout, raw)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
-			[]FieldError{{Field: "date", Message: "must be a YYYY-MM-DD date"}}, t.logger)
+			[]FieldError{{Field: field, Message: "must be a YYYY-MM-DD date"}}, t.logger)
 		return time.Time{}, false
 	}
 	return d, true

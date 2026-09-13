@@ -48,10 +48,12 @@ type InsertSongParams struct {
 	SongMetadata
 }
 
-// ListSongsParams is a keyset page request for the song archive: songs strictly
-// older than the (Date, ID) cursor, newest first, capped at Limit. A nil Cursor
-// starts at the newest song.
+// ListSongsParams is a keyset page request for the song archive: songs dated
+// Until or earlier and strictly older than the (Date, ID) cursor, newest first,
+// capped at Limit. A nil Cursor starts at the newest song. Until keeps days
+// registered ahead of time out of "これまでの一曲".
 type ListSongsParams struct {
+	Until  time.Time
 	Limit  int
 	Cursor *SongCursor
 }

@@ -142,11 +142,13 @@ func (s *TodayService) Today(ctx context.Context, date time.Time) (TodayContent,
 	return content, nil
 }
 
-// Archive returns one page of the song archive, newest first. It over-fetches by
-// one row to decide whether a next page exists without a second query.
-func (s *TodayService) Archive(ctx context.Context, limit int, cursor *repository.SongCursor) (SongPage, error) {
+// Archive returns one page of the song archive up to and including until,
+// newest first. It over-fetches by one row to decide whether a next page exists
+// without a second query.
+func (s *TodayService) Archive(ctx context.Context, until time.Time, limit int, cursor *repository.SongCursor) (SongPage, error) {
 	limit = clampSongLimit(limit)
 	songs, err := s.store.ListSongs(ctx, repository.ListSongsParams{
+		Until:  until,
 		Limit:  limit + 1, // sentinel row reveals a further page
 		Cursor: cursor,
 	})

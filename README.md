@@ -102,6 +102,12 @@ curl http://localhost:8080/api/v1/healthz
 - **タイムゾーンはユーザーの現地日付でグルーピング**（`kotlinx-datetime`）。日付境界は**現地 0:00–24:00**で、現地 23:30 に書いた記録は UTC で翌日でもその現地日に留まる。各日の月相は現地正午で計算する。空の日に「書く」と、その日付でバックデート記録される。
 - **`GET /diary/calendar?year=&month=&tz=` はサーバ側の件数の正（整合性確認の補助）**で、描画には使わない。他端末で書いた分は既存の `/diary/sync` でローカルへ流し込み、`tz`（IANA）でサーバ側も同一の現地日グルーピングを行う（既定 UTC）。詳細は [apps/go/README.md](apps/go/README.md) の「Calendar design」。
 
+### きょうの一曲（Apple のカタログの紹介と試聴）
+
+- **曲は Apple のカタログの実在の楽曲**。運営者は iTunes の `trackId` と日付だけで登録し（`POST /admin/songs`、id は `hack/itunes-search.sh` で探す）、曲名・アーティスト名・アートワーク・30 秒の試聴・Apple Music のページはサーバーが iTunes Search API から取得して `daily_songs` に保存する。24 時間より古い行は読み出し時にバックグラウンドで取得し直す。Apple の音源を自前で配信しない理由（原盤権）と Apple の利用条件は [PRD](docs/prd/todays-song-itunes-preview.md)、設計は [DD](docs/dd/todays-song-itunes-preview.md)。
+- **画面は「紹介」として作る**。07 きょうの一曲 / 08 これまでの一曲は、Apple Music の公式バッジ（`store_url`）を主に置き、試聴は再生・一時停止と進み具合だけ（シーク無し）、"provided courtesy of iTunes" を表示する。試聴の音声はサーバーにもクライアントにも保存・キャッシュしない（Apple の条件）。
+- `ITUNES_BASE_URL`（既定 `https://itunes.apple.com`）でローカルの偽 API に向けられる。
+
 ### インサイト（16 ふりかえり）
 
 「うつろい」= ダイアリーの mood と記録から週/月の傾向を映し返す静かな画面。**描画の正はローカル集計**で通信不要。

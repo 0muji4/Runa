@@ -36,7 +36,6 @@ enum L {
     static let signinApple = "Appleでつづける"
     static let signinGoogle = "Googleでつづける"
     static let signinEmailContinue = "メールでつづける"
-    static let signinSkip = "いまはしない"
     static let signinEmailTitle = "メールではじめる"
     static let signinEmailLabel = "メールアドレス"
     static let signinPasswordLabel = "パスワード"

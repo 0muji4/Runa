@@ -47,7 +47,6 @@
     <string name="signin_apple">Appleでつづける</string>
     <string name="signin_google">Googleでつづける</string>
     <string name="signin_email_continue">メールでつづける</string>
-    <string name="signin_skip">いまはしない</string>
     <string name="signin_email_title">メールではじめる</string>
     <string name="signin_email_label">メールアドレス</string>
     <string name="signin_password_label">パスワード</string>

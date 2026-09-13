@@ -2,8 +2,12 @@ import AuthenticationServices
 import SwiftUI
 
 /// Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
-/// wordmark and a poetic line, then Apple / Google / メール with いまはしない below.
+/// wordmark and a poetic line, then Apple / Google / メール.
 /// "メールでつづける" opens a second, still email step rather than crowding the hero.
+///
+/// The design's 「いまはスキップ」 is intentionally absent: no guest session exists, so
+/// the only way past the auth gate is signing in. Showing a skip that merely loops
+/// back to onboarding ① would promise an exit that does not exist.
 struct SignInView: View {
     @Environment(\.runaTheme) private var runaTheme
     let isBusy: Bool
@@ -12,7 +16,6 @@ struct SignInView: View {
     let onAppleError: (String) -> Void
     let onGoogle: () -> Void
     let onEmailSubmit: (_ isSignup: Bool, _ email: String, _ password: String, _ displayName: String) -> Void
-    let onSkip: () -> Void
 
     @State private var showEmail = false
 
@@ -60,14 +63,6 @@ struct SignInView: View {
 
                 if isBusy { ProgressView().tint(runaTheme.accent).padding(.top, RunaSpacing.md) }
                 if let errorMessage { errorLine(errorMessage) }
-
-                Text(L.signinSkip)
-                    .font(RunaFonts.body(13))
-                    .tracking(4)
-                    .foregroundStyle(runaTheme.subtle)
-                    .padding(12)
-                    .padding(.top, RunaSpacing.md)
-                    .onTapGesture { if !isBusy { onSkip() } }
             }
             .padding(.horizontal, 36)
             .padding(.vertical, RunaSpacing.lg)

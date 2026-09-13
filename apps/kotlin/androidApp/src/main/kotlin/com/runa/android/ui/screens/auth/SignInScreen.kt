@@ -52,8 +52,12 @@ private val EmailModeSaver = Saver<EmailMode, String>(
 
 /**
  * Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
- * wordmark and a poetic line, then Apple / Google / メール, with いまはしない below.
+ * wordmark and a poetic line, then Apple / Google / メール.
  * "メールでつづける" opens a second, still email step rather than crowding the hero.
+ *
+ * The design's 「いまはスキップ」 is intentionally absent: no guest session exists, so
+ * the only way past the auth gate is signing in. Showing a skip that merely loops
+ * back to onboarding ① would promise an exit that does not exist.
  */
 @Composable
 fun SignInScreen(
@@ -62,7 +66,6 @@ fun SignInScreen(
     onAppleClick: () -> Unit,
     onGoogleClick: () -> Unit,
     onEmailSubmit: (mode: EmailMode, email: String, password: String, displayName: String) -> Unit,
-    onSkip: () -> Unit,
 ) {
     var showEmail by rememberSaveable { mutableStateOf(false) }
 
@@ -81,7 +84,6 @@ fun SignInScreen(
                 onAppleClick = onAppleClick,
                 onGoogleClick = onGoogleClick,
                 onEmailClick = { showEmail = true },
-                onSkip = onSkip,
             )
         }
     }
@@ -94,7 +96,6 @@ private fun SignInChoices(
     onAppleClick: () -> Unit,
     onGoogleClick: () -> Unit,
     onEmailClick: () -> Unit,
-    onSkip: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -142,16 +143,6 @@ private fun SignInChoices(
         Spacer(Modifier.height(28.dp))
         if (isBusy) CircularProgressIndicator(color = RunaColors.Accent, strokeWidth = 2.dp)
         errorMessage?.let { ErrorLine(it) }
-
-        Spacer(Modifier.height(32.dp))
-        Text(
-            text = stringResource(R.string.signin_skip),
-            style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 4.sp),
-            color = RunaColors.Subtle,
-            modifier = Modifier
-                .clickable(enabled = !isBusy, onClick = onSkip)
-                .padding(12.dp),
-        )
     }
 }
 

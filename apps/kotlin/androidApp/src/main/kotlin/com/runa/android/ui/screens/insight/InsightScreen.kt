@@ -48,7 +48,7 @@ import com.runa.shared.feature.insight.InsightPeriodType
 import com.runa.shared.feature.insight.InsightViewModel
 import com.runa.shared.feature.insight.MoodCount
 import com.runa.shared.feature.insight.MoonPhaseBucket
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * 16 インサイト — "あなたへの、手紙". A quiet retrospective letter: the period label,
@@ -60,7 +60,7 @@ import org.koin.compose.koinInject
 @Composable
 fun InsightScreen(
     onBack: () -> Unit,
-    viewModel: InsightViewModel = koinInject(),
+    viewModel: InsightViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val header by viewModel.header.collectAsStateWithLifecycle()

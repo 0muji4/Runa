@@ -161,10 +161,12 @@ internal fun sharedModule(baseUrl: String): Module = module {
     }
     single<AppLockRepository> { DefaultAppLockRepository(settings = get()) }
 
-    // 引き続き `single`。view model 側は viewModelScope を持つようになったが、
-    // :androidApp はまだ koinInject() で解決していて ViewModelStore に載っていないため、
-    // `factory` にすると解決のたびに clear() されないインスタンスが増える。
-    // スコープの見直しは koinViewModel() へ移す Issue #186 とセットで行う。
+    // ここから下の `single` は「画面より長生きさせる」ことが仕様。Android 側は
+    // koinInject() のまま解決する。`single` を koinViewModel() で取ると、画面を離れた
+    // ときに ViewModelStore がこの唯一のインスタンスを clear() してしまい、以降は
+    // 破棄済みの view model が配られ続けるため、組み合わせてはいけない。
+    // 逆に `factory` の 5 つ（editor / calendar / insight / dayRecords / imageDetail）は
+    // 画面ごとに新しくてよいので、Android では koinViewModel() で ViewModelStore に載せる。
     single { AuthViewModel(repository = get()) }
     single { HealthzViewModel(apiClient = get()) }
     single { DiaryListViewModel(repository = get()) }

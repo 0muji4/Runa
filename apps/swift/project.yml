@@ -48,6 +48,9 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "1.0"
         ENABLE_PREVIEWS: YES
+        # Assets.xcassets exists only for the Apple Music badge (07/08). There is
+        # no AppIcon set yet, so stop actool from requiring one.
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
     dependencies:
       # Imports the shared KMP module as `import Shared`.
       - package: SharedKit

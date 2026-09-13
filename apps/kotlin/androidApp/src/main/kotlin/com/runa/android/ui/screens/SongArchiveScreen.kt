@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.runa.android.R
+import com.runa.android.ui.components.AppleMusicBadge
+import com.runa.android.ui.components.ITunesCourtesyLine
 import com.runa.android.ui.components.LocalReauthenticate
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaErrorView
@@ -43,8 +45,11 @@ import org.koin.compose.koinInject
 
 /**
  * 08 これまでの一曲. The song archive (newest first) plus the local play history.
- * Tapping a song plays it through the shared [SongPlayerViewModel] and returns to
- * the player (07), recording the play.
+ * Tapping a song plays its preview through the shared [SongPlayerViewModel] and
+ * returns to 07, recording the play. Every row shows Apple's badge and the list
+ * carries the iTunes attribution, as Apple's Promo Content terms require for
+ * artwork/previews (docs/dd/todays-song-itunes-preview.md, Q4); the play history
+ * is text only, so it needs neither.
  */
 @Composable
 fun SongArchiveScreen(
@@ -103,6 +108,9 @@ fun SongArchiveScreen(
                 }
             }
 
+            if (state.songs.isNotEmpty()) {
+                item { ITunesCourtesyLine(modifier = Modifier.padding(bottom = 4.dp)) }
+            }
             items(state.songs, key = { it.id }) { song ->
                 SongRow(song) {
                     playerViewModel.play(song)
@@ -129,19 +137,11 @@ fun SongArchiveScreen(
                     )
                 }
                 items(state.history, key = { it.id }) { entry ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = entry.artworkUrl,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Text(
-                            "${entry.title} · ${entry.artist}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = RunaColors.Subtle,
-                        )
-                    }
+                    Text(
+                        "${entry.title} · ${entry.artist}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = RunaColors.Subtle,
+                    )
                 }
             }
         }
@@ -162,9 +162,11 @@ private fun SongRow(song: SongDto, onClick: () -> Unit) {
             modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)),
         )
         Spacer(Modifier.width(16.dp))
-        Column {
+        Column(Modifier.weight(1f)) {
             Text(song.title, style = MaterialTheme.typography.titleLarge, color = RunaColors.Heading)
             Text("${song.artist} · ${song.date}", style = MaterialTheme.typography.bodyMedium, color = RunaColors.Subtle)
         }
+        Spacer(Modifier.width(12.dp))
+        AppleMusicBadge(storeUrl = song.storeUrl, height = 28.dp)
     }
 }

@@ -46,7 +46,7 @@ class SongRepositoryTest {
     fun getArchivePassesThroughBackendPage() = runTest {
         val archiveJson = """
             {"songs":[{"id":"s1","date":"2024-12-15","title":"夜想曲","artist":"月詠",
-                       "artwork_url":"https://x/a.jpg","audio_url":"https://x/a.mp3"}],
+                       "artwork_url":"https://x/a.jpg","preview_url":"https://x/a.m4a","store_url":"https://music.apple.com/jp/x"}],
              "next_cursor":"CURSOR2"}
         """.trimIndent()
         val engine = MockEngine {

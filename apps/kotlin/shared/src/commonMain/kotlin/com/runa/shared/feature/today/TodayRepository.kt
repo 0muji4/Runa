@@ -68,7 +68,7 @@ class DefaultTodayRepository(
     private fun cacheSong(s: SongDto) =
         database.todayQueries.upsertSong(
             date = s.date, id = s.id, title = s.title, artist = s.artist,
-            artwork_url = s.artworkUrl, audio_url = s.audioUrl,
+            artwork_url = s.artworkUrl, preview_url = s.previewUrl, store_url = s.storeUrl,
         )
 
     private fun cachedQuote(dateKey: String): QuoteDto? =
@@ -80,7 +80,7 @@ class DefaultTodayRepository(
             ?.let {
                 SongDto(
                     id = it.id, date = it.date, title = it.title, artist = it.artist,
-                    artworkUrl = it.artwork_url, audioUrl = it.audio_url,
+                    artworkUrl = it.artwork_url, previewUrl = it.preview_url, storeUrl = it.store_url,
                 )
             }
 }

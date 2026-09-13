@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,12 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.runa.android.R
+import com.runa.android.ui.components.AppleMusicBadge
+import com.runa.android.ui.components.ITunesCourtesyLine
 import com.runa.android.ui.components.RunaEmptyView
 import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.components.RunaScreenHeader
@@ -42,9 +45,13 @@ import com.runa.shared.network.dto.SongDto
 import org.koin.compose.koinInject
 
 /**
- * 07 きょうの一曲. A spacious, refined player. Defaults to today's song (from the
- * shared [HomeViewModel]); once a song is playing (today's or one chosen from the
- * archive) it reflects the shared [SongPlayerViewModel]'s live state.
+ * 07 きょうの一曲. Introduces the day's track from Apple's catalog: artwork, title,
+ * the Apple Music badge as the main action, and a 30-second preview below it.
+ * Defaults to today's song (from the shared [HomeViewModel]); once a preview is
+ * playing (today's or one chosen from the archive) it reflects the shared
+ * [SongPlayerViewModel]'s live state. The layout follows Apple's Promo Content
+ * terms (docs/dd/todays-song-itunes-preview.md, Q4): badge and attribution on
+ * the same screen, no seek.
  */
 @Composable
 fun TodaysSongScreen(
@@ -96,7 +103,7 @@ fun TodaysSongScreen(
                     return@Column
                 }
 
-                Player(
+                SongIntroduction(
                     song = song,
                     isPlaying = playerState.isPlaying,
                     positionMs = playerState.positionMs,
@@ -104,7 +111,6 @@ fun TodaysSongScreen(
                     onToggle = {
                         if (playerState.song == null) playerViewModel.play(song) else playerViewModel.togglePlayPause()
                     },
-                    onSeek = { playerViewModel.seekTo(it) },
                 )
             }
         }
@@ -112,13 +118,12 @@ fun TodaysSongScreen(
 }
 
 @Composable
-private fun Player(
+private fun SongIntroduction(
     song: SongDto,
     isPlaying: Boolean,
     positionMs: Long,
     durationMs: Long,
     onToggle: () -> Unit,
-    onSeek: (Long) -> Unit,
 ) {
     AsyncImage(
         model = song.artworkUrl,
@@ -133,41 +138,40 @@ private fun Player(
     Text(song.title, style = MaterialTheme.typography.headlineMedium, color = RunaColors.Heading, textAlign = TextAlign.Center)
     Text(song.artist, style = MaterialTheme.typography.bodyLarge, color = RunaColors.Subtle)
 
-    Spacer(Modifier.height(24.dp))
+    // The badge is the screen's main action: the preview below only introduces
+    // the track, so it sits under the badge and cannot be scrubbed.
+    Spacer(Modifier.height(28.dp))
+    AppleMusicBadge(storeUrl = song.storeUrl, height = 48.dp)
 
-    // Seek bar (shown once the media reports a duration).
-    if (durationMs > 0) {
-        Slider(
-            value = positionMs.coerceIn(0, durationMs).toFloat(),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..durationMs.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = RunaColors.Accent,
-                activeTrackColor = RunaColors.Accent,
-                inactiveTrackColor = RunaColors.Surface,
-            ),
-        )
-        Box(Modifier.fillMaxWidth()) {
-            Text(formatTime(positionMs), style = MaterialTheme.typography.bodyMedium, color = RunaColors.Subtle, modifier = Modifier.align(Alignment.CenterStart))
-            Text(formatTime(durationMs), style = MaterialTheme.typography.bodyMedium, color = RunaColors.Subtle, modifier = Modifier.align(Alignment.CenterEnd))
+    Spacer(Modifier.height(28.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onToggle, modifier = Modifier.size(56.dp)) {
+            Icon(
+                imageVector = if (isPlaying) RunaIcons.Pause else RunaIcons.Play,
+                contentDescription = stringResource(if (isPlaying) R.string.player_pause else R.string.player_play),
+                tint = RunaColors.Accent,
+                modifier = Modifier.size(40.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.song_preview_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = RunaColors.Subtle,
+            )
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { if (durationMs > 0) positionMs.coerceIn(0, durationMs).toFloat() / durationMs else 0f },
+                color = RunaColors.Accent,
+                trackColor = RunaColors.Surface,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 
-    Spacer(Modifier.height(16.dp))
-    // 07 の再生操作はアイコンのみ（iOS と同じ）。文言は読み上げラベルとしてだけ残る。
-    IconButton(onClick = onToggle, modifier = Modifier.size(72.dp)) {
-        Icon(
-            imageVector = if (isPlaying) RunaIcons.Pause else RunaIcons.Play,
-            contentDescription = stringResource(if (isPlaying) R.string.player_pause else R.string.player_play),
-            tint = RunaColors.Accent,
-            modifier = Modifier.size(56.dp),
-        )
-    }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = (ms / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "$minutes:${seconds.toString().padStart(2, '0')}"
+    Spacer(Modifier.height(20.dp))
+    ITunesCourtesyLine()
 }

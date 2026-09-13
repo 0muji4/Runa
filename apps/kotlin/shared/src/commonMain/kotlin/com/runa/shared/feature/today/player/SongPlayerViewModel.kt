@@ -14,11 +14,11 @@ import kotlinx.datetime.Clock
 
 /**
  * Shared song-player view model. It owns the playback INTENT (which song, and
- * play/pause/seek) while the actual audio engine is the platform [AudioPlayer]
+ * play/pause) while the actual audio engine is the platform [AudioPlayer]
  * ([ExoPlayer]/[AVPlayer], injected). [state] merges the current song with the
  * engine's live [PlaybackState]. Starting a NEW song also records a play via
  * [SongRepository], so history accumulates whether the song is today's or an
- * archived one.
+ * archived one. What plays is the track's 30-second preview ([SongDto.previewUrl]).
  */
 class SongPlayerViewModel(
     private val audioPlayer: AudioPlayer,
@@ -42,7 +42,7 @@ class SongPlayerViewModel(
         val isNewSong = currentSong.value?.id != song.id
         currentSong.value = song
         if (isNewSong) {
-            audioPlayer.load(song.audioUrl)
+            audioPlayer.load(song.previewUrl)
             viewModelScope.launch { songRepository.markPlayed(song, Clock.System.now().toEpochMilliseconds()) }
         }
         audioPlayer.play()
@@ -54,6 +54,4 @@ class SongPlayerViewModel(
     }
 
     fun pause() = audioPlayer.pause()
-
-    fun seekTo(positionMs: Long) = audioPlayer.seekTo(positionMs)
 }

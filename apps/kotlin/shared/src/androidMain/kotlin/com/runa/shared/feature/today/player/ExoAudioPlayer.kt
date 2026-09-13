@@ -21,8 +21,11 @@ import kotlinx.coroutines.launch
 /**
  * ExoPlayer-backed [AudioPlayer] (Media3). ExoPlayer must be created and driven
  * on a thread with a Looper, so every engine call is posted to the main thread;
- * the shared view model may invoke play/pause/seek from any dispatcher. Position
- * is not pushed by ExoPlayer, so a coroutine ticker samples it while playing.
+ * the shared view model may invoke play/pause from any dispatcher. Position is
+ * not pushed by ExoPlayer, so a coroutine ticker samples it while playing.
+ *
+ * The default media source streams straight from the URL; do not wrap it in a
+ * CacheDataSource (Apple's preview must not be cached — see [AudioPlayer]).
  */
 class ExoAudioPlayer(context: Context) : AudioPlayer {
 
@@ -56,11 +59,6 @@ class ExoAudioPlayer(context: Context) : AudioPlayer {
     override fun play() = onMain { player.play() }
 
     override fun pause() = onMain { player.pause() }
-
-    override fun seekTo(positionMs: Long) = onMain {
-        player.seekTo(positionMs)
-        syncState()
-    }
 
     override fun release() = onMain {
         ticker?.cancel()

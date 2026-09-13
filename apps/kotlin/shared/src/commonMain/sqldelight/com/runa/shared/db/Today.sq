@@ -11,22 +11,26 @@ CREATE TABLE today_quote (
     body_text TEXT NOT NULL
 );
 
+-- preview_url is Apple's 30-second preview and store_url the Apple Music page
+-- the badge links to. Only these URLs are cached — never the preview audio.
 CREATE TABLE today_song (
     date        TEXT NOT NULL PRIMARY KEY,
     id          TEXT NOT NULL,
     title       TEXT NOT NULL,
     artist      TEXT NOT NULL,
     artwork_url TEXT NOT NULL,
-    audio_url   TEXT NOT NULL
+    preview_url TEXT NOT NULL,
+    store_url   TEXT NOT NULL
 );
 
+-- The play log keeps only text: artwork is Apple promo content and may only be
+-- shown next to the store badge, which a history line does not carry.
 CREATE TABLE song_history (
-    id          TEXT    NOT NULL PRIMARY KEY,
-    song_id     TEXT    NOT NULL,
-    title       TEXT    NOT NULL,
-    artist      TEXT    NOT NULL,
-    artwork_url TEXT    NOT NULL,
-    played_at   INTEGER NOT NULL
+    id        TEXT    NOT NULL PRIMARY KEY,
+    song_id   TEXT    NOT NULL,
+    title     TEXT    NOT NULL,
+    artist    TEXT    NOT NULL,
+    played_at INTEGER NOT NULL
 );
 
 -- ---- today_quote ----
@@ -41,21 +45,21 @@ WHERE date = ?;
 
 -- ---- today_song ----
 upsertSong:
-INSERT OR REPLACE INTO today_song(date, id, title, artist, artwork_url, audio_url)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO today_song(date, id, title, artist, artwork_url, preview_url, store_url)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 selectSong:
-SELECT date, id, title, artist, artwork_url, audio_url
+SELECT date, id, title, artist, artwork_url, preview_url, store_url
 FROM today_song
 WHERE date = ?;
 
 -- ---- song_history ----
 insertPlay:
-INSERT INTO song_history(id, song_id, title, artist, artwork_url, played_at)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO song_history(id, song_id, title, artist, played_at)
+VALUES (?, ?, ?, ?, ?);
 
 selectHistory:
-SELECT id, song_id, title, artist, artwork_url, played_at
+SELECT id, song_id, title, artist, played_at
 FROM song_history
 ORDER BY played_at DESC
 LIMIT ?;

@@ -1,12 +1,7 @@
 import Foundation
 import Shared
 
-/// ObservableObject bridge over the shared `GalleryViewModel` (13 ギャラリー). Mirrors
-/// the other observables: collect the SKIE-bridged `StateFlow` and republish on the
-/// main actor; the display-theme toggle and mutations forward to the shared VM.
-/// The gallery grid's page state, mapped from the shared `UiState<List<GalleryImage>>`
-/// into a native Swift enum so the view never touches SKIE generics. The display-theme
-/// toggle is a separate flow (grid chrome shown over both content and empty).
+/// The gallery grid's page state, decoded from the shared `UiState<List<GalleryImage>>`.
 enum GalleryUi {
     case loading
     case empty
@@ -14,10 +9,7 @@ enum GalleryUi {
     case failure(AppError)
 }
 
-/// ObservableObject bridge over the shared `GalleryViewModel` (13 ギャラリー). Collects
-/// the SKIE-bridged `StateFlow<UiState<…>>` + the display-theme flow, mapping each grid
-/// emission to [GalleryUi], and republishes on the main actor; mutations forward to the
-/// shared VM.
+/// ObservableObject bridge over the shared `GalleryViewModel`.
 @MainActor
 final class GalleryObservable: ObservableObject {
     @Published private(set) var ui: GalleryUi = .loading
@@ -48,14 +40,12 @@ final class GalleryObservable: ObservableObject {
         }
     }
 
-    /// Switch the gallery-scoped display treatment (monotone ⇔ pink). Client-only —
-    /// NOT the app-wide theme.
+    /// Gallery-scoped display treatment (monotone ⇔ pink); NOT the app-wide theme.
     func setDisplayTheme(_ theme: GalleryDisplayTheme) {
         viewModel.setDisplayTheme(theme: theme)
     }
 
-    /// Add a picked image. `base64` is the normalized JPEG; the shared helper decodes
-    /// it to a Kotlin `ByteArray` reference, so no per-byte bridging happens in Swift.
+    /// Add a picked image; `base64` is the normalized JPEG, decoded to `ByteArray` in Kotlin.
     func addImage(base64: String, width: Int32, height: Int32, mimeType: String) {
         let bytes = galleryDecodeBase64(value: base64)
         viewModel.addImage(bytes: bytes, width: width, height: height, mimeType: mimeType)

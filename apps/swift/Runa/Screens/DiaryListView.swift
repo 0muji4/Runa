@@ -12,9 +12,7 @@ enum DiaryRoute: Hashable {
     case writeOn(isoDate: String)
 }
 
-/// Diary list (09 ダイアリー). A large 明朝 heading over a still column of record
-/// cards, each led by its day's moon phase. Pull-to-refresh, a whisper-quiet sync
-/// line, a new-moon empty state, and a round moonlight-pink FAB into the editor.
+/// ダイアリー list; owns the diary tab's `NavigationPath` and its route destinations.
 struct DiaryListView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = DiaryListObservable()
@@ -71,8 +69,7 @@ struct DiaryListView: View {
     private func listBody(entries: [DiaryEntry], sync: SyncPhase) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // Outside the spaced stack so the gap below the title is the header's
-                // own, matching every other screen.
+                // Outside the spaced stack so the gap below the title is the header's own.
                 RunaScreenHeader(title: L.diaryListTitle) {
                     HStack(spacing: 16) {
                         insightLink
@@ -104,7 +101,6 @@ struct DiaryListView: View {
                 }
             }
             .padding(.horizontal, 20)
-            // Shared empty surface (24) — the diary's own copy over the shared motif.
             RunaEmptyView(
                 title: L.diaryEmptyTitle,
                 message: L.diaryEmptyBody,
@@ -114,7 +110,6 @@ struct DiaryListView: View {
         }
     }
 
-    /// Quiet link into the retrospective calendar (12 ふりかえり).
     private var calendarLink: some View {
         Button { path.append(DiaryRoute.calendar) } label: {
             Text(L.diaryOpenCalendar)
@@ -123,7 +118,6 @@ struct DiaryListView: View {
         }
     }
 
-    /// Quiet link into the insight letter (16 インサイト).
     private var insightLink: some View {
         Button { path.append(DiaryRoute.insight) } label: {
             Text(L.diaryOpenInsight)
@@ -153,7 +147,6 @@ struct DiaryListView: View {
 
 }
 
-/// One quiet record card, led by its day's moon phase.
 private struct DiaryCardRow: View {
     @Environment(\.runaTheme) private var runaTheme
     let entry: DiaryEntry

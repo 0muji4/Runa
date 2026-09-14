@@ -1,9 +1,8 @@
 import Foundation
 import Shared
 
-/// Bridge over the shared `ThemeViewModel`. Publishes the theme id string and drives
-/// selection by id — this keeps the Swift side independent of the bridged Kotlin
-/// enum's case names. Seeded synchronously so the first frame uses the saved theme.
+/// Bridge over the shared `ThemeViewModel`, keyed by theme id string.
+/// Seeded synchronously so the first frame uses the saved theme.
 @MainActor
 final class ThemeObservable: ObservableObject {
     @Published private(set) var themeId: String
@@ -30,7 +29,7 @@ final class ThemeObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// Bridge over the shared `AccountViewModel` for the account-data screen (23).
+/// Bridge over the shared `AccountViewModel` for the account-data screen.
 @MainActor
 final class AccountObservable: ObservableObject {
     @Published private(set) var state: AccountUiState?

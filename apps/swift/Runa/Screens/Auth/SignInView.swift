@@ -1,13 +1,8 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
-/// wordmark and a poetic line, then Apple / Google / メール.
-/// "メールでつづける" opens a second, still email step rather than crowding the hero.
-///
-/// The design's 「いまはスキップ」 is intentionally absent: no guest session exists, so
-/// the only way past the auth gate is signing in. Showing a skip that merely loops
-/// back to onboarding ① would promise an exit that does not exist.
+/// Sign-in: Apple / Google / an email step. The design's skip is omitted — there is no
+/// guest session, so signing in is the only way past the auth gate.
 struct SignInView: View {
     @Environment(\.runaTheme) private var runaTheme
     let isBusy: Bool

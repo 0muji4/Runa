@@ -1,15 +1,8 @@
 import SwiftUI
 import Shared
 
-/// Root auth gate. Subscribes to the shared `AuthObservable` and switches the
-/// whole app between the startup splash, the unauthenticated flow, and the tab
-/// body:
-///  - `AuthState.Restoring`     → splash (checking the stored session)
-///  - `AuthState.Authenticated` → the tabbed app, greeting the /me display name
-///  - anything else             → onboarding → sign-in
-///
-/// Signing out from Settings flips the shared state back to unauthenticated, so
-/// this gate returns to the sign-in flow automatically.
+/// Root auth gate: `Restoring` → splash, `Authenticated` → the tab body, anything else →
+/// the onboarding / sign-in flow.
 struct RootView: View {
     @StateObject private var auth = AuthObservable()
 
@@ -24,9 +17,7 @@ struct RootView: View {
                         displayName: authenticated.user.displayName,
                         onSignOut: { auth.logout() }
                     )
-                    // Provide the app-wide re-authenticate action (clears the session
-                    // → sign-in) so RunaErrorView's auth CTA works without threading a
-                    // callback. Mirrors Android's LocalReauthenticate.
+                    // App-wide re-authenticate action consumed by RunaErrorView's auth CTA.
                     .environment(\.runaReauthenticate, { auth.logout() })
                 default:
                     AuthFlowView(auth: auth, state: state)
@@ -35,7 +26,5 @@ struct RootView: View {
                 SplashView()
             }
         }
-        // The color scheme now follows the selected theme, applied by ThemedRoot at
-        // the app root (see RunaApp).
     }
 }

@@ -1,10 +1,7 @@
 import SwiftUI
 import Shared
 
-/// アカウント・データ (23). Profile display + display-name editing, data export (text
-/// or JSON via the system share sheet) and account deletion (with confirmation).
-/// Sign-out lives here per the confirmed design. On successful deletion the shared
-/// auth state drops to unauthenticated, so the app root returns to sign-in on its own.
+/// アカウント・データ: profile + display-name editing, data export, sign-out and account deletion.
 struct AccountView: View {
     let onSignOut: () -> Void
 
@@ -31,7 +28,6 @@ struct AccountView: View {
             .padding(.horizontal, 28)
         }
         .background(runaTheme.background)
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .onAppear { account.loadProfile() }

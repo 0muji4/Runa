@@ -1,11 +1,7 @@
 import SwiftUI
 import Shared
 
-/// 12 ふりかえりカレンダー. A quiet month grid: a serif "YYYY M月" header flanked by
-/// prev/next chevrons (the title taps back to today), the 日〜土 row, then the days.
-/// Per the confirmed design the moon lights ONLY on days that hold a record
-/// ("記録のある日に、月あかり"); today wears a soft moonlight-pink outline. Tapping a
-/// day opens its records, or the backdated writer when it has none.
+/// ふりかえりカレンダー: month grid; a day taps into its records, or the backdated writer when empty.
 struct CalendarView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Binding var path: NavigationPath
@@ -19,8 +15,7 @@ struct CalendarView: View {
         ZStack(alignment: .top) {
             runaTheme.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
-                // No screen title here — the month stepper below is the heading, so
-                // this screen takes the header's back affordance and top offset only.
+                // No title: the month stepper below is the heading.
                 RunaScreenHeader(onBack: { dismiss() })
 
                 content
@@ -117,7 +112,6 @@ struct CalendarView: View {
 
     private func legend(_ banner: SyncPhase) -> some View {
         VStack(spacing: 12) {
-            // Quiet offline/error line over the always-rendered grid (idle/syncing silent).
             RunaSyncBanner(phase: banner)
             HStack(spacing: 10) {
                 Circle().fill(runaTheme.subAccent).frame(width: 8, height: 8)

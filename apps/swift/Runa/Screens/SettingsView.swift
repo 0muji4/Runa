@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// 設定 トップ (19). A quiet list of entry points: theme, notification and
-/// privacy-lock (the latter two are 導線 only for a later feature), then
-/// account・データ, the LUNA+ card and the app version. Sign-out lives on the
-/// account screen (23) per the confirmed design. Pushed onto Home's NavigationStack.
+/// 設定 top: entry points to the sub-screens, the LUNA+ card and the app version.
 struct SettingsView: View {
     let onSignOut: () -> Void
 
@@ -55,7 +52,6 @@ struct SettingsView: View {
             .padding(.horizontal, 28)
         }
         .background(runaTheme.background)
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }
@@ -67,7 +63,7 @@ struct SettingsView: View {
     }
 
     private var premiumCard: some View {
-        // LUNA+ 導線. The paywall is a separate, not-yet-built feature — a quiet card.
+        // LUNA+ 導線; the paywall is not built yet, so the card has no action.
         HStack(spacing: RunaSpacing.sm) {
             Circle().fill(runaTheme.subAccent).frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 4) {

@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The app-wide color palette (the seven semantic tokens). A theme change swaps the
-/// whole `RunaTheme`; screens read it from the environment as `@Environment(\.runaTheme)`
-/// so a switch recolors them in place (nav state preserved, live preview on the
-/// theme screen). Hex values are IDENTICAL to Android and the README canonical table.
+/// The app-wide color palette (seven semantic tokens). Hex values are the shared 3-theme
+/// tokens; Android carries the same set.
 struct RunaTheme {
     let background: Color
     let surface: Color
@@ -24,8 +22,7 @@ struct RunaTheme {
         subAccent: Color(hex: 0xE8E2D0)
     )
 
-    /// あさ（ライト）. Values beyond the cream background are derived from the design
-    /// swatch + spec (pending sign-off).
+    /// あさ（ライト）.
     static let light = RunaTheme(
         background: Color(hex: 0xFAF7F5),
         surface: Color(hex: 0xFFFFFF),
@@ -36,7 +33,7 @@ struct RunaTheme {
         subAccent: Color(hex: 0xC9B8A0)
     )
 
-    /// ピンク×ピンク. Dark base with the accent pushed further (derived, pending sign-off).
+    /// ピンク×ピンク.
     static let pink = RunaTheme(
         background: Color(hex: 0x141017),
         surface: Color(hex: 0x1E1622),
@@ -47,8 +44,7 @@ struct RunaTheme {
         subAccent: Color(hex: 0xE8B7C8)
     )
 
-    /// Maps the shared `AppTheme.id` string to its palette. Using the id keeps this
-    /// free of the bridged Kotlin enum's case names.
+    /// Maps the shared `AppTheme.id` string to its palette.
     static func forId(_ id: String) -> RunaTheme {
         switch id {
         case "light": return .light
@@ -63,15 +59,14 @@ private struct RunaThemeKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// The active app palette. Injected once at the root (see `ThemedRoot`); read by
-    /// every screen as `@Environment(\.runaTheme) private var runaTheme`.
+    /// The active app palette, injected once at the root by `ThemedRoot`.
     var runaTheme: RunaTheme {
         get { self[RunaThemeKey.self] }
         set { self[RunaThemeKey.self] = newValue }
     }
 }
 
-/// Generous, minimal spacing scale (moon motif — lots of breathing room).
+/// Spacing scale.
 enum RunaSpacing {
     static let xs: CGFloat = 8
     static let sm: CGFloat = 16
@@ -80,14 +75,8 @@ enum RunaSpacing {
     static let xl: CGFloat = 64
 }
 
-/// Header metrics. Every screen header is built from these four values by
-/// `RunaScreenHeader` — screens do not set their own.
-///
-/// They are pinned by the canon table in README「画面ヘッダー（全画面共通の型）」and
-/// must match Android's `RunaHeader`; `hack/check-header-tokens.sh` verifies it.
-/// A dedicated type rather than reuse of `RunaSpacing` is what keeps the two
-/// clients from drifting apart — the tab offset used to be `RunaSpacing.lg` here
-/// and a separate 32dp constant on Android.
+/// Header metrics; every screen header is built from these by `RunaScreenHeader`, screens
+/// do not set their own.
 enum RunaHeaderMetrics {
     /// Top of a bottom-tab root's header, inside the safe area.
     static let topTab: CGFloat = 40

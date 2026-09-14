@@ -17,7 +17,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.random.Random
 
-/** One local play-history record (also used as the archive list's "played" feed). */
 data class SongHistoryEntry(
     val id: String,
     val songId: String,
@@ -28,26 +27,21 @@ data class SongHistoryEntry(
 
 /** Reads the song archive and records/observes local play history. */
 interface SongRepository {
-    /** The local play log, newest first, as a reactive stream. */
+    /** The local play log, newest first. */
     fun observeSongHistory(limit: Long = 100): Flow<List<SongHistoryEntry>>
 
     /** One page of the backend song archive (newest first). */
     suspend fun getArchive(limit: Int?, cursor: String?): SongsArchiveResponse
 
-    /** Record a play: write it to the local log AND best-effort POST to the server. */
+    /** Record a play locally, then best-effort POST to the server. */
     suspend fun markPlayed(song: SongDto, playedAtMs: Long)
 }
 
-/**
- * Default [SongRepository]. History is authoritative locally (SQLDelight) so it
- * survives offline; [markPlayed] also notifies the server but never fails the
- * local write if that call errors.
- */
+/** Default [SongRepository]. History is authoritative locally; the server call never fails the local write. */
 class DefaultSongRepository(
     private val apiClient: ApiClient,
     private val database: RunaDatabase,
-    // The archive ends at the user's local day, so a song registered for
-    // tomorrow does not show up as "これまでの一曲" tonight.
+    // The archive ends at the user's local day, so tomorrow's song does not show tonight.
     private val today: () -> LocalDate = { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date },
 ) : SongRepository {
 
@@ -75,16 +69,15 @@ class DefaultSongRepository(
             artist = song.artist,
             played_at = playedAtMs,
         )
-        // Best-effort server notification; the local record already succeeded.
         try {
             apiClient.markSongPlayed(song.id, Instant.fromEpochMilliseconds(playedAtMs).toString())
         } catch (_: Exception) {
-            // Offline or server error: the play stays local; a later slice may sync it.
+            // Offline or server error: the play stays local.
         }
     }
 }
 
-/** A random v4-style UUID string for local-only ids (no dependency needed). */
+/** A random v4-style UUID string for local-only ids. */
 private fun randomId(): String {
     val hex = "0123456789abcdef"
     val sb = StringBuilder(36)

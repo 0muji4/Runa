@@ -3,20 +3,15 @@ package com.runa.shared.network.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Request/response DTOs for the account-data endpoints (PATCH /me, GET /me/export).
- * As with the other DTOs the backend speaks snake_case JSON, so camelCase fields
- * carry an explicit [SerialName].
- */
+/** DTOs for the account-data endpoints (PATCH /me, GET /me/export). */
 
-/** Body for PATCH /api/v1/me — the only editable profile field for now. */
+/** Body for PATCH /api/v1/me. */
 @Serializable
 data class UpdateMeRequest(
     @SerialName("display_name") val displayName: String,
 )
 
-/** GET /api/v1/me/export payload. Diaries reuse [DiaryEntryDto]; images carry a
- *  short-lived presigned URL that is absent when object storage is unavailable. */
+/** GET /api/v1/me/export payload; image [ExportImageDto.url] is absent when object storage is unavailable. */
 @Serializable
 data class ExportDto(
     @SerialName("exported_at") val exportedAt: String,

@@ -1,10 +1,5 @@
--- Local diary store for the offline-first sync engine.
---
--- client_id is the stable LOCAL primary key (generated on the device the moment
--- an entry is authored), so a row exists and renders before it ever reaches the
--- server. server_id is null until the create is synced. sync_state tracks what
--- still needs pushing:
---   synced | pending_create | pending_update | pending_delete
+-- client_id is the device-generated primary key; server_id is null until the create is synced.
+-- sync_state: synced | pending_create | pending_update | pending_delete
 -- Timestamps are ISO-8601 strings (kotlinx.datetime Instant.toString()).
 
 CREATE TABLE diary_entries (
@@ -20,7 +15,7 @@ CREATE TABLE diary_entries (
 
 CREATE INDEX diary_entries_created_idx ON diary_entries(created_at);
 
--- Single-row key/value table for sync bookkeeping (last_synced_at watermark).
+-- Sync bookkeeping (last_synced_at watermark).
 CREATE TABLE diary_sync_meta (
     key   TEXT NOT NULL PRIMARY KEY,
     value TEXT NOT NULL
@@ -28,8 +23,6 @@ CREATE TABLE diary_sync_meta (
 
 -- ---- reads ----
 
--- Visible list, newest first. Anything soft-deleted (locally or from the server,
--- incl. pending_delete which sets deleted_at) drops out.
 selectVisible:
 SELECT *
 FROM diary_entries
@@ -41,8 +34,7 @@ SELECT *
 FROM diary_entries
 WHERE client_id = ?;
 
--- Everything with unsynced local work, oldest-authored first so pushes replay in
--- authoring order.
+-- Oldest-authored first so pushes replay in authoring order.
 selectPending:
 SELECT *
 FROM diary_entries
@@ -73,7 +65,6 @@ deleteByClientId:
 DELETE FROM diary_entries
 WHERE client_id = ?;
 
--- Full wipe (account deletion). Truncates the whole local diary store.
 deleteAllEntries:
 DELETE FROM diary_entries;
 
@@ -82,15 +73,12 @@ DELETE FROM diary_sync_meta;
 
 -- ---- sync application ----
 
--- After a successful push, pin the entry to the server's authoritative id and
--- updated_at so the next delta comparison lines up.
 markSynced:
 UPDATE diary_entries
 SET server_id = ?, updated_at = ?, sync_state = 'synced'
 WHERE client_id = ?;
 
--- Apply a server row wholesale during pull (server wins). Overwrites the local
--- row for that client_id, incl. a tombstone (deleted_at set).
+-- Pull: server wins, incl. tombstones (deleted_at set).
 applyServerRow:
 INSERT OR REPLACE INTO diary_entries(client_id, server_id, body_text, mood, created_at, updated_at, deleted_at, sync_state)
 VALUES (?, ?, ?, ?, ?, ?, ?, 'synced');

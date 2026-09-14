@@ -3,14 +3,7 @@ package com.runa.shared.feature.settings
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Backs the settings top screen (19). Its only shared state is the active theme,
- * shown as the trailing value on the "テーマ" row; the app version is read natively
- * per client, and the notification / privacy-lock rows are placeholders for a later
- * feature. Kept as its own view model (rather than reusing [ThemeViewModel]) so the
- * settings-top screen resolves one dedicated holder, matching the app's screen↔VM
- * convention.
- */
+/** Backs the settings top screen (19); its only shared state is the active theme. */
 class SettingsViewModel(
     themeRepository: ThemeRepository,
 ) : ViewModel() {

@@ -8,14 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Reference-date suite for [MoonPhaseCalculator] — the DoD centrepiece.
- *
- * The expected values come from real astronomical new/full/quarter moons. Because
- * the calculator is pure `commonMain` math, every Kotlin target (Android JVM, iOS
- * Native) compiles and runs THIS test, so a green run on any target is the proof
- * that both platforms return identical results.
- */
+/** Expected values come from real astronomical new/full/quarter moons (UTC). */
 class MoonPhaseCalculatorTest {
 
     private val utc = TimeZone.UTC
@@ -24,12 +17,11 @@ class MoonPhaseCalculatorTest {
     private fun phase(date: String) =
         MoonPhaseCalculator.phaseFor(LocalDate.parse(date), utc)
 
-    /** Distance to the nearest new moon (age 0 or a full synodic month), in days. */
     private fun ageFromNew(ageDays: Double) = min(ageDays, synodic - ageDays)
 
     @Test
     fun knownNewMoonsAreClassifiedAsNew() {
-        // Verified new moons (UTC): 2000-01-06 is the calculator's own epoch.
+        // 2000-01-06 is the calculator's own epoch.
         for (date in listOf("2000-01-06", "2024-01-11", "2024-12-01", "2025-03-29")) {
             val p = phase(date)
             assertEquals(MoonPhaseKey.NEW_MOON, p.phaseKey, "phaseKey for $date")
@@ -40,7 +32,6 @@ class MoonPhaseCalculatorTest {
 
     @Test
     fun knownFullMoonsAreClassifiedAsFull() {
-        // Verified full moons (UTC).
         for (date in listOf("2024-01-25", "2024-12-15", "2025-03-14")) {
             val p = phase(date)
             assertEquals(MoonPhaseKey.FULL_MOON, p.phaseKey, "phaseKey for $date")
@@ -51,7 +42,6 @@ class MoonPhaseCalculatorTest {
 
     @Test
     fun knownQuartersAreClassified() {
-        // First quarter 2024-12-08, last quarter 2024-12-22 (half-lit disc).
         val first = phase("2024-12-08")
         assertEquals(MoonPhaseKey.FIRST_QUARTER, first.phaseKey)
         assertTrue(first.illumination in 0.40..0.65, "first-quarter illum ${first.illumination}")
@@ -81,8 +71,7 @@ class MoonPhaseCalculatorTest {
 
     @Test
     fun pinnedValueGuardsCrossPlatformDeterminism() {
-        // A byte-level anchor: if any target's Double math diverged, this fails.
-        // Value computed from the same algorithm (2024-12-15 noon UTC).
+        // Computed by the same algorithm at 2024-12-15 noon UTC; a target whose Double math diverges fails here.
         val p = phase("2024-12-15")
         assertEquals(14.478633, p.ageDays, 1e-4, "pinned ageDays")
         assertEquals(0.999070, p.illumination, 1e-4, "pinned illumination")

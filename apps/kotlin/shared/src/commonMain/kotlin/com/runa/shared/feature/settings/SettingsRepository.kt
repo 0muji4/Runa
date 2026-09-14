@@ -3,15 +3,8 @@ package com.runa.shared.feature.settings
 import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.UserDto
 
-/**
- * The account-data boundary: profile read/edit, self-service export and account
- * deletion. Theme selection is a separate concern ([ThemeRepository]) — this one
- * is the network-backed account surface.
- *
- * All methods return [Result] so callers surface success/failure inline. On a
- * successful [deleteAccount] the local session is torn down (tokens cleared,
- * auth state dropped to unauthenticated) and the local database is wiped.
- */
+/** The account-data boundary: profile read/edit, export and account deletion.
+ *  A successful [deleteAccount] also tears down the local session and wipes the local database. */
 interface SettingsRepository {
     /** GET /me — the caller's current profile. */
     suspend fun getProfile(): Result<UserDto>

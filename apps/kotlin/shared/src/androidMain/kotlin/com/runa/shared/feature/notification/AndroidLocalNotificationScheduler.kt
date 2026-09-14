@@ -12,14 +12,8 @@ import com.runa.shared.R
 import java.util.Calendar
 
 /**
- * Android [LocalNotificationScheduler]. Arms a daily local reminder with
- * AlarmManager and posts it from [ReminderReceiver]. Uses `setAndAllowWhileIdle`
- * (inexact, allow-while-idle) rather than an exact alarm, so no
- * `SCHEDULE_EXACT_ALARM` permission is needed — a gentle nightly nudge does not
- * require to-the-second precision. The alarm fires once; the receiver re-arms the
- * next day (and [BootReceiver] re-arms after a reboot), which is why the scheduler
- * exposes [rescheduleFromPreferences] reading the same `runa_settings` store the
- * repository writes.
+ * Android [LocalNotificationScheduler] over AlarmManager. Inexact `setAndAllowWhileIdle` (no SCHEDULE_EXACT_ALARM
+ * permission); the alarm fires once and [ReminderReceiver] / [BootReceiver] re-arm it via [rescheduleFromPreferences].
  */
 class AndroidLocalNotificationScheduler(
     private val context: Context,
@@ -46,16 +40,13 @@ class AndroidLocalNotificationScheduler(
         private const val ALARM_REQUEST_CODE = 4202
         private const val CONTENT_REQUEST_CODE = 4203
 
-        // Same store + keys the DefaultNotificationSettingsRepository persists to, so
-        // a receiver (alarm fire / boot) can re-arm without the shared graph.
+        // Must match the store + keys DefaultNotificationSettingsRepository persists to.
         private const val PREFS_NAME = "runa_settings"
         private const val KEY_ENABLED = "notif.reminder.enabled"
         private const val KEY_HOUR = "notif.reminder.hour"
         private const val KEY_MINUTE = "notif.reminder.minute"
 
-        /** Re-arm the daily reminder from the persisted preference (used by the alarm
-         *  receiver to schedule the next day and by the boot receiver after reboot).
-         *  A no-op when the reminder is disabled. */
+        /** Re-arm the daily reminder from the persisted preference; a no-op when disabled. */
         fun rescheduleFromPreferences(context: Context) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             if (!prefs.getBoolean(KEY_ENABLED, false)) return
@@ -66,8 +57,7 @@ class AndroidLocalNotificationScheduler(
             AndroidLocalNotificationScheduler(context).scheduleDailyReminder(time)
         }
 
-        /** Build + post the reminder notification. Silently a no-op if the user has
-         *  not granted POST_NOTIFICATIONS (API 33+) — the reminder never crashes. */
+        /** Build + post the reminder notification; silently a no-op without POST_NOTIFICATIONS (API 33+). */
         fun postReminder(context: Context) {
             ensureChannel(context)
             val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)

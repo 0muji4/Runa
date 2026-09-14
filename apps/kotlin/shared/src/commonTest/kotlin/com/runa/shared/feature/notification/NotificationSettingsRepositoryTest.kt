@@ -5,7 +5,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Records scheduler calls so the repository's OS-schedule instructions can be asserted. */
 private class FakeLocalNotificationScheduler : LocalNotificationScheduler {
     val scheduled = mutableListOf<ReminderTime>()
     var cancelCount = 0
@@ -80,8 +79,7 @@ class NotificationSettingsRepositoryTest {
             setReminderTime(ReminderTime(21, 0))
         }
 
-        // A brand-new repository over the SAME settings restores the preference —
-        // what a process restart exercises.
+        // A new repository over the SAME settings models a process restart.
         val restored = DefaultNotificationSettingsRepository(settings, FakeLocalNotificationScheduler())
         assertEquals(true, restored.observeReminderEnabled().value)
         assertEquals(ReminderTime(21, 0), restored.observeReminderTime().value)

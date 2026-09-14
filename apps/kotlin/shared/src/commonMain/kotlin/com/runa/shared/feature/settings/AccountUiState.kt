@@ -2,13 +2,7 @@ package com.runa.shared.feature.settings
 
 import com.runa.shared.network.dto.UserDto
 
-/**
- * State for the account-data screen (23). Modeled as a data class holding several
- * independent statuses (profile, name edit, export, deletion) rather than a single
- * sealed state, because these concerns are concurrent on one screen: an export can
- * be in progress while the profile is shown and a name edit is idle. A single
- * sealed hierarchy would force them into one mode and lose that independence.
- */
+/** State for the account-data screen (23): independent facets (profile, name edit, export, deletion). */
 data class AccountUiState(
     val profile: UserDto? = null,
     val isLoadingProfile: Boolean = true,
@@ -21,8 +15,7 @@ data class AccountUiState(
     val deletion: DeletionStatus = DeletionStatus.Idle,
 )
 
-/** Progress of a data export. [Ready] carries both renderings so the UI can offer
- *  "text or JSON" without another network call. */
+/** Progress of a data export; [Ready] carries both renderings so the UI can offer text or JSON. */
 sealed interface ExportStatus {
     data object Idle : ExportStatus
     data object InProgress : ExportStatus
@@ -30,8 +23,7 @@ sealed interface ExportStatus {
     data class Error(val message: String) : ExportStatus
 }
 
-/** The account-deletion confirmation flow. [Deleted] is terminal; the app root
- *  observes auth state (now unauthenticated) and returns to sign-in. */
+/** The account-deletion flow. [Deleted] is terminal; the app root observes auth state and returns to sign-in. */
 sealed interface DeletionStatus {
     data object Idle : DeletionStatus
     data object Confirming : DeletionStatus

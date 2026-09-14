@@ -27,7 +27,7 @@ class TodayRepositoryTest {
         assertFalse(today.isOffline)
         assertEquals("月あかり", today.quote?.bodyText)
         assertEquals("夜想曲", today.song?.title)
-        // 2024-12-15 is a full moon — proves the moon is composed in, not fetched.
+        // 2024-12-15 is a full moon.
         assertEquals(MoonPhaseKey.FULL_MOON, today.moon.phaseKey)
         assertTrue(today.moon.illumination > 0.95)
     }
@@ -36,10 +36,8 @@ class TodayRepositoryTest {
     fun fallsBackToCachedQuoteAndComputesMoonWhenOffline() = runTest {
         val db = inMemoryDatabase()
 
-        // First, an online fetch populates the cache.
         DefaultTodayRepository(mockApiClient(jsonEngine { todayJson }), db).getToday(date, TimeZone.UTC)
 
-        // Then a failing backend must fall back to the cache, moon still computed.
         val failing = MockEngine { respondError(HttpStatusCode.InternalServerError) }
         val offline = DefaultTodayRepository(mockApiClient(failing), db).getToday(date, TimeZone.UTC)
 

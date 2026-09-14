@@ -11,15 +11,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /**
- * Android [BiometricAuthenticator] over androidx.biometric BiometricPrompt. Face /
- * fingerprint is primary; the device passcode is the fallback (via
- * `DEVICE_CREDENTIAL` on API 30+, so [BiometricResult.Success] covers both). On
- * older APIs the STRONG+credential combination is unsupported, so the prompt shows
- * biometric-only with a cancel button (degraded fallback, documented).
- *
- * The prompt needs a [androidx.fragment.app.FragmentActivity]; it is pulled from
- * [CurrentActivityHolder], which the single Activity keeps current via its
- * lifecycle. If no Activity is resumed the attempt reports [BiometricResult.Unavailable].
+ * [BiometricAuthenticator] over androidx.biometric BiometricPrompt. The prompt needs a FragmentActivity,
+ * pulled from [CurrentActivityHolder]; with none resumed the attempt reports [BiometricResult.Unavailable].
  */
 class AndroidBiometricAuthenticator(
     private val context: Context,
@@ -46,14 +39,11 @@ class AndroidBiometricAuthenticator(
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    // Cancel / lockout / hardware error: treat as a failed attempt so
-                    // the gate stays locked and offers a retry. availability() already
-                    // screens out the "no credential at all" case.
+                    // Cancel / lockout / hardware error: a failed attempt, so the gate stays locked and offers a retry.
                     if (cont.isActive) cont.resume(BiometricResult.Failed)
                 }
 
-                // onAuthenticationFailed (a single non-matching read) keeps the prompt
-                // open; the system lets the user try again, so nothing is resumed here.
+                // onAuthenticationFailed (a single non-matching read) keeps the prompt open; nothing to resume.
             }
 
             // BiometricPrompt must be built and started on the main thread.
@@ -71,8 +61,7 @@ class AndroidBiometricAuthenticator(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             builder.setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
         } else {
-            // Pre-30 can't combine STRONG with DEVICE_CREDENTIAL; require a negative
-            // button (mandatory when device credential isn't an allowed authenticator).
+            // Pre-30 can't combine STRONG with DEVICE_CREDENTIAL; a negative button is then mandatory.
             builder.setAllowedAuthenticators(BIOMETRIC_STRONG)
             builder.setNegativeButtonText(PROMPT_CANCEL)
         }

@@ -16,11 +16,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The repository wires the calculator + composer over the local diary stream, and
- * the summariser is swappable behind the interface (DoD#5). Fully in commonMain
- * over a fake diary — no DB, no network.
- */
 class InsightRepositoryTest {
 
     private val utc = TimeZone.UTC
@@ -41,7 +36,6 @@ class InsightRepositoryTest {
     fun summariserIsSwappableBehindTheInterface() = runTest {
         val diary = FakeDiaryRepository()
         diary.setEntries(listOf(entry("2024-12-10T09:00:00Z", "calm")))
-        // A stand-in for a future server-LLM summariser.
         val serverLike = object : SummaryComposer {
             override suspend fun compose(summary: InsightSummary) = InsightNarrative("server-composed", null)
         }
@@ -60,15 +54,12 @@ class InsightRepositoryTest {
         assertEquals(1, diary.syncCalls)
     }
 
-    // ---- helpers ----
-
     private fun entry(instant: String, mood: String?): DiaryEntry {
         val ms = Instant.parse(instant).toEpochMilliseconds()
         return DiaryEntry(instant, null, "x", mood, ms, ms, SyncState.Synced)
     }
 }
 
-/** Minimal in-memory [DiaryRepository]: a controllable entry stream + sync counter. */
 private class FakeDiaryRepository : DiaryRepository {
     private val entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
     private val _syncStatus = MutableStateFlow(SyncPhase.Idle)

@@ -17,7 +17,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** createEntry / updateEntry の呼ばれ方を記録する [DiaryRepository]。 */
 private class RecordingDiaryRepository(private var stored: DiaryEntry? = null) : DiaryRepository {
     val createdBodies = mutableListOf<String>()
     val createdAt = mutableListOf<Instant?>()
@@ -54,12 +53,6 @@ private class RecordingDiaryRepository(private var stored: DiaryEntry? = null) :
     override suspend fun sync(): Result<Unit> = Result.success(Unit)
 }
 
-/**
- * 自動保存の状態機械をピン留めする。#186 まで、日記エディタは回転で view model ごと
- * 作り直され `clientId` が null に戻るため、書き足すたびに新しい日記ができていた。
- * ここでは view model 単体として「最初の保存だけが create、以降は同じ id への update」
- * になることを固定する。
- */
 class DiaryEditorViewModelTest {
 
     @BeforeTest

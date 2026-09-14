@@ -15,12 +15,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Performs the access-token refresh when a protected request returns 401.
- *
- * It uses a **bare** HTTP client (no auth interceptor) to hit /auth/refresh so a
- * failing refresh can never recurse into itself. A [Mutex] collapses concurrent
- * refreshes: if several requests 401 at once, only the first refreshes and the
- * rest reuse the freshly stored token.
+ * Refreshes the access token after a 401. Must use the bare client so a failing refresh cannot recurse;
+ * the [Mutex] collapses concurrent refreshes so only the first hits the network.
  */
 class TokenRefresher(
     private val bareClient: HttpClient,
@@ -30,13 +26,8 @@ class TokenRefresher(
     private val mutex = Mutex()
 
     /**
-     * Refreshes the token pair and returns the new access token, or null when the
-     * session has ended (no refresh token, or the server rejected it). On failure
-     * it clears the store and fires [TokenStore.sessionExpired].
-     *
-     * @param previousAccess the access token the caller tried to use; if the
-     * stored token already differs, another coroutine refreshed first and its
-     * token is returned without a second network call.
+     * Returns the new access token, or null when the session has ended (store cleared, [TokenStore.sessionExpired] fired).
+     * If the stored token already differs from [previousAccess], another coroutine refreshed first and its token is returned.
      */
     suspend fun refresh(previousAccess: String?): String? = mutex.withLock {
         val current = tokenStore.load()

@@ -16,7 +16,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-/** In-memory [SettingsRepository] driving the view-model state machine tests. */
 private class FakeSettingsRepository(
     var profile: UserDto = UserDto(id = "u1", displayName = "Runa", authProvider = "email"),
     var deleteResult: Result<Unit> = Result.success(Unit),
@@ -41,8 +40,7 @@ private class FakeSettingsRepository(
 
 class AccountViewModelTest {
 
-    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
-    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    // The view model runs on viewModelScope (Dispatchers.Main), so Main must be a test dispatcher.
     @BeforeTest
     fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
 

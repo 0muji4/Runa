@@ -61,16 +61,12 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
 
-// Koin qualifiers for the HTTP clients (bare vs. authenticated vs. object-storage).
 internal val BARE_CLIENT = named("bareClient")
 internal val AUTH_CLIENT = named("authClient")
 internal val STORAGE_CLIENT = named("storageClient")
 
 /**
- * DI entry point for iOS (via SKIE as `doInitKoin(baseUrl:)`) and the fallback
- * for platforms that need no Context. Android uses its own overload that also
- * supplies an `androidContext(...)` (see Koin.android.kt).
- *
+ * DI entry point for platforms that need no Context (iOS: `doInitKoin(baseUrl:)`); Android has its own overload.
  * @param baseUrl host+port only (e.g. http://localhost:8080), no /api/v1 suffix.
  */
 fun initKoin(baseUrl: String) {
@@ -80,12 +76,8 @@ fun initKoin(baseUrl: String) {
 }
 
 /**
- * The platform-agnostic bindings. Marked `internal` (not `private`) so the
- * Android `initKoin(context, baseUrl)` overload in androidMain can reuse it.
- *
- * Dependency order is acyclic: bareClient → tokenStore → refresher → authClient →
- * apiClient → repository. Forced logout flows the other way as an event through
- * [TokenStore.sessionExpired], so nothing needs a back-reference.
+ * The platform-agnostic bindings. Keep the dependency order acyclic: bareClient → tokenStore →
+ * refresher → authClient → apiClient → repository; forced logout flows back only as [TokenStore.sessionExpired].
  */
 internal fun sharedModule(baseUrl: String): Module = module {
     single(BARE_CLIENT) { HttpClientFactory.createBase(httpClientEngine()) }
@@ -103,15 +95,12 @@ internal fun sharedModule(baseUrl: String): Module = module {
 
     single<ApiClient> { KtorApiClient(httpClient = get(AUTH_CLIENT), baseUrl = baseUrl) }
 
-    // Bare, Bearer-free client for raw-byte PUT to presigned object-storage URLs.
-    // Must NOT be the auth client (it would attach the Runa token to the store host).
+    // Must NOT be the auth client: it would attach the Runa token to the object-storage host.
     single(STORAGE_CLIENT) { HttpClientFactory.createStorage(httpClientEngine()) }
     single<StorageClient> { KtorStorageClient(client = get(STORAGE_CLIENT)) }
 
     single<AuthRepository> { DefaultAuthRepository(apiClient = get(), tokenStore = get()) }
 
-    // Local persistence. The SqlDriver + NetworkMonitor come from platformModule();
-    // the database and repositories are shared singletons.
     single { RunaDatabase(driver = get()) }
     single<DiaryRepository> {
         DefaultDiaryRepository(database = get(), apiClient = get(), networkMonitor = get())
@@ -119,17 +108,11 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single<TodayRepository> { DefaultTodayRepository(apiClient = get(), database = get()) }
     single<SongRepository> { DefaultSongRepository(apiClient = get(), database = get()) }
 
-    // Calendar composes the local diary stream with the shared moon calc; the moon
-    // screen is a pure offline computation (no store needed).
     single<CalendarRepository> { DefaultCalendarRepository(diaryRepository = get(), apiClient = get()) }
     single<TodayMoonRepository> { DefaultTodayMoonRepository() }
 
-    // Insight composes the local diary stream with the shared aggregation +
-    // rule-based summariser; no new persistence, no network on the render path.
     single<InsightRepository> { DefaultInsightRepository(diaryRepository = get()) }
 
-    // Gallery: local-first image metadata + presigned-URL upload/download. The
-    // storage client does the direct byte PUT; the API client issues the URLs.
     single<GalleryRepository> {
         DefaultGalleryRepository(
             database = get(),
@@ -139,9 +122,6 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
-    // Settings: theme selection is a local preference (persisted via the
-    // platform-provided Settings); account data (profile/export/delete) is
-    // network-backed and reuses auth teardown + a local-DB wipe on deletion.
     single<ThemeRepository> { DefaultThemeRepository(settings = get()) }
     single<LocalDataCleaner> { DefaultLocalDataCleaner(database = get()) }
     single<SettingsRepository> {
@@ -152,26 +132,18 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
-    // Notification (夜のリマインダー) + privacy lock. Both are local preferences via the
-    // platform-provided Settings; the reminder repository also drives the platform
-    // LocalNotificationScheduler, and the lock uses the platform BiometricAuthenticator
-    // — both bound in platformModule().
     single<NotificationSettingsRepository> {
         DefaultNotificationSettingsRepository(settings = get(), scheduler = get())
     }
     single<AppLockRepository> { DefaultAppLockRepository(settings = get()) }
 
-    // 引き続き `single`。view model 側は viewModelScope を持つようになったが、
-    // :androidApp はまだ koinInject() で解決していて ViewModelStore に載っていないため、
+    // `single` のまま: :androidApp は koinInject() で解決し ViewModelStore に載っていないため、
     // `factory` にすると解決のたびに clear() されないインスタンスが増える。
-    // スコープの見直しは koinViewModel() へ移す Issue #186 とセットで行う。
     single { AuthViewModel(repository = get()) }
     single { HealthzViewModel(apiClient = get()) }
     single { DiaryListViewModel(repository = get()) }
 
-    // The editor is per-entry: `factory` so each open gets a fresh state.
-    // Params are matched by type: an optional clientId (null = new entry) and an
-    // optional createdAt epoch-ms (calendar "write on this day" backdate).
+    // Params are matched by type: an optional clientId (null = new entry) and an optional createdAt epoch-ms.
     factory { params ->
         DiaryEditorViewModel(
             repository = get(),
@@ -184,63 +156,40 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single { SongPlayerViewModel(audioPlayer = get(), songRepository = get()) }
     single { SongArchiveViewModel(repository = get()) }
 
-    // Calendar view model is a `factory` so each open starts at today's month.
     factory { CalendarViewModel(repository = get()) }
     single { TodayMoonViewModel(repository = get()) }
 
-    // Insight view model is a `factory` so each open starts at the current month.
     factory { InsightViewModel(repository = get()) }
 
-    // Per-day records: `factory` keyed by the tapped ISO date (yyyy-MM-dd).
     factory { params -> DayRecordsViewModel(repository = get(), isoDate = params.get()) }
 
-    // Gallery grid view model is a `single` (app-lifetime, like the diary list).
     single { GalleryViewModel(repository = get()) }
 
-    // The lightbox is per-open: `factory` keyed by the tapped image's clientId.
     factory { params -> ImageDetailViewModel(repository = get(), startClientId = params.get()) }
 
-    // Settings view models. Theme + settings-top are app-lifetime singles (the theme
-    // one also feeds the root); account is a single that reloads its profile on open.
     single { ThemeViewModel(repository = get()) }
     single { SettingsViewModel(themeRepository = get()) }
     single { AccountViewModel(repository = get()) }
 
-    // Notification settings (21) + privacy lock (22 + the app-start/resume gate).
-    // App-lifetime singles: the lock view model in particular must outlive any
-    // screen so the gate keeps its state across foreground/background.
+    // The lock view model must outlive any screen so the gate keeps its state across foreground/background.
     single { NotificationSettingsViewModel(repository = get()) }
     single { AppLockViewModel(repository = get(), authenticator = get()) }
 }
 
-/**
- * Resolve [HealthzViewModel] from the started Koin graph (iOS entry point,
- * exported by SKIE as `KoinKt.resolveHealthzViewModel()`).
- */
+/** Resolve [HealthzViewModel] from the started Koin graph (iOS entry point). */
 fun resolveHealthzViewModel(): HealthzViewModel = KoinPlatform.getKoin().get()
 
-/**
- * Resolve [AuthViewModel] from the started Koin graph (iOS entry point, exported
- * by SKIE as `KoinKt.resolveAuthViewModel()`).
- */
+/** Resolve [AuthViewModel] from the started Koin graph (iOS entry point). */
 fun resolveAuthViewModel(): AuthViewModel = KoinPlatform.getKoin().get()
 
-/**
- * Resolve [DiaryListViewModel] (iOS entry point, `KoinKt.resolveDiaryListViewModel()`).
- */
+/** Resolve [DiaryListViewModel] (iOS entry point). */
 fun resolveDiaryListViewModel(): DiaryListViewModel = KoinPlatform.getKoin().get()
 
-/**
- * Resolve a [DiaryEditorViewModel] for an entry (iOS entry point). Pass null to
- * start a new entry, or an existing entry's clientId to edit it.
- */
+/** Resolve a [DiaryEditorViewModel] for an entry (iOS entry point); null [clientId] starts a new entry. */
 fun resolveDiaryEditorViewModel(clientId: String?): DiaryEditorViewModel =
     KoinPlatform.getKoin().get { parametersOf(clientId) }
 
-/**
- * Resolve a [DiaryEditorViewModel] for a NEW entry backdated to [createdAtEpochMs]
- * (the calendar's "write on this day" flow). iOS entry point.
- */
+/** Resolve a [DiaryEditorViewModel] for a NEW entry backdated to [createdAtEpochMs] (iOS entry point). */
 fun resolveNewDiaryEditorViewModelOn(createdAtEpochMs: Long): DiaryEditorViewModel =
     KoinPlatform.getKoin().get { parametersOf(createdAtEpochMs) }
 
@@ -262,16 +211,14 @@ fun resolveTodayMoonViewModel(): TodayMoonViewModel = KoinPlatform.getKoin().get
 /** Resolve a fresh [InsightViewModel] (iOS entry point; starts at the current month). */
 fun resolveInsightViewModel(): InsightViewModel = KoinPlatform.getKoin().get()
 
-/** Resolve a [DayRecordsViewModel] for a tapped calendar day (iOS entry point).
- *  [isoDate] is the day as `yyyy-MM-dd`. */
+/** Resolve a [DayRecordsViewModel] for the day [isoDate] (`yyyy-MM-dd`) (iOS entry point). */
 fun resolveDayRecordsViewModel(isoDate: String): DayRecordsViewModel =
     KoinPlatform.getKoin().get { parametersOf(isoDate) }
 
 /** Resolve the [GalleryViewModel] from the started Koin graph (iOS entry point). */
 fun resolveGalleryViewModel(): GalleryViewModel = KoinPlatform.getKoin().get()
 
-/** Resolve an [ImageDetailViewModel] for the lightbox, focused on [startClientId]
- *  (iOS entry point). */
+/** Resolve an [ImageDetailViewModel] for the lightbox, focused on [startClientId] (iOS entry point). */
 fun resolveImageDetailViewModel(startClientId: String): ImageDetailViewModel =
     KoinPlatform.getKoin().get { parametersOf(startClientId) }
 
@@ -284,10 +231,9 @@ fun resolveSettingsViewModel(): SettingsViewModel = KoinPlatform.getKoin().get()
 /** Resolve the [AccountViewModel] for the account-data screen (iOS entry point). */
 fun resolveAccountViewModel(): AccountViewModel = KoinPlatform.getKoin().get()
 
-/** Resolve the [NotificationSettingsViewModel] for 通知設定 (21) (iOS entry point). */
+/** Resolve the [NotificationSettingsViewModel] (iOS entry point). */
 fun resolveNotificationSettingsViewModel(): NotificationSettingsViewModel =
     KoinPlatform.getKoin().get()
 
-/** Resolve the [AppLockViewModel] for the privacy-lock gate + 22 (iOS entry point).
- *  App-lifetime single, so the gate state survives across foreground/background. */
+/** Resolve the [AppLockViewModel] for the privacy-lock gate (iOS entry point). */
 fun resolveAppLockViewModel(): AppLockViewModel = KoinPlatform.getKoin().get()

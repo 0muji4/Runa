@@ -8,35 +8,20 @@ import kotlinx.datetime.daysUntil
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.plus
 
-/**
- * Pure month-grid logic for the calendar — no database, no repository, no network.
- * Isolated here so the DoD cases (leap year, month length, the weekday a month
- * starts on) are directly unit-testable in commonTest, and so Android and iOS
- * derive the exact same grid layout from the shared layer rather than each doing
- * platform date math.
- */
+/** Pure month-grid logic (no DB, no network) so the layout is unit-testable. */
 object CalendarGrid {
 
-    /** The number of days in [month] of [year], leap years included. */
     fun daysInMonth(year: Int, month: Int): Int {
         val first = LocalDate(year, month, 1)
         return first.daysUntil(first.plus(1, DateTimeUnit.MONTH))
     }
 
-    /**
-     * The column (0 = Sunday .. 6 = Saturday) that the 1st of [month] lands in,
-     * i.e. the number of empty leading cells before day 1. The design's weekday
-     * header runs 日〜土, so Sunday is column 0.
-     */
+    /** Column (0 = Sunday .. 6 = Saturday) of the 1st of [month] = leading blank cells. */
     fun firstDayOfWeekIndex(year: Int, month: Int): Int =
         // isoDayNumber is Mon=1..Sun=7; mod 7 maps Sun→0, Mon→1, … Sat→6.
         LocalDate(year, month, 1).dayOfWeek.isoDayNumber % 7
 
-    /**
-     * Build every [CalendarDay] of the month: the moon phase for each day (via the
-     * shared [MoonPhaseCalculator], computed at local noon in [zone]), the diary
-     * [entryCountByDay] (keyed by day-of-month), and whether the day is [today].
-     */
+    /** Build every [CalendarDay] of the month; [entryCountByDay] is keyed by day-of-month. */
     fun build(
         year: Int,
         month: Int,

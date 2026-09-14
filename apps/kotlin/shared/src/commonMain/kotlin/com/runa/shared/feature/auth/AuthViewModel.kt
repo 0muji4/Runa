@@ -6,15 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Shared auth view model. Mirrors [HealthzViewModel]'s shape: it owns a
- * [CoroutineScope] and exposes a [StateFlow] that Android collects directly and
- * iOS observes via SKIE.
- *
- * [state] is [AuthRepository.authState] verbatim, so the repository stays the one
- * source of truth. Construction triggers [restore] so the app boots straight into
- * the correct screen (splash → sign-in or tabs).
- */
+/** Shared auth view model; [state] is [AuthRepository.authState] verbatim and construction triggers [restore]. */
 class AuthViewModel(
     private val repository: AuthRepository,
 ) : ViewModel() {

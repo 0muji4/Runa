@@ -12,14 +12,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 
 /**
- * The composed home payload: the day's quote and song fetched from the backend
- * (or the last-cached copy when offline) combined with the locally computed moon
- * phase. [isOffline] is true when the network fetch failed and the quote/song (if
- * any) came from the SQLDelight cache; the moon is always freshly computed.
- *
- * [dateLabel] is pre-formatted (e.g. "7月11日") here rather than exposing a
- * kotlinx-datetime type, so the UIs need not depend on that library (matching the
- * diary slice's epoch-millis convention).
+ * The composed home payload. [isOffline] is true when the quote/song came from the
+ * local cache after a failed fetch; the moon is always computed locally.
  */
 data class Today(
     val dateLabel: String,
@@ -29,19 +23,11 @@ data class Today(
     val isOffline: Boolean,
 )
 
-/** Loads and composes the home's "today" payload. */
 interface TodayRepository {
-    /** Fetch (and cache) the day's quote+song and compute its moon phase. Falls
-     *  back to the cached quote/song — plus the computed moon — when offline. */
+    /** Fetch (and cache) the day's quote+song; falls back to the cache when offline. */
     suspend fun getToday(localDate: LocalDate, zone: TimeZone): Today
 }
 
-/**
- * Default [TodayRepository]. The moon phase is computed first and unconditionally
- * (it never needs the network), then the quote/song are fetched and cached; a
- * network failure falls back to the SQLDelight cache so the home still renders
- * the day's copy and moon fully offline.
- */
 class DefaultTodayRepository(
     private val apiClient: ApiClient,
     private val database: RunaDatabase,

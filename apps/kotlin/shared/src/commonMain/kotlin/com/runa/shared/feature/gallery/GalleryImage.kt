@@ -1,18 +1,7 @@
 package com.runa.shared.feature.gallery
 
-/**
- * A gallery image as the UI sees it. Domain model, distinct from the wire
- * [com.runa.shared.network.dto.GalleryImageDto] and the SQLDelight row.
- *
- * [clientId] is the stable local identity (present from the moment of picking);
- * [serverId] is null until the upload completes. A queued (not-yet-uploaded) image
- * is rendered from [localBytes]; an uploaded one from its presigned [viewUrl]
- * (the platform image loader caches the bytes for offline viewing). [theme] is the
- * per-image saved color mood — NOT the gallery-wide display-theme toggle.
- *
- * [createdAtEpochMs] is an epoch-millis Long (not a kotlinx.datetime type) so the
- * UI formats it with each platform's native date API.
- */
+/** A gallery image as the UI sees it; [serverId] is null until the upload completes.
+ *  [theme] is the per-image saved mood — NOT the gallery-wide display-theme toggle. */
 data class GalleryImage(
     val clientId: String,
     val serverId: String?,
@@ -59,10 +48,7 @@ data class GalleryImage(
 private fun ByteArray?.contentEqualsOrNull(other: ByteArray?): Boolean =
     if (this == null || other == null) this === other else this.contentEquals(other)
 
-/**
- * The per-image saved color mood. Distinct from the gallery's client-side display
- * theme (which re-grades the whole grid and is never persisted per image).
- */
+/** The per-image saved color mood; distinct from the gallery's client-side display theme. */
 enum class GalleryTheme {
     MONOTONE,
     PINK;

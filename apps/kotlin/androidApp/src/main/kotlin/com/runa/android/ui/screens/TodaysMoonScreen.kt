@@ -32,12 +32,7 @@ import com.runa.shared.feature.todaymoon.TodayMoon
 import com.runa.shared.feature.todaymoon.TodayMoonViewModel
 import org.koin.compose.koinInject
 
-/**
- * 15 今日の月. A large, quiet moon under the "今日の月" label, its phase name, 月齢 and
- * date, a hushed 明朝 line for the phase, and a whisper of the next principal phase.
- * Reached from the home screen's moon. Fully offline — every value is computed on
- * device by the shared moon calculator.
- */
+/** 今日の月: phase name, 月齢, date and the next principal phase, all computed on device. */
 @Composable
 fun TodaysMoonScreen(
     onBack: () -> Unit,
@@ -56,8 +51,7 @@ fun TodaysMoonScreen(
             onBack = onBack,
         )
 
-        // Pure local computation: settles to Content synchronously; Loading/Empty/
-        // Failure never surface for the moon.
+        // Local computation settles to Content synchronously; other states never surface.
         (state as? UiState.Content<TodayMoon>)?.let { MoonContent(it.data) }
     }
 }
@@ -97,7 +91,6 @@ private fun MoonContent(moon: TodayMoon) {
         )
     }
 
-    // The next principal phase, quietly pinned to the bottom.
     Column(
         modifier = Modifier
             .fillMaxSize()

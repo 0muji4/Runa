@@ -25,11 +25,8 @@ private val AuthStepSaver = Saver<AuthStep, String>(
 )
 
 /**
- * The unauthenticated flow: onboarding ①② → notification shell → sign-in. Shown
- * by the app gate whenever [AuthState] is not [AuthState.Authenticated]. Actions
- * delegate to the shared [AuthViewModel]; native errors (e.g. Google cancelled,
- * a provider not yet configured) are surfaced locally alongside the view model's
- * own [AuthState.Error].
+ * Unauthenticated flow: onboarding ①② → notification shell → sign-in. Native errors
+ * (Google cancelled, provider unconfigured) are surfaced locally beside [AuthState.Error].
  */
 @Composable
 fun AuthFlow(

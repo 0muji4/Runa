@@ -40,12 +40,7 @@ import com.runa.shared.feature.settings.AppTheme
 import com.runa.shared.feature.settings.SettingsViewModel
 import org.koin.compose.koinInject
 
-/**
- * 設定 トップ (19). A quiet list of entry points: theme, notification and
- * privacy-lock (the latter two are 導線 only for a later feature), then
- * account・データ, the LUNA+ card, and the app version. Sign-out lives on the
- * account screen (per the confirmed design), not here.
- */
+/** 設定 トップ: entry points to theme / notification / privacy-lock / account, LUNA+, version. */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -176,8 +171,7 @@ private fun SettingDivider() {
 
 @Composable
 private fun PremiumCard() {
-    // LUNA+ 導線. The paywall is a separate, not-yet-built feature, so this is a
-    // quiet static card for now.
+    // LUNA+ 導線 only; the paywall is a separate, not-yet-built feature.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,7 +208,6 @@ private fun PremiumCard() {
     }
 }
 
-/** The short theme name shown as the テーマ row's trailing value. */
 @Composable
 private fun themeShortName(theme: AppTheme): String = when (theme) {
     AppTheme.DARK -> stringResource(R.string.theme_dark_name)

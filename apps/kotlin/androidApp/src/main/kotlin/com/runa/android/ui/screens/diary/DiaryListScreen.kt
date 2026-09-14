@@ -49,12 +49,7 @@ import com.runa.shared.feature.diary.DiaryEntry
 import com.runa.shared.feature.diary.DiaryListViewModel
 import org.koin.compose.koinInject
 
-/**
- * Diary list (09 ダイアリー). A large 明朝 heading over a quiet column of record
- * cards, each led by its day's moon phase. Pull-to-refresh, a whisper-quiet sync
- * line, a new-moon empty state with a "綴りはじめる" invitation, and a round
- * moonlight-pink FAB into the editor. No Material app bar — the header is the page.
- */
+/** ダイアリー: record cards led by the day's moon, pull-to-refresh, sync line, FAB to editor. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiaryListScreen(
@@ -73,7 +68,6 @@ fun DiaryListScreen(
                 title = stringResource(R.string.diary_list_title),
                 modifier = Modifier.padding(horizontal = 24.dp),
             ) {
-                // Quiet links into the retrospective calendar (12) and insight (16).
                 Text(
                     text = stringResource(R.string.diary_open_insight),
                     style = MaterialTheme.typography.labelMedium,
@@ -181,7 +175,6 @@ private fun DiaryCard(entry: DiaryEntry, onClick: () -> Unit) {
     }
 }
 
-/** Round moonlight-pink FAB carrying a drawn "+" (no glyph). */
 @Composable
 private fun PlusFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
@@ -191,8 +184,7 @@ private fun PlusFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // Read the token in composable scope, then draw with it (a draw lambda is not
-        // composable, so it cannot read the RunaColors accessor directly).
+        // Read the token in composable scope; a draw lambda cannot read the RunaColors accessor.
         val plusColor = RunaColors.Background
         Canvas(Modifier.size(22.dp)) {
             val c = center

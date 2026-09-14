@@ -15,13 +15,7 @@ import com.runa.shared.feature.settings.ThemeViewModel
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
 
-/**
- * A [FragmentActivity] (not a bare ComponentActivity) because androidx.biometric
- * BiometricPrompt requires one. The privacy-lock gate wraps the whole app: the
- * shared [AppLockViewModel] is driven by this Activity's lifecycle
- * (foreground/background), and the current Activity is registered so the biometric
- * authenticator can present its prompt.
- */
+/** Must be a [FragmentActivity] (not ComponentActivity): androidx.biometric requires one. */
 class MainActivity : FragmentActivity() {
 
     private val appLockViewModel: AppLockViewModel by inject()
@@ -30,8 +24,6 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            // The selected theme (persisted in shared) drives the whole app; changing
-            // it recomposes every screen against the new palette.
             val themeViewModel: ThemeViewModel = koinInject()
             val theme by themeViewModel.theme.collectAsStateWithLifecycle()
             RunaTheme(theme = theme) {

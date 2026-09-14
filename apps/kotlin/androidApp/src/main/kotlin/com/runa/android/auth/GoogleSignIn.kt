@@ -15,12 +15,8 @@ import com.runa.shared.core.state.toJaMessage
 import kotlinx.coroutines.launch
 
 /**
- * Remembers a launcher for Sign in with Google via the Credential Manager. On
- * success it hands the raw Google **ID token** to [onIdToken]; the shared
- * `AuthRepository.loginGoogle` posts it to the backend, which verifies it.
- *
- * Requires `GOOGLE_SERVER_CLIENT_ID` (the Google OAuth *Web* client ID) to be set
- * — see README. When absent the launcher reports a friendly "unconfigured" error.
+ * Remembers a Sign in with Google launcher; hands the raw ID token to [onIdToken].
+ * `GOOGLE_SERVER_CLIENT_ID` must be the OAuth *Web* client ID, not the Android one.
  */
 @Composable
 fun rememberGoogleSignIn(

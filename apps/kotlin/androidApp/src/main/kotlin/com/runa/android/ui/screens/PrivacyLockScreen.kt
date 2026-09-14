@@ -29,11 +29,8 @@ import com.runa.shared.feature.lock.AppLockViewModel
 import org.koin.compose.koinInject
 
 /**
- * プライバシー・ロック (22). The confirmed design's パスコード / Face ID / すぐにロック
- * controls are simplified to a single ON/OFF toggle (per the agreed spec-minimal
- * model): when on, the app requires biometric — with the device passcode as
- * fallback — on launch/resume. Shows a quiet notice when the device has no security
- * set up, so enabling the lock would be ineffective.
+ * プライバシー・ロック: one ON/OFF toggle — when on, biometric (device passcode as fallback)
+ * is required on launch/resume. Shows a notice when the device has no security set up.
  */
 @Composable
 fun PrivacyLockScreen(

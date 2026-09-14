@@ -35,10 +35,8 @@ import com.runa.shared.feature.settings.ThemeViewModel
 import org.koin.compose.koinInject
 
 /**
- * テーマ (20). The three app themes as selectable cards; the active one is bordered
- * with a filled radio. Selecting one calls the shared [ThemeViewModel], which
- * persists it and re-emits — so the whole app (this screen included) recolors
- * immediately, giving the live preview the design calls for.
+ * テーマ: the three themes as cards. Selecting one calls [ThemeViewModel], which persists
+ * and re-emits, so the whole app (this screen included) recolors immediately.
  */
 @Composable
 fun ThemeScreen(

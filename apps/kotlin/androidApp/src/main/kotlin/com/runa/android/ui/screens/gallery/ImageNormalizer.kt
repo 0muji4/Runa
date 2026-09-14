@@ -9,14 +9,8 @@ import android.net.Uri
 import java.io.ByteArrayOutputStream
 
 /**
- * The Android half of the gallery's OS-specific image handling: take a URI from the
- * Photo Picker and turn it into normalized JPEG bytes the shared layer can upload.
- * This is the "extract the image and hand it over" boundary — the shared
- * `GalleryViewModel.addImage` does the rest (queue → presigned PUT → register).
- *
- * Normalization: sample-decode to bound memory, apply the EXIF orientation (so a
- * portrait photo isn't stored sideways), downscale so the long edge ≤ [MAX_DIMENSION],
- * and re-encode as JPEG (keeps uploads well under the server's size cap).
+ * Turns a Photo Picker URI into JPEG bytes for `GalleryViewModel.addImage`: sample-decode
+ * to bound memory, bake in the EXIF orientation, long edge ≤ [MAX_DIMENSION], re-encode.
  */
 object ImageNormalizer {
     private const val MAX_DIMENSION = 2048
@@ -27,28 +21,23 @@ object ImageNormalizer {
     fun normalize(context: Context, uri: Uri): Picked? {
         val resolver = context.contentResolver
 
-        // 1. Read bounds only, to pick a sample size.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-        // 2. Decode at a memory-bounded sample size.
         val decodeOpts = BitmapFactory.Options().apply {
             inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, MAX_DIMENSION * 2)
         }
         var bitmap = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, decodeOpts) }
             ?: return null
 
-        // 3. Correct orientation from EXIF.
         val orientation = resolver.openInputStream(uri)?.use {
             ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
         } ?: ExifInterface.ORIENTATION_NORMAL
         bitmap = applyOrientation(bitmap, orientation)
 
-        // 4. Downscale so the long edge ≤ MAX_DIMENSION.
         bitmap = scaleDown(bitmap, MAX_DIMENSION)
 
-        // 5. Re-encode as JPEG.
         val out = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
         return Picked(out.toByteArray(), bitmap.width, bitmap.height, "image/jpeg")

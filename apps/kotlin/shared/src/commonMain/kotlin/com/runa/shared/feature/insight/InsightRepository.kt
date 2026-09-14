@@ -15,35 +15,21 @@ data class Insight(
 )
 
 /**
- * The insight boundary the UI depends on. Like [com.runa.shared.feature.calendar.CalendarRepository]
- * it is **local-first**: [observeInsight] is composed purely from the on-device
- * diary DB ([InsightCalculator]) plus a [SummaryComposer], so the whole screen
- * renders with no network. The only network touch is [refresh], which reconciles
- * other devices' entries via the existing diary sync.
- *
- * A future server-side summariser or cross-device aggregation hides behind this
- * interface (swap the injected [SummaryComposer], or provide an alternative
- * implementation) — the view model and both UIs never change.
+ * Insight boundary for the UI. Local-first: [observeInsight] is computed from the
+ * on-device diary DB only; [refresh] is the sole network touch.
  */
 interface InsightRepository {
 
-    /** Live [Insight] for [period], recomputed on every local diary write and every
-     *  applied server change. No network. */
+    /** Live [Insight] for [period], recomputed on every local diary change. */
     fun observeInsight(period: InsightPeriod, zone: TimeZone): Flow<Insight>
 
-    /** Bring other devices' entries in via the diary sync (never on the render path;
-     *  offline is a no-op that leaves the local render intact). */
+    /** Bring other devices' entries in via the diary sync; offline is a no-op. */
     suspend fun refresh(): Result<Unit>
 
-    /** The diary sync phase, surfaced as the insight screen's quiet banner. */
     val syncStatus: StateFlow<SyncPhase>
 }
 
-/**
- * Default [InsightRepository]. Adds no new persistence: it observes the existing
- * [DiaryRepository] entry stream, folds each period with [InsightCalculator], and
- * composes the read-back with [composer] (the rule-based, offline default).
- */
+/** Default [InsightRepository]: folds the [DiaryRepository] stream through [InsightCalculator] + [composer]. */
 class DefaultInsightRepository(
     private val diaryRepository: DiaryRepository,
     private val composer: SummaryComposer = RuleBasedSummaryComposer,

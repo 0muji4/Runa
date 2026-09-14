@@ -16,7 +16,7 @@ import io.ktor.http.headersOf
 
 const val BASE_URL = "http://localhost:8080"
 
-/** In-memory [SecureKeyValueStore] for tests — no device Keychain/prefs needed. */
+/** In-memory [SecureKeyValueStore]. */
 class FakeSecureStore(initial: Map<String, String> = emptyMap()) : SecureKeyValueStore {
     private val map = initial.toMutableMap()
     override fun get(key: String): String? = map[key]
@@ -26,12 +26,8 @@ class FakeSecureStore(initial: Map<String, String> = emptyMap()) : SecureKeyValu
 
 typealias MockHandler = suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData
 
-/**
- * Wires the real auth graph (TokenStore → refresher → auth client → ApiClient →
- * repository) over a [MockEngine], so tests exercise the actual Bearer-injection
- * and 401→refresh→retry logic. Two engines share one [handler]: the bare client
- * (refresh) and the authenticated client (protected calls).
- */
+/** Real auth graph (TokenStore → refresher → auth client → ApiClient → repository) over a [MockEngine];
+ *  the bare (refresh) and authenticated clients share one [handler]. */
 class AuthHarness(
     initialTokens: Map<String, String> = emptyMap(),
     handler: MockHandler,

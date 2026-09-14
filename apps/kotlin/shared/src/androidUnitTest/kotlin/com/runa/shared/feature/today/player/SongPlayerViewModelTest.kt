@@ -19,7 +19,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** In-memory AudioPlayer that records the calls the view model makes to it. */
 private class FakeAudioPlayer : AudioPlayer {
     override val playbackState = MutableStateFlow(PlaybackState())
     val calls = mutableListOf<String>()
@@ -40,8 +39,7 @@ private class RecordingSongRepository : SongRepository {
 
 class SongPlayerViewModelTest {
 
-    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
-    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    // The view model runs on viewModelScope (Dispatchers.Main), so Main must be a test dispatcher.
     @BeforeTest
     fun setUpMain() = Dispatchers.setMain(UnconfinedTestDispatcher())
 

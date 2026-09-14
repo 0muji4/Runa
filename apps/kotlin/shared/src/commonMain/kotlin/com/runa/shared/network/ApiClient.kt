@@ -40,12 +40,8 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
 /**
- * The single network surface shared between Android and iOS.
- *
- * The auth methods post to /api/v1/auth/... and read /api/v1/me. Automatic Bearer
- * injection and 401→refresh→retry live in the underlying [HttpClient]
- * ([HttpClientFactory.createAuthenticated]), so this interface stays a plain,
- * request/response seam.
+ * The single network surface shared between Android and iOS; Bearer injection and 401→refresh live in
+ * the [HttpClient].
  */
 interface ApiClient {
     suspend fun healthz(): HealthzResponse
@@ -58,12 +54,10 @@ interface ApiClient {
     suspend fun logout(req: LogoutRequest)
     suspend fun getMe(): UserDto
 
-    // Account-data management (all Bearer-protected).
     suspend fun updateMe(req: UpdateMeRequest): UserDto
     suspend fun exportData(): ExportDto
     suspend fun deleteAccount()
 
-    // Diary (all Bearer-protected; the HTTP layer injects the token).
     suspend fun listDiary(limit: Int?, cursor: String?): DiaryListResponse
     suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto
     suspend fun getDiary(id: String): DiaryEntryDto
@@ -71,23 +65,20 @@ interface ApiClient {
     suspend fun deleteDiary(id: String)
     suspend fun syncDiary(since: String?): DiarySyncResponse
 
-    /** GET /diary/calendar?year=&month=&tz= — server-side per-day entry counts for
-     *  the month (auxiliary consistency check; the calendar renders from local DB). */
+    /** GET /diary/calendar?year=&month=&tz= — server-side per-day entry counts for the month. */
     suspend fun getCalendar(year: Int, month: Int, tz: String?): DiaryCalendarResponse
 
     /** GET /today?date= — the day's curated quote and song (either may be null). */
     suspend fun getToday(date: String?): TodayResponse
 
-    /** GET /songs?until=&limit=&cursor= — the song archive up to [until] (the
-     *  client's local day, ISO yyyy-MM-dd), newest first. */
+    /** GET /songs?until=&limit=&cursor= — the song archive up to [until] (local day, yyyy-MM-dd), newest first. */
     suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse
 
     /** POST /songs/{id}/played — record a play (server clock when playedAt is null). */
     suspend fun markSongPlayed(songId: String, playedAt: String?)
 
-    // Gallery (all Bearer-protected; the HTTP layer injects the token). The image
-    // bytes never pass through here — createGalleryUploadUrl returns a presigned
-    // PUT URL the client uploads to directly, then createGallery registers it.
+    // Image bytes never pass through here: createGalleryUploadUrl issues a presigned PUT URL,
+    // createGallery registers the result.
     suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse
     suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto
     suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse
@@ -97,9 +88,7 @@ interface ApiClient {
 
 /**
  * Ktor-backed [ApiClient].
- *
- * @param baseUrl host+port ONLY (e.g. http://10.0.2.2:8080), WITHOUT the /api/v1
- * suffix. This class owns the versioned API prefix so callers never hardcode it.
+ * @param baseUrl host+port ONLY (e.g. http://10.0.2.2:8080), WITHOUT the /api/v1 suffix (owned here).
  */
 class KtorApiClient(
     private val httpClient: HttpClient,
@@ -266,8 +255,7 @@ class KtorApiClient(
         }
 }
 
-/** Decodes a successful body as [T], otherwise throws [ApiException] built from
- *  the shared error envelope. */
+/** Decodes a successful body as [T], otherwise throws [ApiException] built from the error envelope. */
 private suspend inline fun <reified T> HttpResponse.decodeOrThrow(): T {
     if (status.isSuccess()) return body()
     throwApiError()

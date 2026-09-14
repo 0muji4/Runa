@@ -32,18 +32,12 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
-/** Android uses the OkHttp Ktor engine. */
 actual fun httpClientEngine(): HttpClientEngine = OkHttp.create()
 
-/**
- * Android Koin bindings: the encrypted secure store, the SQLDelight driver
- * (persisted to `runa.db`), the connectivity monitor, and the ExoPlayer-backed
- * audio player. All pull the Context from Koin's androidContext.
- */
+/** Android Koin bindings; all pull the Context from Koin's androidContext. */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { EncryptedPrefsStore(androidContext()) }
-    // Non-sensitive preferences (the app theme). Plain SharedPreferences — no need
-    // for the encrypted store used by tokens.
+    // Non-sensitive preferences (the app theme); plain SharedPreferences, not the encrypted store.
     single<Settings> {
         SharedPreferencesSettings(
             androidContext().getSharedPreferences("runa_settings", Context.MODE_PRIVATE),
@@ -52,16 +46,11 @@ actual fun platformModule(): Module = module {
     single<SqlDriver> { AndroidSqliteDriver(RunaDatabase.Schema, androidContext(), "runa.db") }
     single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
     single<AudioPlayer> { ExoAudioPlayer(androidContext()) }
-    // Nightly-reminder scheduling (AlarmManager + notification channel) and the
-    // biometric gate (androidx.biometric BiometricPrompt). Both need a Context.
     single<LocalNotificationScheduler> { AndroidLocalNotificationScheduler(androidContext()) }
     single<BiometricAuthenticator> { AndroidBiometricAuthenticator(androidContext()) }
 }
 
-/**
- * [NetworkMonitor] over [ConnectivityManager]. Registers a default-network
- * callback and publishes whether a validated, internet-capable network exists.
- */
+/** [NetworkMonitor] over [ConnectivityManager]'s default-network callback. */
 class AndroidNetworkMonitor(context: Context) : NetworkMonitor {
     private val connectivity =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -85,22 +74,15 @@ class AndroidNetworkMonitor(context: Context) : NetworkMonitor {
     }
 }
 
-/**
- * EncryptedSharedPreferences-backed [SecureKeyValueStore]. Values are encrypted
- * at rest with a hardware-backed master key.
- */
+/** EncryptedSharedPreferences-backed [SecureKeyValueStore]. */
 class EncryptedPrefsStore(private val context: Context) : SecureKeyValueStore {
 
     private val prefs: SharedPreferences by lazy {
         try {
             createEncryptedPrefs()
         } catch (e: GeneralSecurityException) {
-            // The Tink keyset can no longer be decrypted by the AndroidKeyStore
-            // master key — e.g. the key was rotated/invalidated across a reinstall
-            // or a lock-screen change. Left unhandled this throws AEADBadTagException
-            // and crashes at startup (restoreSession reads tokens here). Recovery:
-            // discard the corrupted store + master key so a fresh keyset is created.
-            // Secrets are lost; the app falls back to unauthenticated and re-login.
+            // The keyset can no longer be decrypted by the master key (rotated across reinstall / lock-screen change);
+            // unhandled it crashes at startup. Discard store + key: secrets are lost and the user re-logs in.
             recoverFromCorruptedKeystore()
             createEncryptedPrefs()
         } catch (e: IOException) {

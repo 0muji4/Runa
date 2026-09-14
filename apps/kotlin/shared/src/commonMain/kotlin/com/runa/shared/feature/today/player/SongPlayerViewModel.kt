@@ -13,12 +13,8 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 /**
- * Shared song-player view model. It owns the playback INTENT (which song, and
- * play/pause) while the actual audio engine is the platform [AudioPlayer]
- * ([ExoPlayer]/[AVPlayer], injected). [state] merges the current song with the
- * engine's live [PlaybackState]. Starting a NEW song also records a play via
- * [SongRepository], so history accumulates whether the song is today's or an
- * archived one. What plays is the track's 30-second preview ([SongDto.previewUrl]).
+ * Owns the playback intent (which song, play/pause) over the platform [AudioPlayer].
+ * Starting a new song also records a play via [SongRepository].
  */
 class SongPlayerViewModel(
     private val audioPlayer: AudioPlayer,
@@ -37,7 +33,7 @@ class SongPlayerViewModel(
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, PlayerUiState())
 
-    /** Load and play [song]. A different song reloads the engine and records a play. */
+    /** Load and play [song]; a different song reloads the engine and records a play. */
     fun play(song: SongDto) {
         val isNewSong = currentSong.value?.id != song.id
         currentSong.value = song
@@ -48,7 +44,6 @@ class SongPlayerViewModel(
         audioPlayer.play()
     }
 
-    /** Toggle between play and pause for the current song. */
     fun togglePlayPause() {
         if (state.value.isPlaying) audioPlayer.pause() else audioPlayer.play()
     }

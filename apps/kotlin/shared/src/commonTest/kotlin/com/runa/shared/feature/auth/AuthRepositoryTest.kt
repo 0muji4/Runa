@@ -78,7 +78,6 @@ class AuthRepositoryTest {
 
     @Test
     fun unauthorizedTriggersRefreshAndRetriesOriginalRequest() = runTest {
-        // Start with an expired-ish access token in the store.
         val harness = AuthHarness(
             initialTokens = mapOf(KEY_ACCESS to "old", KEY_REFRESH to "r1"),
         ) { request ->
@@ -99,7 +98,6 @@ class AuthRepositoryTest {
         val result = harness.repository.getMe()
 
         assertTrue(result.isSuccess, "getMe should succeed after an automatic refresh")
-        // The token pair was rotated and persisted.
         assertEquals("new", harness.secureStore.get(KEY_ACCESS))
         assertEquals("r2", harness.secureStore.get(KEY_REFRESH))
         assertIs<AuthState.Authenticated>(harness.repository.authState.value)

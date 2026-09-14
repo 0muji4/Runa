@@ -32,32 +32,20 @@ import platform.Network.nw_path_status_satisfied
 import platform.Foundation.NSUserDefaults
 import platform.darwin.dispatch_queue_create
 
-/** iOS uses the Darwin (NSURLSession) Ktor engine. */
 actual fun httpClientEngine(): HttpClientEngine = Darwin.create()
 
-/**
- * iOS Koin bindings: the Keychain-backed secure store, the SQLDelight native
- * driver (persisted to `runa.db`), the connectivity monitor, and the
- * AVPlayer-backed audio player.
- */
 actual fun platformModule(): Module = module {
     single<SecureKeyValueStore> { KeychainSecureStore() }
-    // Non-sensitive preferences (the app theme) live in NSUserDefaults; tokens stay
-    // in the Keychain-backed secure store above.
+    // Non-sensitive preferences (the app theme); tokens stay in the Keychain store above.
     single<Settings> { NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults) }
     single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
     single<NetworkMonitor> { IosNetworkMonitor() }
     single<AudioPlayer> { AvAudioPlayer() }
-    // Nightly-reminder scheduling (UNUserNotificationCenter) and the biometric gate
-    // (LocalAuthentication). No Context needed, but bound here to match the seam.
     single<LocalNotificationScheduler> { IosLocalNotificationScheduler() }
     single<BiometricAuthenticator> { IosBiometricAuthenticator() }
 }
 
-/**
- * [NetworkMonitor] over `NWPathMonitor`. The update handler fires on a private
- * dispatch queue whenever the path changes; we publish "satisfied" as online.
- */
+/** [NetworkMonitor] over `NWPathMonitor`; "satisfied" is published as online. */
 @OptIn(ExperimentalForeignApi::class)
 class IosNetworkMonitor : NetworkMonitor {
     private val _isOnline = MutableStateFlow(true)
@@ -73,12 +61,7 @@ class IosNetworkMonitor : NetworkMonitor {
     }
 }
 
-/**
- * Keychain-backed [SecureKeyValueStore]. Reuses multiplatform-settings'
- * [KeychainSettings] (already a shared dependency) so tokens live in the iOS
- * Keychain without hand-rolled Security-framework interop. The no-arg constructor
- * uses the default keychain service scope, which is sufficient here.
- */
+/** Keychain-backed [SecureKeyValueStore] via multiplatform-settings' [KeychainSettings]. */
 @OptIn(ExperimentalSettingsImplementation::class)
 class KeychainSecureStore(
     private val settings: KeychainSettings = KeychainSettings(),

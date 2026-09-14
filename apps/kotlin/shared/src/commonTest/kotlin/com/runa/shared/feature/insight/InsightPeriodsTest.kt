@@ -7,11 +7,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
- * Period-boundary logic: week start, month/year wrap, leap February, and the
- * half-open `[start, endExclusive)` membership. Pure commonMain, so a green run
- * proves Android and iOS derive identical windows.
- */
 class InsightPeriodsTest {
 
     @Test

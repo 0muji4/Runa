@@ -1,10 +1,6 @@
 package com.runa.shared.network
 
-/**
- * Thrown by [ApiClient] when the backend returns a non-2xx response. [code] is
- * the machine-readable error code from the shared error envelope (e.g.
- * "invalid_credentials"), when the body could be parsed.
- */
+/** Thrown by [ApiClient] on a non-2xx response; [code] is the envelope's machine-readable code when parsed. */
 class ApiException(
     val statusCode: Int,
     val code: String?,

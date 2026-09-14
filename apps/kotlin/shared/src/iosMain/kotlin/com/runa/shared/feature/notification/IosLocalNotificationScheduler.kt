@@ -7,12 +7,8 @@ import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
 
 /**
- * iOS [LocalNotificationScheduler] over UNUserNotificationCenter. A single repeating
- * daily calendar trigger (hour + minute, repeats = true) is OS-managed — it
- * survives relaunch/reboot with no receiver, unlike Android's AlarmManager. Using a
- * fixed identifier means (re)scheduling replaces the previous one. Authorization is
- * requested separately in the app's onboarding (④); scheduling before authorization
- * simply won't display until granted.
+ * iOS [LocalNotificationScheduler] over UNUserNotificationCenter: one repeating calendar trigger under a
+ * fixed identifier, so (re)scheduling replaces the previous one. Authorization is requested by the app.
  */
 class IosLocalNotificationScheduler : LocalNotificationScheduler {
 

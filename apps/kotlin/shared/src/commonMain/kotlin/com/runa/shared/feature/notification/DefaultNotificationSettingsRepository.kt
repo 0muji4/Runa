@@ -5,16 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * Default [NotificationSettingsRepository] backed by multiplatform-settings and a
- * platform [LocalNotificationScheduler].
- *
- * The enabled flag and time are mirrored in in-memory [MutableStateFlow]s (seeded
- * from persisted values at construction, so the settings screen renders the saved
- * state with no flash) and written back on every change. This mirrors the theme /
- * gallery display-theme precedent. On every mutation the repository re-issues the
- * OS schedule so the on-device notification always matches the stored preference.
- */
+/** Default [NotificationSettingsRepository] backed by multiplatform-settings; every
+ *  mutation re-issues the OS schedule through [LocalNotificationScheduler]. */
 class DefaultNotificationSettingsRepository(
     private val settings: Settings,
     private val scheduler: LocalNotificationScheduler,
@@ -36,8 +28,7 @@ class DefaultNotificationSettingsRepository(
         settings.putInt(KEY_HOUR, time.hour)
         settings.putInt(KEY_MINUTE, time.minute)
         _time.value = time
-        // Only touch the OS schedule when the reminder is on; changing the time
-        // while off just records the preference for when it's next enabled.
+        // While off, changing the time only records the preference; the OS schedule is untouched.
         if (_enabled.value) scheduler.scheduleDailyReminder(time)
     }
 

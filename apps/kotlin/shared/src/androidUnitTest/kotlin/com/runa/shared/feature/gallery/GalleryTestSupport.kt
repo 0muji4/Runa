@@ -37,13 +37,8 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.datetime.Instant
 
 /**
- * A minimal in-memory stand-in for the Go gallery backend + object store. It mirrors
- * the server's contract closely enough to test the client's upload/sync engine:
- * upload-url issuance, "the object must be PUT before it can be registered",
- * idempotent registration by object_key, a full list with FRESH presigned URLs each
- * call (so URL refresh is observable), and soft delete. [events] records the call
- * order across the API and the storage PUT so the three-step dance can be asserted.
- * One instance can be shared by two harnesses to model two devices.
+ * In-memory stand-in for the gallery backend + object store; [events] logs the call order across API
+ * and storage PUT.
  */
 class FakeGalleryServer {
     private data class Img(
@@ -56,23 +51,19 @@ class FakeGalleryServer {
         var deleted: Boolean = false,
     )
 
-    private val images = linkedMapOf<String, Img>() // by server id
-    private val pendingUrls = mutableMapOf<String, String>() // upload_url -> object_key
-    private val uploaded = mutableSetOf<String>() // object_keys that were actually PUT
+    private val images = linkedMapOf<String, Img>()
+    private val pendingUrls = mutableMapOf<String, String>()
+    private val uploaded = mutableSetOf<String>()
     private var idSeq = 0
     private var keySeq = 0
     private var urlSeq = 0
     private var tickMs = Instant.parse("2026-02-01T00:00:00Z").toEpochMilliseconds()
 
-    /** Ordered log of API + storage calls (upload-url, put, register, list, get, delete). */
     val events = mutableListOf<String>()
 
-    /** When true every endpoint throws, simulating a transport/connectivity failure. */
     var offline = false
 
     fun liveCount(): Int = images.values.count { !it.deleted }
-
-    // ---- API ----
 
     fun uploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse {
         ensureOnline(); events += "upload-url"
@@ -121,8 +112,6 @@ class FakeGalleryServer {
         img.deleted = true
     }
 
-    // ---- storage side (called by FakeStorageClient) ----
-
     fun completeUpload(url: String) {
         val key = pendingUrls.remove(url) ?: error("PUT to unknown upload url $url")
         uploaded += key
@@ -133,7 +122,7 @@ class FakeGalleryServer {
         if (offline) throw RuntimeException("simulated offline")
     }
 
-    // Each read issues a FRESH presigned URL (rotating), so a refresh is observable.
+    // Each read issues a fresh presigned URL, so a refresh is observable.
     private fun Img.toDto() = GalleryImageDto(
         id = id,
         url = "https://store.test/get/$id?v=${++urlSeq}",
@@ -152,7 +141,6 @@ class FakeGalleryServer {
     }
 }
 
-/** [StorageClient] that records the direct PUT into [FakeGalleryServer]. */
 class FakeStorageClient(private val server: FakeGalleryServer) : StorageClient {
     override suspend fun putBytes(url: String, bytes: ByteArray, contentType: String, onProgress: (Float) -> Unit) {
         onProgress(0.5f)
@@ -161,7 +149,6 @@ class FakeStorageClient(private val server: FakeGalleryServer) : StorageClient {
     }
 }
 
-/** [ApiClient] backed by [FakeGalleryServer]; only the gallery methods are live. */
 class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
     override suspend fun createGalleryUploadUrl(req: GalleryUploadURLRequest): GalleryUploadURLResponse = server.uploadUrl(req)
     override suspend fun createGallery(req: CreateGalleryRequest): GalleryImageDto = server.register(req)
@@ -169,7 +156,6 @@ class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
     override suspend fun getGallery(id: String): GalleryImageDto = server.get(id)
     override suspend fun deleteGallery(id: String) = server.delete(id)
 
-    // Unused by the gallery engine; present only to satisfy the interface.
     override suspend fun healthz(): HealthzResponse = unused()
     override suspend fun signup(req: SignupRequest): AuthTokens = unused()
     override suspend fun login(req: LoginRequest): AuthTokens = unused()
@@ -196,9 +182,8 @@ class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
 }
 
 /**
- * Wires a real [DefaultGalleryRepository] over a JVM in-memory SQLDelight database,
- * a [FakeGalleryApi] and a [FakeStorageClient], all on the test scheduler so sync
- * timing is deterministic.
+ * Real [DefaultGalleryRepository] over an in-memory SQLDelight database, [FakeGalleryApi] and
+ * [FakeStorageClient], all on the test scheduler.
  */
 class GalleryHarness(
     scheduler: TestCoroutineScheduler,

@@ -9,15 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Drives the account-data screen (23): profile display, display-name editing,
- * data export and account deletion. Exposes a single [state] the UI renders; each
- * action mutates one facet of [AccountUiState] and leaves the others untouched.
- *
- * Deletion does not navigate here — on success the underlying repository ends the
- * session, so the app root's auth-state observer returns to sign-in. [state] still
- * reports [DeletionStatus.Deleted] for any UI that wants to reflect it.
- */
+/** Drives the account-data screen (23). Deletion does not navigate here: the
+ *  repository ends the session and the app root's auth-state observer returns to sign-in. */
 class AccountViewModel(
     private val repository: SettingsRepository,
 ) : ViewModel() {
@@ -95,7 +88,6 @@ class AccountViewModel(
         }
     }
 
-    /** Dismiss the export result (after the share sheet closes). */
     fun clearExport() {
         _state.update { it.copy(export = ExportStatus.Idle) }
     }

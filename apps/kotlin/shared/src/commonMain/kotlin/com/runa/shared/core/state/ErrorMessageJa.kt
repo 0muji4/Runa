@@ -6,14 +6,8 @@ import com.runa.shared.network.ApiException
 const val GENERIC_ERROR_JA = "エラーが発生しました。"
 
 /**
- * サーバー由来のメッセージを画面に素通しさせないためのマッピング層。
- *
- * バックエンドは機械可読な [ApiException.code]（apps/go internal/handler/response.go の
- * ErrorCode）を返すので、それを一次キーにする。英語のメッセージ本文は表示に使わない。
- * 未知の code、通信失敗（[ApiException] 以外）はすべて [fallback] に集約する。
- *
- * 呼び出し側は「その操作が失敗したときの日本語」を [fallback] に渡す
- * （例: 保存なら「保存できませんでした。」）。既定は [GENERIC_ERROR_JA]。
+ * [ApiException.code] を一次キーに日本語文言へ写す。未知の code・通信失敗は [fallback]
+ * （その操作が失敗したときの日本語。既定は [GENERIC_ERROR_JA]）。
  */
 fun Throwable.toJaMessage(fallback: String = GENERIC_ERROR_JA): String {
     val api = this as? ApiException ?: return fallback
@@ -26,8 +20,7 @@ fun Throwable.toJaMessage(fallback: String = GENERIC_ERROR_JA): String {
             else -> fallback
         }
     }
-    // code が無いのはエラー封筒をパースできなかったときだけ。既知の英語本文だけ拾い、
-    // それ以外は fallback。英語をそのまま返す経路は無い。
+    // code が無い（封筒をパースできなかった）ときも英語本文をそのまま返す経路は無い。
     val body = message?.lowercase().orEmpty()
     return when {
         body.contains("email or password is incorrect") -> "メールアドレスかパスワードが違います。"

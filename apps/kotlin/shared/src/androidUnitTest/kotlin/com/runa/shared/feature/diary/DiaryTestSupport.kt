@@ -38,8 +38,7 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
-/** Fixed test [Clock]; local write timestamps are irrelevant once pushed (the
- *  server assigns authoritative, monotonic updated_at values). */
+/** Fixed test [Clock]. */
 class MutableClock(var instant: Instant) : Clock {
     override fun now(): Instant = instant
 }
@@ -51,13 +50,7 @@ class FakeNetworkMonitor(online: Boolean) : NetworkMonitor {
     fun set(value: Boolean) { _isOnline.value = value }
 }
 
-/**
- * A minimal in-memory stand-in for the Go diary backend. It mirrors the server's
- * contract closely enough to test the client sync engine: idempotent upsert by
- * client_id, soft delete, and a since-filtered delta with tombstones. A single
- * instance can be shared by two harnesses to model two devices talking to one
- * server.
- */
+/** In-memory stand-in for the diary backend; share one instance across harnesses to model two devices. */
 class FakeDiaryServer {
     private data class Row(
         val id: String,
@@ -69,25 +62,21 @@ class FakeDiaryServer {
         var deletedAt: Instant?,
     )
 
-    private val rows = linkedMapOf<String, Row>() // keyed by client_id (single test user)
+    private val rows = linkedMapOf<String, Row>()
     private var idSeq = 0
     private var tickMillis = Instant.parse("2026-01-01T00:00:00Z").toEpochMilliseconds()
 
-    /** When true every endpoint throws, simulating a transport/connectivity failure. */
     var offline: Boolean = false
 
     fun count(): Int = rows.values.count { it.deletedAt == null }
     fun isEmpty(): Boolean = count() == 0
     fun bodyOf(clientId: String): String? = rows[clientId]?.body
 
-    /** Seed a row as if authored on another device. */
     fun seed(clientId: String, body: String, mood: String? = null) {
         val t = nextTick()
         rows[clientId] = Row("srv-${++idSeq}", clientId, body, mood, t.toString(), t, null)
     }
 
-    /** Soft-delete a row server-side (as another device would), so the next pull
-     *  carries the tombstone. */
     fun serverDelete(clientId: String) {
         rows[clientId]?.let { row ->
             val t = nextTick()
@@ -96,9 +85,6 @@ class FakeDiaryServer {
         }
     }
 
-    // ---- the four endpoints the sync engine calls ----
-
-    /** POST /api/v1/diary — idempotent by client_id. */
     fun upsert(req: CreateDiaryRequest): DiaryEntryDto {
         ensureOnline()
         val existing = rows[req.clientId]
@@ -113,7 +99,6 @@ class FakeDiaryServer {
         return row.toDto()
     }
 
-    /** PATCH /api/v1/diary/{id} — 404 once the row is gone (deleted elsewhere). */
     fun update(id: String, req: UpdateDiaryRequest): DiaryEntryDto {
         ensureOnline()
         val row = rows.values.firstOrNull { it.id == id && it.deletedAt == null }
@@ -124,7 +109,6 @@ class FakeDiaryServer {
         return row.toDto()
     }
 
-    /** DELETE /api/v1/diary/{id} — soft delete, idempotent. */
     fun softDelete(id: String) {
         ensureOnline()
         rows.values.firstOrNull { it.id == id }?.let { row ->
@@ -136,7 +120,6 @@ class FakeDiaryServer {
         }
     }
 
-    /** GET /api/v1/diary/sync?since= — every change after the watermark, tombstones included. */
     fun delta(since: String?): DiarySyncResponse {
         ensureOnline()
         val sinceInstant = since?.let { Instant.parse(it) }
@@ -163,16 +146,8 @@ class FakeDiaryServer {
     }
 }
 
-/**
- * [ApiClient] backed directly by [FakeDiaryServer].
- *
- * This deliberately bypasses Ktor's MockEngine. `HttpClientEngineBase.dispatcher`
- * is a real IO dispatcher, so a request issued from a sync coroutine leaves the
- * TestCoroutineScheduler — `advanceUntilIdle()` then returns while the call is
- * still in flight and the assertions race the repository's best-effort
- * `scope.launch { sync() }`. Faking the [ApiClient] seam instead keeps every
- * coroutine on the test scheduler, which is what makes these tests deterministic.
- */
+/** [ApiClient] backed by [FakeDiaryServer]. Not Ktor MockEngine: its engine dispatcher is real IO, so
+ *  requests would leave the test scheduler and `advanceUntilIdle()` would race the in-flight sync. */
 class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
 
     override suspend fun createDiary(req: CreateDiaryRequest): DiaryEntryDto = server.upsert(req)
@@ -180,7 +155,6 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun deleteDiary(id: String) = server.softDelete(id)
     override suspend fun syncDiary(since: String?): DiarySyncResponse = server.delta(since)
 
-    // The sync engine never reaches these; they only satisfy the interface.
     override suspend fun healthz(): HealthzResponse = unused()
     override suspend fun signup(req: SignupRequest): AuthTokens = unused()
     override suspend fun login(req: LoginRequest): AuthTokens = unused()
@@ -208,9 +182,8 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
 }
 
 /**
- * Wires a real [DefaultDiaryRepository] over a JVM in-memory SQLDelight database
- * and a [FakeDiaryApi]. All coroutines run on the test scheduler so the test
- * drives sync timing deterministically.
+ * Real [DefaultDiaryRepository] over an in-memory SQLDelight database and [FakeDiaryApi], all on the
+ * test scheduler.
  */
 class DiaryHarness(
     scheduler: TestCoroutineScheduler,

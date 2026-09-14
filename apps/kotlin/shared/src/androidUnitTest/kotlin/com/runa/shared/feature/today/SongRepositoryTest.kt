@@ -59,7 +59,6 @@ class SongRepositoryTest {
 
         val page = repo.getArchive(limit = 20, cursor = null)
 
-        // The archive stops at the user's local day, so tomorrow's song stays hidden.
         assertEquals("2024-12-15", requestedUntil)
 
         assertEquals(1, page.songs.size)

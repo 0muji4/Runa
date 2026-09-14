@@ -9,13 +9,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * Drives the lightbox (14 画像詳細). Thin: it observes the same local image stream as
- * the grid and tracks which image is focused, so swipe/next/prev page over the
- * already-loaded list and a delete flows straight through to the repository. When the
- * focused image disappears (deleted here or elsewhere) the state becomes [Dismissed]
- * so the UI closes the lightbox.
- */
+/** Drives the lightbox (14 画像詳細) over the same local image stream as the grid;
+ *  when the focused image disappears the state becomes [Dismissed]. */
 class ImageDetailViewModel(
     private val repository: GalleryRepository,
     startClientId: String,
@@ -32,7 +27,6 @@ class ImageDetailViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), ImageDetailUiState.Loading)
 
-    /** Update which image is focused (the UI calls this as the pager swipes). */
     fun focus(clientId: String) {
         focused.value = clientId
     }

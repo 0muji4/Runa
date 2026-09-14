@@ -3,14 +3,7 @@ package com.runa.shared.network.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Request/response DTOs for the /api/v1/today, /songs and /songs/{id}/played
- * endpoints. As with the auth DTOs the backend speaks snake_case, so each
- * camelCase field carries an explicit [SerialName].
- *
- * Note the moon phase is NOT part of this contract: it is computed on the client
- * by [com.runa.shared.feature.today.moon.MoonPhaseCalculator].
- */
+/** DTOs for /api/v1/today, /songs and /songs/{id}/played. The moon phase is computed on the client, not served. */
 
 @Serializable
 data class TodayResponse(
@@ -26,11 +19,7 @@ data class QuoteDto(
     @SerialName("body_text") val bodyText: String,
 )
 
-/**
- * A day's song: a track from Apple's catalog. [previewUrl] is Apple's 30-second
- * preview, provided only to promote the track — it is streamed, never cached,
- * and shown next to the Apple Music badge that opens [storeUrl].
- */
+/** A day's song from Apple's catalog. [previewUrl] is the 30-second preview: stream it, never cache it. */
 @Serializable
 data class SongDto(
     val id: String,

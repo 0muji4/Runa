@@ -20,7 +20,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-/** ホームは「ネットワーク優先＋失敗時キャッシュ」なので、リポジトリの戻り方を差し替える。 */
 private class StubTodayRepository(
     var result: () -> Today,
 ) : TodayRepository {
@@ -35,10 +34,6 @@ private fun today(isOffline: Boolean) = Today(
     isOffline = isOffline,
 )
 
-/**
- * ホームの状態の出し分けを固定する。オフラインは本文を隠す [UiState.Failure] ではなく
- * [UiState.Content] に [SyncPhase.Offline] を載せる、というのがこのアプリの約束。
- */
 class HomeViewModelTest {
 
     @BeforeTest

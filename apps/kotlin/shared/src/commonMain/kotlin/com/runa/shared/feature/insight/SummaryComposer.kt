@@ -2,37 +2,18 @@ package com.runa.shared.feature.insight
 
 import com.runa.shared.feature.today.moon.MoonPhaseKey
 
-/**
- * Turns an [InsightSummary] into the quiet read-back text the insight screen shows.
- *
- * This is the seam the feature is designed to swap: today it is the local,
- * offline [RuleBasedSummaryComposer]; a future server-side LLM summariser would be
- * a different implementation injected behind [InsightRepository], with the VM and
- * both UIs unchanged. `compose` is `suspend` precisely so a network-backed
- * implementation fits without touching this interface.
- */
+/** Turns an [InsightSummary] into the read-back text; `suspend` so a network-backed implementation fits. */
 interface SummaryComposer {
     suspend fun compose(summary: InsightSummary): InsightNarrative
 }
 
-/**
- * The two text blocks the insight screen draws: the main letter [body] and the
- * quiet [footnote] card beneath the chart. The fixed heading ("あなたへの、手紙")
- * and the period label live in the UI/VM, not here.
- */
+/** The letter [body] and the [footnote] card beneath the chart; heading and period label live in the UI. */
 data class InsightNarrative(
     val body: String,
     val footnote: String?,
 )
 
-/**
- * Rule-based, offline summary composition — templates with simple conditional
- * branches over the aggregated facts. The tone is a still映し返し: it states what
- * happened and never evaluates, diagnoses, advises, or encourages. No claim beyond
- * the numbers is made. (The one design-fixed case — a month with many nights whose
- * words gathered as the moon grew full — reproduces `design/16_insight.png` verbatim;
- * the other branches are drafts, tunable in this one file.)
- */
+/** Rule-based, offline composition: states what happened, never evaluates or advises. */
 object RuleBasedSummaryComposer : SummaryComposer {
 
     override suspend fun compose(summary: InsightSummary): InsightNarrative =
@@ -48,7 +29,7 @@ object RuleBasedSummaryComposer : SummaryComposer {
         return if (moon != null) "$opening\n$moon" else opening
     }
 
-    /** "言葉が多かったのは、月が満ちてゆく頃。" — only when there's enough to notice a peak. */
+    /** Only when there is enough to notice a peak. */
     private fun moonLine(summary: InsightSummary): String? {
         if (summary.daysJournaled < 3) return null
         val peak = summary.moonOverlap.maxByOrNull { it.count } ?: return null
@@ -69,7 +50,7 @@ object RuleBasedSummaryComposer : SummaryComposer {
         InsightPeriodType.Monthly -> "この一か月"
     }
 
-    /** Phases at or growing toward full — the moon is "満ちてゆく". Full is included. */
+    /** Waxing phases; full is included. */
     private fun isTowardFull(key: MoonPhaseKey): Boolean = when (key) {
         MoonPhaseKey.WAXING_CRESCENT,
         MoonPhaseKey.FIRST_QUARTER,

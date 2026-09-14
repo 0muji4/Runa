@@ -1,20 +1,13 @@
 package com.runa.shared.core.state
 
 /**
- * The coarse phase of a background sync, surfaced to the UI as the quiet status
- * line (`RunaSyncBanner`) over already-rendered content — never a body-hiding
- * state. This is the single shared replacement for the per-feature banner/status
- * enums that used to duplicate it (the diary `SyncStatus`, `GallerySyncStatus`,
- * and the four `*Banner` enums). It rides along on [UiState.Content.sync].
- *
- * Distinct from the per-entry `SyncState` (pending_create/update/delete), which is
- * about a single row, not a whole sync run.
+ * Coarse phase of a whole background sync run, shown as a banner over content via [UiState.Content.sync].
+ * Distinct from the per-row `SyncState` (pending_create/update/delete).
  */
 enum class SyncPhase {
-    /** Nothing in flight; the last sync (if any) succeeded. No banner is shown. */
+    /** Nothing in flight; no banner is shown. */
     Idle,
 
-    /** A sync is running. */
     Syncing,
 
     /** The last sync could not reach the server (connectivity). */

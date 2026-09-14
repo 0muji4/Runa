@@ -9,15 +9,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Rule-based summary: the design-fixed case reproduced verbatim, the branch
- * variations, and a tone guardrail asserting the text never advises or diagnoses.
- */
 class SummaryComposerTest {
 
     @Test
     fun reproducesTheConfirmedMonthlyLetter() = runTest {
-        // design/16_insight.png: a month of 18 nights whose words gathered toward full moon.
         val summary = summary(
             type = InsightPeriodType.Monthly,
             days = 18,
@@ -68,7 +63,6 @@ class SummaryComposerTest {
 
     @Test
     fun neverAdvisesDiagnosesOrEncourages() = runTest {
-        // A still映し返し only — none of these evaluative / prescriptive tokens may appear.
         val forbidden = listOf(
             "がんばって", "頑張", "大丈夫", "べき", "しましょう", "しよう",
             "診断", "アドバイス", "おすすめ", "改善", "治", "病", "気をつけ",
@@ -92,8 +86,6 @@ class SummaryComposerTest {
             }
         }
     }
-
-    // ---- helpers ----
 
     private fun peakAt(peak: MoonPhaseKey, count: Int): List<MoonPhaseBucket> =
         MoonPhaseKey.entries.map { MoonPhaseBucket(it, if (it == peak) count else 0) }

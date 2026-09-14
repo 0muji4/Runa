@@ -24,7 +24,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Records whether the local wipe ran, without touching a real database. */
 private class RecordingCleaner : LocalDataCleaner {
     var cleared = false
     override suspend fun clearAll() {
@@ -32,8 +31,6 @@ private class RecordingCleaner : LocalDataCleaner {
     }
 }
 
-/** Wires the real settings graph (KtorApiClient over MockEngine + DefaultAuthRepository +
- *  DefaultSettingsRepository) with a recording local cleaner. */
 private class SettingsFixture(handler: MockHandler) {
     val secureStore = FakeSecureStore(mapOf(KEY_ACCESS to "access", KEY_REFRESH to "refresh"))
     val tokenStore = TokenStore(secureStore)

@@ -8,11 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Shared archive view model. Loads the paged song archive from the backend and
- * mirrors the local play history via [SongRepository.observeSongHistory]. The UI
- * plays a tapped song through the [com.runa.shared.feature.today.player.SongPlayerViewModel].
- */
+/** Loads the paged song archive and mirrors the local play history. */
 class SongArchiveViewModel(
     private val repository: SongRepository,
 ) : ViewModel() {

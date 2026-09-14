@@ -29,13 +29,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * Local-first [DiaryRepository]. Writes hit the SQLDelight DB immediately (as
- * pending_*) so the UI updates without a round trip; the network is only touched
- * in [sync], which pushes pending work then pulls the server delta.
- *
- * Sync policy (see apps/go/README.md): client_id makes POST idempotent, and pull
- * conflicts resolve last-write-wins by updated_at. Auto-sync fires when
- * connectivity returns (via [NetworkMonitor]) and after every local mutation.
+ * Local-first [DiaryRepository]: writes land in SQLDelight as pending_* at once; the
+ * network is touched only in [sync] (push pending, then pull; last-write-wins by updated_at).
  */
 class DefaultDiaryRepository(
     database: RunaDatabase,
@@ -51,13 +46,11 @@ class DefaultDiaryRepository(
     private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
     override val syncStatus: StateFlow<SyncPhase> = _syncStatus.asStateFlow()
 
-    // Coalesces overlapping syncs: a caller that finds one already running simply
-    // returns, since that run will push everything currently pending.
+    // Coalesces overlapping syncs: a caller that finds one running returns immediately.
     private val syncMutex = Mutex()
 
     init {
-        // Auto-sync on the false → true connectivity edge (and once at startup if
-        // already online, since StateFlow replays its current value on collect).
+        // Auto-sync on the false → true connectivity edge (StateFlow replays, so also at startup).
         scope.launch {
             var wasOnline = false
             networkMonitor.isOnline.collect { online ->
@@ -77,9 +70,7 @@ class DefaultDiaryRepository(
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun createEntry(bodyText: String, mood: String?, createdAt: Instant?): DiaryEntry {
         val entry = withContext(dispatcher) {
-            // created_at may be backdated (calendar "write on this day"); updated_at
-            // is always "now" so the row is newer than any server delta and pushes
-            // cleanly under last-write-wins.
+            // created_at may be backdated; updated_at must stay "now" for last-write-wins.
             val now = clock.now()
             val created = (createdAt ?: now).toString()
             val updated = now.toString()
@@ -96,9 +87,7 @@ class DefaultDiaryRepository(
             runCatching {
                 val existing = queries.selectByClientId(clientId).executeAsOneOrNull()
                     ?: error("no diary entry $clientId")
-                // A create still queued locally stays pending_create (there is no
-                // server row to PATCH yet); an already-synced entry becomes
-                // pending_update.
+                // A queued create stays pending_create: there is no server row to PATCH yet.
                 val nextState =
                     if (existing.sync_state == STATE_PENDING_CREATE) STATE_PENDING_CREATE else STATE_PENDING_UPDATE
                 queries.updateContent(bodyText, mood, clock.now().toString(), nextState, clientId)
@@ -114,7 +103,6 @@ class DefaultDiaryRepository(
                 val existing = queries.selectByClientId(clientId).executeAsOneOrNull()
                     ?: error("no diary entry $clientId")
                 if (existing.sync_state == STATE_PENDING_CREATE && existing.server_id == null) {
-                    // Never reached the server → just drop it; nothing to delete remotely.
                     queries.deleteByClientId(clientId)
                 } else {
                     val now = clock.now().toString()
@@ -135,8 +123,7 @@ class DefaultDiaryRepository(
             _syncStatus.value = SyncPhase.Idle
             Result.success(Unit)
         } catch (e: Exception) {
-            // An ApiException means the server answered (we are online but it
-            // errored); anything else is a transport/connectivity failure.
+            // ApiException = server answered; anything else = transport/connectivity.
             _syncStatus.value = if (e is ApiException) SyncPhase.Error else SyncPhase.Offline
             Result.failure(e)
         } finally {
@@ -176,8 +163,7 @@ class DefaultDiaryRepository(
             val dto = apiClient.updateDiary(serverId, UpdateDiaryRequest(row.body_text, row.mood))
             withContext(dispatcher) { queries.markSynced(dto.id, dto.updatedAt, row.client_id) }
         } catch (e: ApiException) {
-            // 404: the entry no longer exists server-side (deleted elsewhere).
-            // Server wins under last-write-wins — drop the local copy.
+            // 404: deleted elsewhere; server wins, drop the local copy.
             if (e.statusCode == 404) withContext(dispatcher) { queries.deleteByClientId(row.client_id) } else throw e
         }
     }
@@ -209,13 +195,10 @@ class DefaultDiaryRepository(
 
     private fun merge(dto: DiaryEntryDto) {
         val local = queries.selectByClientId(dto.clientId).executeAsOneOrNull()
-        // A tombstone for a row we do not hold must not materialise it: this is
-        // either our own pushed delete echoing back, or a delete for an entry
-        // authored before this device ever synced.
+        // A tombstone for a row we do not hold must not materialise it.
         if (local == null && dto.deletedAt != null) return
         if (local != null && local.sync_state != STATE_SYNCED) {
-            // A local edit hasn't been pushed yet: last-write-wins by updated_at.
-            // Keep the local copy (it will push) when it is at least as new.
+            // Unpushed local edit: keep it (it will push) when at least as new.
             if (Instant.parse(local.updated_at) >= Instant.parse(dto.updatedAt)) return
         }
         queries.applyServerRow(

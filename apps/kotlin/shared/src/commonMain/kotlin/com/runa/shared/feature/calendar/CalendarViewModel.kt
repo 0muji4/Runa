@@ -16,16 +16,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * Drives the retrospective calendar. Holds the month on show and derives [state]
- * (the shared [UiState]) from the local DB stream + sync phase, so it renders
- * instantly from cache and works fully offline. Local-first means the grid always
- * renders (a month with no records is simply all-zero counts), so the state is
- * effectively [UiState.Loading] then [UiState.Content]; offline/error ride along as
- * [UiState.Content.sync] rather than hiding the body. Android collects [state]
- * directly; iOS observes via SKIE.
- *
- * A `factory` binding gives each open a fresh instance starting at today's month
- * (so "今日へ戻る" is the default entry point).
+ * Drives the retrospective calendar: holds the month on show and derives [state] from
+ * the local DB stream + sync phase. Offline/error ride along as [UiState.Content.sync].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModel(
@@ -51,7 +43,6 @@ class CalendarViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
-        // Bring other devices' entries in; the local render is already showing.
         refresh()
     }
 
@@ -65,7 +56,6 @@ class CalendarViewModel(
         refresh()
     }
 
-    /** Jump back to the current month ("今日へ戻る"). */
     fun showToday() {
         month.value = currentYearMonth()
         refresh()
@@ -88,11 +78,7 @@ data class YearMonth(val year: Int, val month: Int) {
     fun previous(): YearMonth = if (month == 1) YearMonth(year - 1, 12) else YearMonth(year, month - 1)
 }
 
-/**
- * The month a calendar screen renders: the [days] grid plus its layout metadata
- * ([year]/[month] and the [firstDayOfWeek] index for the leading blank cells). This
- * is the payload carried by [UiState.Content].
- */
+/** The month a calendar screen renders; [firstDayOfWeek] is the count of leading blank cells. */
 data class CalendarMonth(
     val year: Int,
     val month: Int,

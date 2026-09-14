@@ -10,13 +10,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Drives the diary list. [state] is the shared [UiState]: it is derived from the
- * local DB stream and the repository's [com.runa.shared.core.state.SyncPhase], so it
- * renders instantly from cache and never blocks on the network. Local-first means we
- * almost always have [UiState.Content] or [UiState.Empty]; offline/error ride along
- * as [UiState.Content.sync] (the quiet banner) rather than hiding the list.
- * [UiState.Loading] shows only before the first DB emission. Android collects it
- * directly; iOS observes via SKIE.
+ * Drives the diary list from the local DB stream + sync phase; offline/error ride
+ * along as [UiState.Content.sync] rather than hiding the list.
  */
 class DiaryListViewModel(
     private val repository: DiaryRepository,
@@ -27,17 +22,13 @@ class DiaryListViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
-        // Kick a sync when the list opens; the repository also auto-syncs on
-        // connectivity changes.
         refresh()
     }
 
-    /** Pull-to-refresh / on-resume entry point. */
     fun refresh() {
         viewModelScope.launch { repository.sync() }
     }
 
-    /** Soft-delete an entry (used by the detail screen's delete action). */
     fun delete(clientId: String) {
         viewModelScope.launch { repository.deleteEntry(clientId) }
     }

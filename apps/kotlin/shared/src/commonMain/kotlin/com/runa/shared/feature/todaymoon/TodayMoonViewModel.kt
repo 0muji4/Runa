@@ -7,12 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.datetime.TimeZone
 
-/**
- * Shared view model for 15 今日の月. The payload is a pure, offline computation, so
- * [load] is synchronous and [state] settles to [UiState.Content] at once (a
- * [UiState.Failure] never occurs — the moon needs no network). Android collects
- * [state]; iOS observes it through SKIE.
- */
+/** View model for 今日の月; the payload is pure and offline, so [load] is synchronous. */
 class TodayMoonViewModel(
     private val repository: TodayMoonRepository,
     private val zone: TimeZone = TimeZone.currentSystemDefault(),

@@ -8,12 +8,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Sync-engine tests for [DefaultDiaryRepository], run against the real SQLDelight
- * schema (JVM in-memory driver) and a fake backend. They cover the local-first
- * guarantees the feature promises: offline authoring, idempotent create, delta
- * merge, deletion propagation and last-write-wins.
- */
 class DiaryRepositoryTest {
 
     @Test
@@ -22,7 +16,7 @@ class DiaryRepositoryTest {
         h.server.offline = true
 
         val entry = h.repo.createEntry("夜の記録", "calm")
-        advanceUntilIdle() // the best-effort push fails while offline
+        advanceUntilIdle()
 
         val local = h.rows()
         assertEquals(1, local.size)
@@ -30,7 +24,6 @@ class DiaryRepositoryTest {
         assertNull(local.single().server_id)
         assertTrue(h.server.isEmpty(), "nothing should have reached the server while offline")
 
-        // Reconnect and sync.
         h.server.offline = false
         h.repo.sync()
         advanceUntilIdle()
@@ -49,8 +42,7 @@ class DiaryRepositoryTest {
         advanceUntilIdle()
         assertEquals(1, h.server.count())
 
-        // Simulate a lost ack: the create was delivered but the client still
-        // believes it is pending, so it pushes the same client_id again.
+        // Simulate a lost ack: the server has the row but the client still believes it is pending.
         h.queries.updateContent("一日目（再送）", null, h.clock.now().toString(), "pending_create", entry.clientId)
         h.repo.sync()
         advanceUntilIdle()
@@ -78,7 +70,6 @@ class DiaryRepositoryTest {
     fun deletionPropagatesBothDirections() = runTest {
         val h = DiaryHarness(testScheduler)
 
-        // Local delete → server soft-delete, local row dropped.
         val entry = h.repo.createEntry("消す", null)
         advanceUntilIdle()
         h.repo.deleteEntry(entry.clientId)
@@ -86,7 +77,6 @@ class DiaryRepositoryTest {
         assertNull(h.row(entry.clientId), "a pushed delete drops the local row")
         assertEquals(0, h.server.count())
 
-        // Server-side delete → pulled tombstone hides the entry locally.
         h.server.seed("cid-remote", "遠隔で作成")
         h.repo.sync()
         advanceUntilIdle()
@@ -108,17 +98,15 @@ class DiaryRepositoryTest {
 
         val entry = a.repo.createEntry("原本", null)
         advanceUntilIdle()
-        b.repo.sync() // B learns of the entry
+        b.repo.sync()
         advanceUntilIdle()
         assertNotNull(b.row(entry.clientId))
 
-        // A edits then B edits; B syncs last, so B wins.
         a.repo.updateEntry(entry.clientId, "Aの推敲", null)
         advanceUntilIdle()
         b.repo.updateEntry(entry.clientId, "Bの推敲", null)
         advanceUntilIdle()
 
-        // A syncs again and converges to the server's (B's) version.
         a.repo.sync()
         advanceUntilIdle()
 

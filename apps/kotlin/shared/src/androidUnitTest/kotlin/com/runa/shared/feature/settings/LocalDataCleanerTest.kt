@@ -8,11 +8,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Exercises the real deleteAll SQL against the actual SQLDelight schema on a JVM
- * in-memory driver (no device needed), proving DefaultLocalDataCleaner empties
- * every user-scoped table + meta.
- */
 class LocalDataCleanerTest {
 
     @Test
@@ -21,7 +16,6 @@ class LocalDataCleanerTest {
             JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { RunaDatabase.Schema.create(it) },
         )
 
-        // Seed one row in each table + both meta stores.
         database.diaryQueries.insertEntry(
             "c1", null, "body", null, "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z", null, "synced",
         )
@@ -34,7 +28,6 @@ class LocalDataCleanerTest {
         database.todayQueries.upsertSong("2026-01-01", "s1", "title", "artist", "art", "preview", "store")
         database.todayQueries.insertPlay("p1", "s1", "title", "artist", 0L)
 
-        // Sanity: the seed landed.
         assertTrue(database.diaryQueries.selectAll().executeAsList().isNotEmpty())
         assertTrue(database.galleryQueries.selectAll().executeAsList().isNotEmpty())
 

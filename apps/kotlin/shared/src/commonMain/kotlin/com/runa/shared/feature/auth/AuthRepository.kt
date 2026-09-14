@@ -3,17 +3,9 @@ package com.runa.shared.feature.auth
 import com.runa.shared.network.dto.UserDto
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * The authentication boundary the rest of the app depends on. It owns the single
- * source of truth [authState] and persists tokens through the secure store.
- *
- * The sign-in methods return [Result] for callers that want the outcome
- * inline; the observable [authState] is the primary way the UI reacts.
- */
+/** The authentication boundary: owns the single source of truth [authState] and persists tokens. */
 interface AuthRepository {
 
-    /** App-wide auth state. Later feature slices subscribe here to run only when
-     *  [AuthState.Authenticated]. */
     val authState: StateFlow<AuthState>
 
     suspend fun signupEmail(email: String, password: String, displayName: String?): Result<Unit>
@@ -21,8 +13,7 @@ interface AuthRepository {
     suspend fun loginApple(idToken: String, displayName: String?): Result<Unit>
     suspend fun loginGoogle(idToken: String): Result<Unit>
 
-    /** Explicitly refresh the token pair. The 401 path refreshes automatically in
-     *  the HTTP layer; this is for tests and manual use. */
+    /** Explicitly refresh the token pair; the 401 path already refreshes in the HTTP layer. */
     suspend fun refresh(): Result<Unit>
 
     suspend fun logout(): Result<Unit>
@@ -35,17 +26,10 @@ interface AuthRepository {
     /** Dismiss an [AuthState.Error] back to [AuthState.Unauthenticated]. */
     fun clearError()
 
-    /**
-     * Local-only session teardown after the account was deleted server-side.
-     * Unlike [logout] this makes NO network call (the account no longer exists):
-     * it clears the stored tokens and drops [authState] to unauthenticated.
-     */
+    /** Local-only session teardown after the account was deleted server-side.
+     *  Unlike [logout] this must make NO network call (the account no longer exists). */
     fun endSession()
 
-    /**
-     * Replace the cached user in [authState] when it is [AuthState.Authenticated]
-     * (e.g. after a display-name edit), keeping the app-wide user record
-     * consistent. A no-op in any other state.
-     */
+    /** Replace the cached user in [authState] when [AuthState.Authenticated]; no-op otherwise. */
     fun updateCachedUser(user: UserDto)
 }

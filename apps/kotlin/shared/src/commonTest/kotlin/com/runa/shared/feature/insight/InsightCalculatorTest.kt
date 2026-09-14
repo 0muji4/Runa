@@ -12,11 +12,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The aggregation core: day counts, mood distribution, streak, mood-less exclusion,
- * moon overlap, period boundaries, and timezone grouping — pure commonMain, so a
- * green run proves Android and iOS compute identical insights.
- */
 class InsightCalculatorTest {
 
     private val utc = TimeZone.UTC
@@ -68,7 +63,6 @@ class InsightCalculatorTest {
 
     @Test
     fun mostFrequentMoodTieBreaksByDeclarationOrder() {
-        // calm(1) and gentle(1) tie → the earlier-declared mood (Calm) wins deterministically.
         val entries = listOf(
             entry("2024-12-11T09:00:00Z", "gentle"),
             entry("2024-12-10T09:00:00Z", "calm"),
@@ -118,8 +112,6 @@ class InsightCalculatorTest {
         assertTrue(s.moodDistribution.all { it.count == 0 })
         assertTrue(s.moonOverlap.all { it.count == 0 })
     }
-
-    // ---- helpers ----
 
     private fun entry(instant: String, mood: String?): DiaryEntry {
         val ms = Instant.parse(instant).toEpochMilliseconds()

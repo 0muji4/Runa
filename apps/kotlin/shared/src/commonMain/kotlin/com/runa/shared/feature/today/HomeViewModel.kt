@@ -14,16 +14,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * Shared home view model. Composes the day's quote + moon + song via
- * [TodayRepository] and exposes the shared [UiState] Android collects directly and
- * iOS observes through SKIE. Runs an initial [load] on construction so the home
- * shows content without an explicit trigger.
- *
- * The home always has renderable content — the moon is computed locally and never
- * needs the network — so offline is carried as [SyncPhase.Offline] on
- * [UiState.Content] (a quiet banner over the cached quote/song), not a body-hiding
- * state. [UiState.Failure] is defensive only (the repository already falls back to
- * cache on a network failure).
+ * Home view model: loads today's quote + moon + song. Offline is carried as
+ * [SyncPhase.Offline] on [UiState.Content]; [UiState.Failure] is defensive only.
  */
 class HomeViewModel(
     private val repository: TodayRepository,
@@ -35,7 +27,6 @@ class HomeViewModel(
         load()
     }
 
-    /** (Re)load today for the current local date. Offline falls back to cache. */
     fun load() {
         viewModelScope.launch {
             _state.value = UiState.Loading

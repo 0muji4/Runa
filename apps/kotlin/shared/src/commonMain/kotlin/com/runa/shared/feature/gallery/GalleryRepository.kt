@@ -4,40 +4,27 @@ import com.runa.shared.core.state.SyncPhase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * The gallery boundary the UI depends on. Local-first, like the diary:
- * [observeImages] streams the on-device DB (so the grid renders instantly and
- * offline), and mutations persist locally then reconcile with the store/server
- * inside [refresh]. Uploads are queued as bytes and pushed on the next sync /
- * connectivity return; the presigned-URL exchange happens transparently inside.
- */
+/** The gallery boundary, local-first: [observeImages] streams the on-device DB;
+ *  mutations persist locally, then reconcile with the store/server inside [refresh]. */
 interface GalleryRepository {
 
-    /** Live, newest-first grid from the local DB. Re-emits on every local write,
-     *  every applied server change, and every upload-progress tick. */
+    /** Live, newest-first grid from the local DB. */
     fun observeImages(): Flow<List<GalleryImage>>
 
-    /** Queue a picked image: persist its bytes locally (rendered at once as
-     *  "uploading") and return; a background upload → register follows. [theme] is
-     *  the saved per-image mood. */
+    /** Queue a picked image: persist its bytes locally and return; the upload follows in the background. */
     suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String, theme: GalleryTheme)
 
-    /** Delete an image: drop it locally if never uploaded, else mark pending-delete
-     *  and push (soft-delete + async object removal server-side). */
+    /** Drop the image locally if never uploaded, else mark pending-delete and push. */
     suspend fun deleteImage(clientId: String)
 
-    /** Push queued uploads/deletes, then pull the server list — bringing in other
-     *  devices' images, refreshing expired view URLs, and reconciling remote
-     *  deletions. Overlapping calls coalesce. */
+    /** Push queued uploads/deletes, then pull the server list. Overlapping calls coalesce. */
     suspend fun refresh(): Result<Unit>
 
     /** Coarse phase of the last/ongoing sync, for the grid banner. */
     val syncStatus: StateFlow<SyncPhase>
 
-    /** The persisted gallery display-theme toggle (enum name), or null if unset.
-     *  This is a client-only view preference, stored in the gallery meta table. */
+    /** The persisted, client-only gallery display-theme toggle (enum name), or null if unset. */
     suspend fun loadDisplayTheme(): String?
 
-    /** Persist the gallery display-theme toggle (enum name). */
     suspend fun saveDisplayTheme(value: String)
 }

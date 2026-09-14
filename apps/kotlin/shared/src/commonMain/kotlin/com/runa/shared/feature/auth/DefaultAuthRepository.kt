@@ -21,9 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Default [AuthRepository]: orchestrates [ApiClient] + [TokenStore] and drives
- * [authState]. It also listens for [TokenStore.sessionExpired] (fired when an
- * automatic refresh fails mid-session) and drops back to unauthenticated.
+ * Default [AuthRepository] over [ApiClient] + [TokenStore]; drops to unauthenticated when
+ * [TokenStore.sessionExpired] fires.
  */
 class DefaultAuthRepository(
     private val apiClient: ApiClient,
@@ -126,8 +125,7 @@ class DefaultAuthRepository(
         }
     }
 
-    /** Runs a sign-in call, persisting tokens and moving to Authenticated on
-     *  success or Error on failure. */
+    /** Runs a sign-in call, persisting tokens; Authenticated on success, Error on failure. */
     private suspend fun authenticate(call: suspend () -> AuthTokens): Result<Unit> {
         _authState.value = AuthState.Authenticating
         return try {

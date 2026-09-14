@@ -13,7 +13,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Scriptable biometric double: choose the availability and the prompt outcome. */
 private class FakeBiometricAuthenticator(
     var availabilityResult: BiometricAvailability = BiometricAvailability.AVAILABLE,
     var authResult: BiometricResult = BiometricResult.Success,
@@ -29,8 +28,7 @@ private class FakeBiometricAuthenticator(
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppLockViewModelTest {
 
-    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
-    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    // The view model runs on viewModelScope (Dispatchers.Main), so Main must be a test dispatcher.
     @BeforeTest
     fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
 
@@ -84,7 +82,6 @@ class AppLockViewModelTest {
         advanceUntilIdle()
 
         assertEquals(AppLockUiState.Unavailable, vm.state.value)
-        // Never even presented the prompt (availability screened it out).
         assertEquals(0, auth.authenticateCalls)
     }
 

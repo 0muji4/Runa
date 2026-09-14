@@ -3,11 +3,7 @@ package com.runa.shared.network.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Request/response DTOs for the /api/v1/diary endpoints. As with [AuthDto] the
- * backend speaks snake_case JSON, so camelCase fields carry an explicit
- * [SerialName]. Timestamps are RFC3339 strings on the wire.
- */
+/** DTOs for /api/v1/diary. Timestamps are RFC3339 strings on the wire. */
 
 @Serializable
 data class CreateDiaryRequest(
@@ -23,8 +19,7 @@ data class UpdateDiaryRequest(
     val mood: String? = null,
 )
 
-/** One diary entry as returned by every diary endpoint. [deletedAt] is only
- *  non-null on tombstones seen through /diary/sync. */
+/** One diary entry; [deletedAt] is non-null only on tombstones from /diary/sync. */
 @Serializable
 data class DiaryEntryDto(
     val id: String,

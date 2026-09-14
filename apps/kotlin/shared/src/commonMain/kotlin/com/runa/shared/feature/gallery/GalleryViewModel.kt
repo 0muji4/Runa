@@ -13,26 +13,13 @@ import kotlinx.coroutines.launch
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-/**
- * Drives the gallery grid (13 ギャラリー). Derives the shared [UiState] from the
- * local image stream + sync phase, so it renders instantly from cache and works
- * offline. Local-first means we almost always have [UiState.Content] or
- * [UiState.Empty]; offline/sync ride along as [UiState.Content.sync] rather than
- * hiding the grid.
- *
- * The [displayTheme] toggle (monotone ⇔ pink) is exposed as a separate flow because
- * it is grid chrome shown over both content and empty — it is a GALLERY-SCOPED view
- * treatment, NOT the app-wide theme setting and NOT the same as an image's saved
- * [GalleryTheme] (though a newly added image is tagged with the current display theme
- * as its saved mood). The toggle is persisted locally, defaulting to PINK per the
- * confirmed design.
- */
+/** Drives the gallery grid (13 ギャラリー). [displayTheme] is a GALLERY-SCOPED view treatment,
+ *  NOT the app-wide theme setting and NOT an image's saved [GalleryTheme]. */
 class GalleryViewModel(
     private val repository: GalleryRepository,
 ) : ViewModel() {
     private val _displayTheme = MutableStateFlow(GalleryDisplayTheme.PINK)
 
-    /** The gallery-scoped display treatment (persisted); grid chrome, shown always. */
     val displayTheme: StateFlow<GalleryDisplayTheme> = _displayTheme.asStateFlow()
 
     val state: StateFlow<UiState<List<GalleryImage>>> =
@@ -41,24 +28,20 @@ class GalleryViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), UiState.Loading)
 
     init {
-        // Restore the persisted display-theme preference (async; PINK until then).
         viewModelScope.launch {
             repository.loadDisplayTheme()?.let { saved ->
                 runCatching { GalleryDisplayTheme.valueOf(saved) }.getOrNull()?.let { _displayTheme.value = it }
             }
         }
-        // Bring in other devices' images / refresh expired URLs; the grid already renders.
         refresh()
     }
 
-    /** Switch the gallery-scoped display treatment (persisted). */
     fun setDisplayTheme(theme: GalleryDisplayTheme) {
         _displayTheme.value = theme
         viewModelScope.launch { repository.saveDisplayTheme(theme.name) }
     }
 
-    /** Add a picked, already-normalized image; it is tagged with the current display
-     *  theme as its saved mood. Bytes come from the platform picker (UI layer). */
+    /** Add a picked, already-normalized image; tagged with the current display theme as its saved mood. */
     fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String) {
         viewModelScope.launch { repository.addImage(bytes, width, height, mimeType, _displayTheme.value.toSavedTheme()) }
     }
@@ -72,12 +55,7 @@ class GalleryViewModel(
     }
 }
 
-/**
- * The gallery-scoped display treatment. This is deliberately a SEPARATE type from
- * the app-wide theme setting and from the per-image [GalleryTheme]: it only changes
- * how the grid is rendered (monotone desaturation ⇔ pink duotone), stays inside the
- * gallery, and is never confused with the global theme.
- */
+/** Gallery-scoped display treatment; deliberately separate from the app-wide theme and the per-image [GalleryTheme]. */
 enum class GalleryDisplayTheme { MONOTONE, PINK }
 
 private fun GalleryDisplayTheme.toSavedTheme(): GalleryTheme = when (this) {
@@ -85,12 +63,7 @@ private fun GalleryDisplayTheme.toSavedTheme(): GalleryTheme = when (this) {
     GalleryDisplayTheme.PINK -> GalleryTheme.PINK
 }
 
-/**
- * Decode base64 image bytes into a Kotlin [ByteArray] on the Kotlin side. iOS uses
- * this so it can pass picked-image bytes as a single String across the Swift↔Kotlin
- * boundary and get back a [ByteArray] reference — avoiding a slow per-element
- * `KotlinByteArray` build in Swift — then hand it straight to [GalleryViewModel.addImage].
- * (Android passes its `ByteArray` directly and does not need this.)
- */
+/** Decodes base64 image bytes for iOS, which passes picked-image bytes as one String
+ *  across Swift↔Kotlin instead of building a slow per-element `KotlinByteArray`. */
 @OptIn(ExperimentalEncodingApi::class)
 fun galleryDecodeBase64(value: String): ByteArray = Base64.decode(value)

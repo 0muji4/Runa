@@ -29,10 +29,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Calendar composition tests: entry-count reflection and time-zone-boundary
- * grouping, over a fake diary stream — fully in commonMain, no DB or network.
- */
 class CalendarRepositoryTest {
 
     private val utc = TimeZone.UTC
@@ -106,8 +102,6 @@ class CalendarRepositoryTest {
         assertEquals(1, api.calendarCalls, "refresh confirms the server counts on success")
     }
 
-    // ---- helpers ----
-
     private fun entryOn(instant: String, clientId: String = instant): DiaryEntry {
         val ms = Instant.parse(instant).toEpochMilliseconds()
         return DiaryEntry(
@@ -121,7 +115,6 @@ private class FixedClock(private val instant: Instant) : Clock {
     override fun now(): Instant = instant
 }
 
-/** Minimal in-memory [DiaryRepository]: a controllable entry stream + sync counter. */
 private class FakeDiaryRepository : DiaryRepository {
     private val entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
     private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
@@ -140,7 +133,6 @@ private class FakeDiaryRepository : DiaryRepository {
     override suspend fun sync(): Result<Unit> { syncCalls++; return Result.success(Unit) }
 }
 
-/** ApiClient stub: only getCalendar is live (records the call); the rest are unused. */
 private class FakeCalendarApi : ApiClient {
     var calendarCalls = 0
         private set

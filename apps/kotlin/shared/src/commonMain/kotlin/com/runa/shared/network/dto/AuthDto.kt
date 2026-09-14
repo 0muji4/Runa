@@ -3,13 +3,7 @@ package com.runa.shared.network.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Request/response DTOs for the /api/v1/auth endpoints and /api/v1/me.
- *
- * The backend speaks snake_case JSON, so each camelCase field carries an explicit
- * [SerialName]. That keeps the mapping visible and avoids relying on an
- * experimental global naming strategy.
- */
+/** DTOs for /api/v1/auth and /api/v1/me. The wire format is snake_case, hence the explicit [SerialName]s. */
 
 @Serializable
 data class SignupRequest(
@@ -45,8 +39,7 @@ data class LogoutRequest(
     @SerialName("refresh_token") val refreshToken: String,
 )
 
-/** Token bundle returned by every successful auth call. [user] is present on
- *  signup/login/apple/google and omitted on refresh. */
+/** Token bundle returned by every successful auth call; [user] is omitted on refresh. */
 @Serializable
 data class AuthTokens(
     @SerialName("access_token") val accessToken: String,

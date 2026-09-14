@@ -3,12 +3,7 @@ package com.runa.shared.network.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Request/response DTOs for the /api/v1/gallery endpoints. As elsewhere the backend
- * speaks snake_case JSON, so camelCase fields carry an explicit [SerialName]. The
- * image BYTES never appear here — they go client↔store directly via the presigned
- * URLs these DTOs carry.
- */
+/** DTOs for /api/v1/gallery. Image bytes never appear here; they go client↔store via the presigned URLs. */
 
 @Serializable
 data class GalleryUploadURLRequest(

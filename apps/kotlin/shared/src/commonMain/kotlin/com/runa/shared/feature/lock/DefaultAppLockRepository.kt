@@ -5,15 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * Default [AppLockRepository] backed by multiplatform-settings. The enabled flag
- * is mirrored in an in-memory [MutableStateFlow] seeded from the persisted value
- * at construction (so the lock gate can decide before the first frame) and written
- * back on change. Same persist-and-observe shape as the theme repository.
- *
- * The flag is not sensitive (biometric enrolment and the device credential live in
- * the OS), so plain [Settings] is used — not the encrypted token store.
- */
+/** Default [AppLockRepository] backed by multiplatform-settings. The flag is not
+ *  sensitive, so plain [Settings] is used — not the encrypted token store. */
 class DefaultAppLockRepository(
     private val settings: Settings,
 ) : AppLockRepository {

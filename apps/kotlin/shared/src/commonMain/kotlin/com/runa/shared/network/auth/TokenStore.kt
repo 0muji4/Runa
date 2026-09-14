@@ -11,10 +11,8 @@ data class StoredTokens(
 )
 
 /**
- * Persists the token pair in the platform secure store and exposes a
- * [sessionExpired] signal that fires when a refresh attempt fails and the local
- * session is cleared. [com.runa.shared.feature.auth.AuthRepository] observes it to
- * drop the whole app back to the unauthenticated state.
+ * Persists the token pair in the secure store; [sessionExpired] fires when a refresh fails and the
+ * session is cleared.
  */
 class TokenStore(private val store: SecureKeyValueStore) {
 
@@ -38,8 +36,7 @@ class TokenStore(private val store: SecureKeyValueStore) {
         store.remove(KEY_REFRESH)
     }
 
-    /** Clears the tokens and notifies subscribers the session has ended. Used by
-     *  the refresher when the refresh token is rejected. */
+    /** Clears the tokens and notifies subscribers the session has ended. */
     fun clearAndNotifyExpired() {
         clear()
         _sessionExpired.tryEmit(Unit)

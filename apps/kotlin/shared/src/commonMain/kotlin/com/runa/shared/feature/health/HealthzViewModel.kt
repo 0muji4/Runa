@@ -10,16 +10,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Drives the health-check probe. Shared across Android (consumed directly) and
- * iOS (exposed to Swift via SKIE, which maps [StateFlow] to an observable).
- *
- * It runs an initial [check] on construction so the Home tab shows a result
- * without any explicit trigger from the UI.
- *
- * Work runs on [androidx.lifecycle.viewModelScope]. これは Koin で `single` 束縛の
- * 疎通確認用なのでアプリ寿命で生き続け、破棄されない。画面ごとに捨てたい view model は
- * `factory` 束縛にしたうえで、Android は koinViewModel()、iOS は
- * [com.runa.shared.platform.ViewModelOwner] に預けること。
+ * Drives the health-check probe; runs an initial [check] on construction.
+ * Koin で `single` 束縛なのでアプリ寿命で生き続ける。画面ごとに捨てたい view model は
+ * `factory` 束縛にし、Android は koinViewModel()、iOS は [com.runa.shared.platform.ViewModelOwner] に預けること。
  */
 class HealthzViewModel(
     private val apiClient: ApiClient,

@@ -6,14 +6,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * The composed payload for 15 今日の月: today's moon (phase, illumination, 月齢) plus
- * a quiet, phase-specific line and the next principal phase to come. Everything is
- * computed on-device — no network — so the screen works fully offline (DoD#5).
- *
- * [dateLabel] / [nextPhaseDateLabel] are pre-formatted (e.g. "7月4日") so the UIs
- * need not depend on kotlinx-datetime (matching the diary/today conventions).
- */
+/** The 今日の月 payload: today's moon, its phrase, and the next principal phase. Computed on-device. */
 data class TodayMoon(
     val dateLabel: String,
     val phaseKey: MoonPhaseKey,
@@ -29,10 +22,6 @@ interface TodayMoonRepository {
     fun getTodayMoon(zone: TimeZone): TodayMoon
 }
 
-/**
- * Default [TodayMoonRepository]. Reuses the shared [MoonPhaseCalculator] for both
- * the current phase and the next principal phase, and [MoonPhrases] for the line.
- */
 class DefaultTodayMoonRepository(
     private val clock: Clock = Clock.System,
 ) : TodayMoonRepository {

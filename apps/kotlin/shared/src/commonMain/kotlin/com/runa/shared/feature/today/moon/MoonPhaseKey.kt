@@ -1,11 +1,6 @@
 package com.runa.shared.feature.today.moon
 
-/**
- * The eight canonical lunar phases, in synodic order from new moon back to new
- * moon. The UI maps each key to an icon and a localized name (新月 / 三日月 /
- * 上弦 / 十三夜月 / 満月 / …／下弦 / 晦), so the shared layer stays free of
- * presentation strings.
- */
+/** The eight lunar phases; declaration order is synodic order (new moon back to new moon). */
 enum class MoonPhaseKey {
     NEW_MOON,
     WAXING_CRESCENT,

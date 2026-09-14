@@ -30,16 +30,9 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * Local-first [GalleryRepository]. A picked image is written to the DB immediately
- * as `pending_upload` (with its bytes) so the grid shows it at once; the network is
- * only touched in [sync], which pushes queued uploads/deletes then pulls the
- * server list.
- *
- * Upload is the three-step presigned-URL dance (see apps/go/README.md): ask our API
- * for a presigned PUT URL, PUT the bytes straight to the store via [StorageClient],
- * then register the metadata. Pull is a full list + reconcile (the gallery API has
- * no delta endpoint): images absent from the server were deleted on another device
- * and are dropped locally; every listed image's presigned view URL is refreshed.
+ * Local-first [GalleryRepository]: a picked image is stored as `pending_upload` with
+ * its bytes; the network is only touched in [sync] (push queued uploads/deletes,
+ * then pull the full server list and reconcile — the gallery API has no delta endpoint).
  */
 class DefaultGalleryRepository(
     database: RunaDatabase,
@@ -56,15 +49,14 @@ class DefaultGalleryRepository(
     private val _syncStatus = MutableStateFlow(SyncPhase.Idle)
     override val syncStatus: StateFlow<SyncPhase> = _syncStatus.asStateFlow()
 
-    // Live per-image upload progress (0..1), keyed by client_id. Merged into the
-    // grid stream so a cell can show its progress without a DB column.
+    // Live per-image upload progress (0..1) keyed by client_id; merged into the grid stream.
     private val uploadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
 
     private val syncMutex = Mutex()
 
     init {
-        // Auto-sync on the false → true connectivity edge (and once at startup if
-        // already online, since StateFlow replays its current value on collect).
+        // Auto-sync on the false → true connectivity edge (StateFlow replays its
+        // current value, so also once at startup when already online).
         scope.launch {
             var wasOnline = false
             networkMonitor.isOnline.collect { online ->
@@ -102,7 +94,6 @@ class DefaultGalleryRepository(
         withContext(dispatcher) {
             val existing = queries.selectByClientId(clientId).executeAsOneOrNull() ?: return@withContext
             if (existing.server_id == null) {
-                // Never reached the server → just drop it; nothing to delete remotely.
                 queries.deleteByClientId(clientId)
             } else {
                 val now = clock.now().toString()
@@ -209,8 +200,7 @@ class DefaultGalleryRepository(
     @OptIn(ExperimentalUuidApi::class)
     private fun merge(dto: GalleryImageDto) {
         val existing = queries.selectByServerId(dto.id).executeAsOneOrNull()
-        // A row with unpushed local work wins until it is pushed (push runs before
-        // pull, so this only guards a rare interleaving).
+        // Unpushed local work wins over the server row until it is pushed.
         if (existing != null && existing.sync_state != STATE_SYNCED) return
         val clientId = existing?.client_id ?: Uuid.random().toString()
         val expiresMs = Instant.parse(dto.urlExpiresAt).toEpochMilliseconds()

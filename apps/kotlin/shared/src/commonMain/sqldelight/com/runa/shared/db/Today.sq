@@ -1,9 +1,4 @@
--- Local persistence for the "today" feature. This replaces the walking-skeleton
--- Placeholder schema and is the first real use of SQLDelight in the app.
---
--- today_quote / today_song cache the last-fetched daily content, keyed by date,
--- so the home screen shows the right day's copy while offline (the moon phase is
--- always computed, never cached). song_history is the local append-only play log.
+-- today_quote / today_song cache the last-fetched daily content keyed by date; song_history is the play log.
 
 CREATE TABLE today_quote (
     date      TEXT NOT NULL PRIMARY KEY,
@@ -11,8 +6,7 @@ CREATE TABLE today_quote (
     body_text TEXT NOT NULL
 );
 
--- preview_url is Apple's 30-second preview and store_url the Apple Music page
--- the badge links to. Only these URLs are cached — never the preview audio.
+-- Only the URLs are cached, never the preview audio.
 CREATE TABLE today_song (
     date        TEXT NOT NULL PRIMARY KEY,
     id          TEXT NOT NULL,
@@ -23,8 +17,7 @@ CREATE TABLE today_song (
     store_url   TEXT NOT NULL
 );
 
--- The play log keeps only text: artwork is Apple promo content and may only be
--- shown next to the store badge, which a history line does not carry.
+-- Text only: artwork is Apple promo content and may only be shown next to the store badge.
 CREATE TABLE song_history (
     id        TEXT    NOT NULL PRIMARY KEY,
     song_id   TEXT    NOT NULL,

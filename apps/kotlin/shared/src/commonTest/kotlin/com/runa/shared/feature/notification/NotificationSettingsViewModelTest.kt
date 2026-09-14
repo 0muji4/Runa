@@ -25,8 +25,7 @@ private class RecordingScheduler : LocalNotificationScheduler {
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationSettingsViewModelTest {
 
-    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
-    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    // The view model runs on viewModelScope (Dispatchers.Main), so Main must be a test dispatcher.
     @BeforeTest
     fun setUpMain() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
@@ -39,7 +38,6 @@ class NotificationSettingsViewModelTest {
         val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
         val vm = NotificationSettingsViewModel(repo)
 
-        // Seeded from persistence: off, 22:00, three presets.
         assertFalse(vm.state.value.enabled)
         assertEquals(ReminderTime(22, 0), vm.state.value.time)
         assertEquals(ReminderTime.Presets, vm.state.value.presets)

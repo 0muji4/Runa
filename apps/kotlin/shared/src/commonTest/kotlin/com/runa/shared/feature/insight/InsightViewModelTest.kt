@@ -35,10 +35,6 @@ private class FakeInsightRepository : InsightRepository {
     override val syncStatus: StateFlow<SyncPhase> = MutableStateFlow(SyncPhase.Idle)
 }
 
-/**
- * 期間セレクタ（週/月）と見出しラベルの動きを固定する。ラベルは本文が空でも常に出す
- * ため [InsightViewModel.header] が [InsightViewModel.state] と別 Flow になっている。
- */
 class InsightViewModelTest {
 
     @BeforeTest

@@ -1,19 +1,10 @@
 package com.runa.shared.feature.settings
 
-/**
- * The app-wide appearance theme, selected by the user and applied across every
- * screen. This is distinct from the gallery's per-image / display treatment
- * ([com.runa.shared.feature.gallery.GalleryTheme] /
- * [com.runa.shared.feature.gallery.GalleryDisplayTheme]) — those style images
- * inside the gallery, whereas this recolors the whole application.
- *
- * The token VALUES for each theme live natively in each client (Compose
- * `RunaColors`, SwiftUI `RunaColors`), kept identical to the canonical table in
- * the repo README. The shared module owns only the SELECTION; the clients own the
- * colors. [id] is the stable string persisted in settings and never localized.
- */
+/** The app-wide appearance theme, distinct from the gallery's [com.runa.shared.feature.gallery.GalleryTheme].
+ *  The shared module owns only the SELECTION (colors live in each client's `RunaColors`);
+ *  [id] is persisted in settings and must never change. */
 enum class AppTheme(val id: String) {
-    /** 夜（ダーク）— the default, the look the app was designed around first. */
+    /** 夜（ダーク）— the default. */
     DARK("dark"),
 
     /** あさ（ライト）— a bright, cream-based light theme. */
@@ -23,8 +14,7 @@ enum class AppTheme(val id: String) {
     PINK("pink");
 
     companion object {
-        /** Maps a persisted [id] back to a theme, defaulting to [DARK] for an
-         *  absent or unrecognized value. */
+        /** Maps a persisted [id] back to a theme, defaulting to [DARK] when absent or unrecognized. */
         fun fromId(id: String?): AppTheme = entries.firstOrNull { it.id == id } ?: DARK
     }
 }

@@ -19,19 +19,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-/**
- * State-transition consistency for the shared [UiState] the diary list exposes:
- * empty stream → [UiState.Empty]; entries → [UiState.Content] carrying the current
- * [SyncPhase] over the body (never a body-hiding offline state); and offline →
- * online recovery flips the banner phase without dropping the content.
- *
- * The state is a `WhileSubscribed` `stateIn`, so a collector is kept active
- * ([launchIn]) for the upstream to run.
- */
+/** The state is a `WhileSubscribed` `stateIn`, so a collector is kept active ([launchIn]) for the upstream to run. */
 class DiaryListViewModelTest {
 
-    // The view model now runs on viewModelScope (Dispatchers.Main), so Main has to be a
-    // test dispatcher. runTest picks up its scheduler, keeping the test deterministic.
+    // The view model runs on viewModelScope (Dispatchers.Main), so Main must be a test dispatcher.
     @BeforeTest
     fun setUpMain() = Dispatchers.setMain(StandardTestDispatcher())
 
@@ -92,7 +83,6 @@ class DiaryListViewModelTest {
     )
 }
 
-/** Minimal in-memory [DiaryRepository]: a controllable entry stream + sync phase. */
 private class FakeDiaryRepository : DiaryRepository {
     private val entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
     private val _syncStatus = MutableStateFlow(SyncPhase.Idle)

@@ -9,12 +9,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 
-/**
- * Drives the "records of one day" screen reached by tapping a calendar cell that
- * has entries. Takes the tapped day as an ISO `yyyy-MM-dd` string (so the UI need
- * not construct kotlinx-datetime types) and streams that day's diary entries from
- * the local DB via [CalendarRepository.observeEntriesOn].
- */
+/** Streams one day's diary entries; [isoDate] is `yyyy-MM-dd`. */
 class DayRecordsViewModel(
     repository: CalendarRepository,
     isoDate: String,

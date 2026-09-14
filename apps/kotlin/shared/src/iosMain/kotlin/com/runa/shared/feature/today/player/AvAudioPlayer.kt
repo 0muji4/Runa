@@ -25,16 +25,8 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSURL
 
 /**
- * AVPlayer-backed [AudioPlayer] (AVFoundation). AVPlayer is safe to drive from any
- * thread for these basic operations, so calls run directly. Position is sampled
- * via a periodic time observer, which republishes [PlaybackState] as it fires.
- *
- * AVPlayerItem streams the URL; nothing here downloads or caches the preview
- * (Apple's terms — see [AudioPlayer]).
- *
- * The periodic observer stops firing once the item ends (AVPlayer pauses
- * itself), so the end is caught through AVPlayerItemDidPlayToEndTimeNotification:
- * it republishes the stopped state, and the next play() restarts from the top.
+ * AVPlayer-backed [AudioPlayer]. Nothing here may download or cache the preview (see [AudioPlayer]).
+ * The periodic observer stops at the end of the item, so the end is caught via AVPlayerItemDidPlayToEndTimeNotification.
  */
 @OptIn(ExperimentalForeignApi::class)
 class AvAudioPlayer : AudioPlayer {
@@ -78,11 +70,6 @@ class AvAudioPlayer : AudioPlayer {
         player.pause()
     }
 
-    /**
-     * Registers a ~0.5s time observer that mirrors playback progress into state,
-     * and the end-of-item notification (for any item of this player) that marks
-     * the preview as finished.
-     */
     private fun addObserversIfNeeded() {
         if (timeObserver == null) {
             val interval = CMTimeMakeWithSeconds(POSITION_POLL_SECONDS, PREFERRED_TIMESCALE)
@@ -96,7 +83,6 @@ class AvAudioPlayer : AudioPlayer {
                 `object` = null,
                 queue = null,
             ) { _ ->
-                // This app has one AVPlayer, so any item ending is ours.
                 ended = true
                 sync()
             }
@@ -106,8 +92,7 @@ class AvAudioPlayer : AudioPlayer {
     private fun sync() {
         val positionSeconds = CMTimeGetSeconds(player.currentTime())
         val durationSeconds = player.currentItem?.duration?.let { CMTimeGetSeconds(it) } ?: Double.NaN
-        // The periodic observer's last tick can land on the final frame before the
-        // end notification arrives; treat reaching the end as ended either way.
+        // The last periodic tick can land on the final frame before the end notification arrives.
         if (!durationSeconds.isNaN() && durationSeconds > 0 && positionSeconds >= durationSeconds - END_TOLERANCE_SECONDS) {
             ended = true
         }

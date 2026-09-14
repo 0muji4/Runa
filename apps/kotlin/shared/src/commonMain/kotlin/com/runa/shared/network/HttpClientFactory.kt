@@ -13,20 +13,9 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 /**
- * Builds the shared [HttpClient]s.
- *
- * Three flavours exist:
- *  - [createBase]: JSON only, no auth. Used by the [TokenRefresher] to call
- *    /auth/refresh without risking a refresh-of-a-refresh loop.
- *  - [createAuthenticated]: JSON plus an [HttpSend] interceptor that attaches the
- *    stored Bearer access token and, on a 401 from a protected route, refreshes
- *    once and replays the original request. Public /api/v1/auth/... routes are
- *    skipped so sign-in calls carry no token and never trigger a refresh.
- *  - [createStorage]: NO content negotiation and NO auth interceptor — a bare
- *    client for raw-byte PUT/GET against arbitrary presigned object-storage URLs.
- *    It must NOT be the authenticated client: that one would attach the Runa
- *    Bearer to the storage host (the presigned URL path has no `auth` segment to
- *    skip on), leaking the token to a third-party host.
+ * Builds the shared [HttpClient]s: [createBase] (JSON, no auth; used by [TokenRefresher] so a refresh
+ * never triggers another), [createAuthenticated] (Bearer + one 401→refresh→replay), and
+ * [createStorage] (bare; must NOT be the authenticated one or the Runa Bearer would leak to the storage host).
  */
 object HttpClientFactory {
 
@@ -52,8 +41,7 @@ object HttpClientFactory {
         }
 
         client.plugin(HttpSend).intercept { request ->
-            // Public auth endpoints (/api/v1/auth/...): send as-is, no Bearer, no
-            // refresh handling. Checked via path segments (Ktor 3 URL API).
+            // Public auth endpoints (/api/v1/auth/...): no Bearer, no refresh handling.
             if (request.url.encodedPathSegments.any { it == "auth" }) {
                 return@intercept execute(request)
             }

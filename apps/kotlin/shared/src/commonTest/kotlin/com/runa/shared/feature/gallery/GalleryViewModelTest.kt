@@ -32,7 +32,6 @@ private class FakeGalleryRepository(private val savedTheme: String? = null) : Ga
     }
 }
 
-/** ギャラリーの空状態と、画面固有の表示テーマの復元・永続化を固定する。 */
 class GalleryViewModelTest {
 
     @BeforeTest

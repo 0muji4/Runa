@@ -18,8 +18,7 @@ class ThemeRepositoryTest {
 
         DefaultThemeRepository(settings).setTheme(AppTheme.PINK)
 
-        // A brand-new repository over the SAME settings restores the selection —
-        // this is what a process restart exercises.
+        // A new repository over the SAME settings models a process restart.
         val restored = DefaultThemeRepository(settings)
         assertEquals(AppTheme.PINK, restored.observeTheme().value)
     }

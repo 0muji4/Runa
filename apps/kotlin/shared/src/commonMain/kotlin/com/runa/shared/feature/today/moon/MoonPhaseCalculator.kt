@@ -13,27 +13,9 @@ import kotlin.math.cos
 import kotlin.math.floor
 
 /**
- * Offline moon-phase calculator — the domain core of the "today" feature.
- *
- * It is deliberately pure `kotlin.math` over [Double] in `commonMain` with NO
- * platform APIs, so Android (Kotlin/JVM) and iOS (Kotlin/Native) run the exact
- * same IEEE-754 arithmetic and therefore return byte-identical results. That
- * cross-platform identity is asserted by the reference-date suite in commonTest.
- *
- * Algorithm (Meeus-simplified "moon age" method): the age of the moon is the time
- * elapsed since a known reference new moon, taken modulo the mean synodic month.
- * The illuminated fraction follows from the phase angle, and the phase bucket is
- * the age rounded to one of eight equal segments. No ephemeris or network is
- * needed, so the home screen's moon works fully offline.
- *
- * Sources:
- *  - Jean Meeus, *Astronomical Algorithms* (2nd ed.), ch. 49 (phases of the Moon)
- *    and the mean synodic month 29.530588853 days.
- *  - Reference new moon epoch JD 2451550.1 (2000-01-06, the first new moon of
- *    2000), the constant used by the common simplified implementations.
- *
- * Accuracy: new/full moons land within ~1 day of the true instant across the app's
- * date range — ample for the phase icon, name, illumination and 月齢 the home shows.
+ * Offline moon-phase calculator, pure `kotlin.math` so both platforms give identical results.
+ * Simplified "moon age" method (Meeus, Astronomical Algorithms 2nd ed., ch. 49): age = days
+ * since a reference new moon mod the mean synodic month; new/full land within ~1 day of true.
  */
 object MoonPhaseCalculator {
     /** Mean synodic month (new moon to new moon), in days. */
@@ -47,7 +29,6 @@ object MoonPhaseCalculator {
 
     private const val MILLIS_PER_DAY = 86_400_000.0
 
-    /** The eight phase buckets in synodic order; index 0 and 8 both wrap to new. */
     private val PHASE_ORDER = listOf(
         MoonPhaseKey.NEW_MOON,
         MoonPhaseKey.WAXING_CRESCENT,
@@ -59,11 +40,7 @@ object MoonPhaseCalculator {
         MoonPhaseKey.WANING_CRESCENT,
     )
 
-    /**
-     * The moon phase for [date] as seen in [zone]. The day is represented at local
-     * noon, a stable mid-day instant that keeps the result on the intended
-     * calendar day regardless of the observer's offset.
-     */
+    /** The moon phase for [date] in [zone], evaluated at local noon so it stays on the intended day. */
     fun phaseFor(date: LocalDate, zone: TimeZone): MoonPhase {
         val instant = date.atTime(hour = 12, minute = 0).toInstant(zone)
         val julianDay = instant.toEpochMilliseconds() / MILLIS_PER_DAY + UNIX_EPOCH_JD
@@ -75,7 +52,7 @@ object MoonPhaseCalculator {
         val fraction = age / SYNODIC_MONTH
         val illumination = ((1 - cos(2 * PI * fraction)) / 2).coerceIn(0.0, 1.0)
 
-        // Round the fraction onto one of eight equal buckets (half-up); 8 wraps to 0.
+        // Round half-up onto eight equal buckets; 8 wraps to 0.
         val index = floor(fraction * 8 + 0.5).toInt() % 8
 
         return MoonPhase(
@@ -85,19 +62,13 @@ object MoonPhaseCalculator {
         )
     }
 
-    /**
-     * Convenience for callers that only hold an epoch-millis timestamp (e.g. a diary
-     * entry's creation time) and no kotlinx-datetime types. Resolves the calendar day
-     * in the system zone, then delegates to [phaseFor]. Single, non-defaulted
-     * parameter so it bridges cleanly to Swift/ObjC.
-     */
+    /** [phaseFor] on the system-zone calendar day of [epochMillis]. */
     fun phaseForEpochMillis(epochMillis: Long): MoonPhase {
         val zone = TimeZone.currentSystemDefault()
         val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone).date
         return phaseFor(date, zone)
     }
 
-    /** The four principal (quarter) phases the "next" hint reports. */
     private val PRINCIPAL_PHASES = setOf(
         MoonPhaseKey.NEW_MOON,
         MoonPhaseKey.FIRST_QUARTER,
@@ -105,12 +76,7 @@ object MoonPhaseCalculator {
         MoonPhaseKey.LAST_QUARTER,
     )
 
-    /**
-     * The next principal phase (新月 / 上弦 / 満月 / 下弦) strictly after [after], for
-     * the 今日の月 "next ▶" line. Built purely on [phaseFor] — a day-by-day forward
-     * scan for the onset of the next principal bucket — so it reuses the calculator
-     * rather than adding any new moon math. Bounded to one synodic month.
-     */
+    /** The next principal phase (新月 / 上弦 / 満月 / 下弦) strictly after [after], by day-by-day scan. */
     fun nextPrincipalPhase(after: LocalDate, zone: TimeZone): PrincipalPhase {
         var previousKey = phaseFor(after, zone).phaseKey
         var date = after
@@ -127,5 +93,4 @@ object MoonPhaseCalculator {
     }
 }
 
-/** A principal moon phase and the day it next occurs. */
 data class PrincipalPhase(val date: LocalDate, val phaseKey: MoonPhaseKey)

@@ -29,7 +29,6 @@ private class CalendarTestClock(private val instant: Instant) : Clock {
 }
 
 private class FakeCalendarRepository : CalendarRepository {
-    /** observeMonth に渡ってきた (year, month) を記録して、そのまま 1 日分を返す。 */
     val requested = mutableListOf<Pair<Int, Int>>()
 
     override fun observeMonth(year: Int, month: Int, zone: TimeZone): Flow<List<CalendarDay>> {
@@ -57,7 +56,6 @@ private class FakeCalendarRepository : CalendarRepository {
     override val syncStatus: StateFlow<SyncPhase> = MutableStateFlow(SyncPhase.Idle)
 }
 
-/** 表示中の月の決まり方と、前後移動・今日へ戻るの動きを固定する。 */
 class CalendarViewModelTest {
 
     @BeforeTest

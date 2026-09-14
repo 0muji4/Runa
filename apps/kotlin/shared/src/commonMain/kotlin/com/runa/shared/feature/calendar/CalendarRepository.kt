@@ -14,40 +14,23 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * The calendar boundary the UI depends on. It is **local-first**: [observeMonth]
- * and [observeEntriesOn] are composed purely from the on-device diary DB plus the
- * offline [com.runa.shared.feature.today.moon.MoonPhaseCalculator], so the whole
- * screen renders with no network (DoD#1/#5). The only network touch is [refresh],
- * which reconciles other devices' entries via the existing diary sync.
+ * Calendar boundary for the UI. Local-first: the observe streams come from the
+ * on-device diary DB only; [refresh] is the sole network touch and never blocks render.
  */
 interface CalendarRepository {
 
-    /** Live [CalendarDay] list for the month, grouped by the user's local date in
-     *  [zone]. Re-emits on every local diary write and every applied server change. */
+    /** Live [CalendarDay] list for the month, grouped by local date in [zone]. */
     fun observeMonth(year: Int, month: Int, zone: TimeZone): Flow<List<CalendarDay>>
 
-    /** Live diary entries whose local date is the given day (for the day-tap view). */
     fun observeEntriesOn(year: Int, month: Int, day: Int, zone: TimeZone): Flow<List<DiaryEntry>>
 
-    /**
-     * Reconcile the month with the server: push/pull via the diary sync (this is
-     * how entries written on another device arrive locally) and confirm against the
-     * server-side authoritative counts. Never on the render path; offline is a
-     * no-op that leaves the local render intact.
-     */
+    /** Push/pull via the diary sync so other devices' entries arrive; offline is a no-op. */
     suspend fun refresh(year: Int, month: Int, zone: TimeZone): Result<Unit>
 
-    /** The diary sync phase, surfaced as the calendar's quiet banner. */
     val syncStatus: StateFlow<SyncPhase>
 }
 
-/**
- * Default [CalendarRepository]. Adds no new persistence: it observes the existing
- * [DiaryRepository] entry stream and folds each month/day together with the shared
- * moon phase via [CalendarGrid]. [refresh] delegates cross-device reconciliation to
- * [DiaryRepository.sync] and then probes `GET /diary/calendar` — the server's count
- * of record, used only for consistency confirmation, never to draw the grid.
- */
+/** Default [CalendarRepository]: folds the [DiaryRepository] stream through [CalendarGrid]; no own persistence. */
 class DefaultCalendarRepository(
     private val diaryRepository: DiaryRepository,
     private val apiClient: ApiClient,
@@ -69,14 +52,11 @@ class DefaultCalendarRepository(
 
     override suspend fun refresh(year: Int, month: Int, zone: TimeZone): Result<Unit> {
         val result = diaryRepository.sync()
-        // Auxiliary: confirm the server's authoritative per-day counts once the pull
-        // has landed other devices' entries locally. Failures (offline) are ignored;
-        // the local render is already correct.
+        // Server counts are a consistency probe only, never used to draw; failures ignored.
         result.onSuccess { runCatching { apiClient.getCalendar(year, month, zone.id) } }
         return result
     }
 
-    /** Group visible entries by day-of-month for [year]/[month], in [zone]. */
     private fun countByDay(entries: List<DiaryEntry>, year: Int, month: Int, zone: TimeZone): Map<Int, Int> {
         val counts = HashMap<Int, Int>()
         for (entry in entries) {

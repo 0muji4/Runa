@@ -5,12 +5,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-/**
- * [toAppError] classification — the shared error taxonomy the state screens depend
- * on: a 401 becomes an [AppError.Auth] (re-auth CTA), any other server response is
- * an [AppError.Server], and a non-[ApiException] (the network never answered) is
- * [AppError.Offline].
- */
 class AppErrorTest {
 
     @Test

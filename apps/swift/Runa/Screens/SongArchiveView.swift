@@ -26,11 +26,8 @@ final class SongArchiveObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// 08 これまでの一曲. The song archive (newest first) plus the local play history.
-/// Every row shows Apple's badge and the list carries the iTunes attribution, as
-/// Apple's Promo Content terms require for artwork/previews
-/// (docs/dd/todays-song-itunes-preview.md, Q4); the play history is text only.
-/// Tapping a song plays it through the shared player and returns to the player (07).
+/// これまでの一曲: the song archive plus the local play history. Apple's Promo Content terms
+/// require the badge and iTunes attribution here (docs/dd/todays-song-itunes-preview.md).
 struct SongArchiveView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var archive = SongArchiveObservable()
@@ -46,13 +43,11 @@ struct SongArchiveView: View {
                 archiveList
             }
 
-            // Empty / initial-loading / load-failure route through the shared state
-            // surfaces (over the list, which is offline-tolerant once a page landed).
+            // State overlay only while no page has landed; the list is offline-tolerant after that.
             if archive.state?.songs.isEmpty ?? true {
                 stateOverlay
             }
         }
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }

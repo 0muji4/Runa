@@ -1,19 +1,7 @@
 import SwiftUI
 import Shared
 
-/// The four shared state screens — LUNA's 空 / オフライン / ローディング / エラー
-/// surfaces (confirmed designs 24–27). Every feature renders these instead of
-/// re-implementing loading / empty / offline / error, so the world-view (the moon
-/// motif, the quiet voice) stays consistent and identical to Android's
-/// `RunaStateViews`.
-///
-/// Observables decode the shared `UiState<T>` into a native Swift enum via [runaDecode]
-/// (SKIE bridges the generic sealed type to a bare protocol without `onEnum`), and the
-/// views hand each case to one of these components. The emblems (`GlowingMoon` / `NewMoonEmblem` /
-/// `CloudedMoon` / `StumbleEmblem`) are the fixed cross-theme motif from
-/// `MoonArt.swift`; the surrounding text and CTAs read the theme tokens. The loading
-/// indicator is a quiet moon + three dots (never a spinner) and honors reduced
-/// motion.
+/// The shared empty / offline / loading / error surfaces every feature renders.
 
 // MARK: - Re-authenticate environment
 
@@ -22,10 +10,7 @@ private struct RunaReauthenticateKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// The app-wide re-authenticate action (clears the session so the shared auth
-    /// state drops to sign-in). Provided once at the root; read by `RunaErrorView`'s
-    /// auth CTA. Mirrors Android's `LocalReauthenticate`; the global
-    /// `TokenStore.sessionExpired` signal remains the primary re-auth path (DoD #3).
+    /// The app-wide re-authenticate action (clears the session so auth drops to sign-in).
     var runaReauthenticate: () -> Void {
         get { self[RunaReauthenticateKey.self] }
         set { self[RunaReauthenticateKey.self] = newValue }
@@ -34,9 +19,7 @@ extension EnvironmentValues {
 
 // MARK: - UiState decoding (SKIE)
 
-/// A page-level state decoded from the shared, generic `UiState<T>`. SKIE bridges the
-/// *generic* sealed `UiState` to a bare Swift protocol without `onEnum` support, so we
-/// decode it with `as?` casts to the generated case classes (see [runaDecode]).
+/// A page-level state decoded from the shared, generic `UiState<T>` via [runaDecode].
 enum RunaUi<T> {
     case loading
     case empty
@@ -44,9 +27,8 @@ enum RunaUi<T> {
     case failure(AppError)
 }
 
-/// Decode a SKIE `UiState` emission into a native [RunaUi]. The content payload arrives
-/// type-erased from the generic bridge (`UiStateContent<AnyObject>`), so it is downcast
-/// to [T] here — a list payload bridges from `NSArray`, an object payload from its class.
+/// Decode a SKIE `UiState` emission into a native [RunaUi]. SKIE bridges the generic sealed
+/// type to a bare protocol without `onEnum`, so cases are matched by `as?` casts.
 func runaDecode<T>(_ value: Any, as type: T.Type) -> RunaUi<T> {
     if value is UiStateLoading { return .loading }
     if value is UiStateEmpty { return .empty }
@@ -59,7 +41,7 @@ func runaDecode<T>(_ value: Any, as type: T.Type) -> RunaUi<T> {
 
 // MARK: - Loading (26)
 
-/// Loading: a quiet glowing moon + three dots. Never a spinner; reduced-motion safe.
+/// Loading: glowing moon + three dots; reduced-motion safe.
 struct RunaLoadingView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -79,7 +61,7 @@ struct RunaLoadingView: View {
 
 // MARK: - Empty (24)
 
-/// Empty: the new-moon emblem over a quiet invitation. Copy is per-feature.
+/// Empty: new-moon emblem over per-feature copy.
 struct RunaEmptyView: View {
     @Environment(\.runaTheme) private var runaTheme
     let title: String
@@ -106,8 +88,7 @@ struct RunaEmptyView: View {
 
 // MARK: - Offline (25)
 
-/// Offline: the clouded moon. Only shown when there is nothing cached to render;
-/// otherwise offline rides along as a `RunaSyncBanner` over the content.
+/// Offline: only shown when there is nothing cached to render; otherwise `RunaSyncBanner`.
 struct RunaOfflineView: View {
     @Environment(\.runaTheme) private var runaTheme
     let onRetry: () -> Void
@@ -129,8 +110,7 @@ struct RunaOfflineView: View {
 
 // MARK: - Error (27)
 
-/// Error: the stumble emblem. Does not apologize — says what happened and how to go
-/// on, in the world's voice. The auth variant overrides the copy + CTA.
+/// Error: stumble emblem; the auth variant overrides the copy + CTA.
 struct RunaErrorView: View {
     @Environment(\.runaTheme) private var runaTheme
     var title: String = L.stateErrorTitle
@@ -155,8 +135,7 @@ struct RunaErrorView: View {
 
 // MARK: - Failure dispatch (AppError → the right surface)
 
-/// Maps a classified `AppError` to the right full-screen surface: offline → retry,
-/// auth → re-authenticate (via the environment), server/unknown → retry.
+/// Maps an `AppError` to the right full-screen surface.
 struct RunaFailureView: View {
     @Environment(\.runaReauthenticate) private var reauthenticate
     let error: AppError
@@ -181,9 +160,7 @@ struct RunaFailureView: View {
 
 // MARK: - Sync banner
 
-/// The quiet status line shown over cached content (DoD #2): offline/error only —
-/// a running sync is signalled by the screen's own refresh, so idle/syncing render
-/// nothing.
+/// Status line shown over cached content; offline/error only, idle/syncing render nothing.
 struct RunaSyncBanner: View {
     @Environment(\.runaTheme) private var runaTheme
     let phase: SyncPhase
@@ -202,15 +179,14 @@ struct RunaSyncBanner: View {
         switch phase {
         case .offline: return L.stateBannerOffline
         case .error: return L.stateBannerError
-        default: return nil // idle / syncing stay silent
+        default: return nil
         }
     }
 }
 
 // MARK: - Shared pieces
 
-/// Centered column the state surfaces share. Fills the space it is given (a caller
-/// inside a scroll pins a height via `.frame(height:)`).
+/// Centered column the state surfaces share; fills the space it is given.
 private struct RunaStateScaffold<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
@@ -223,7 +199,7 @@ private struct RunaStateScaffold<Content: View>: View {
     }
 }
 
-/// A bordered pill CTA. `accent` uses the moonlight-pink accent, else a quiet subtle outline.
+/// A bordered pill CTA.
 private struct RunaPillButton: View {
     @Environment(\.runaTheme) private var runaTheme
     let label: String
@@ -245,7 +221,7 @@ private struct RunaPillButton: View {
     }
 }
 
-/// Three quiet dots. A staggered fade unless `animate` is false (reduced motion).
+/// Three dots with a staggered fade unless `animate` is false (reduced motion).
 private struct RunaThreeDotProgress: View {
     @Environment(\.runaTheme) private var runaTheme
     var animate: Bool

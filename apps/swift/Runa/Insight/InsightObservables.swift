@@ -1,8 +1,7 @@
 import Foundation
 import Shared
 
-/// The insight letter's page state, decoded from the shared `UiState<Insight>` into a
-/// native Swift enum. Offline/sync ride on `.content` as a `SyncPhase`.
+/// The insight letter's page state, decoded from the shared `UiState<Insight>`.
 enum InsightUi {
     case loading
     case empty
@@ -10,20 +9,17 @@ enum InsightUi {
     case failure(AppError)
 }
 
-/// ObservableObject bridge over the shared `InsightViewModel` (16 インサイト). Collects
-/// the SKIE-bridged `StateFlow`, decodes to [InsightUi], and republishes on the main
-/// actor; the period toggle and prev/next forward straight to the shared VM.
+/// ObservableObject bridge over the shared `InsightViewModel`.
 @MainActor
 final class InsightObservable: ObservableObject {
     @Published private(set) var ui: InsightUi = .loading
-    /// The period chrome (label + week/month mode), shown over content and empty alike.
+    /// Period label + week/month mode, shown over content and empty alike.
     @Published private(set) var header: InsightHeader?
 
     private let viewModel: InsightViewModel
     private var collectTask: Task<Void, Never>?
     private var headerTask: Task<Void, Never>?
-    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
-    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    // Koin の factory 束縛で画面ごとに新しい実体になるため、deinit で破棄する。
     private let owner = ViewModelOwner()
 
     init(viewModel: InsightViewModel = resolveInsightViewModel()) {

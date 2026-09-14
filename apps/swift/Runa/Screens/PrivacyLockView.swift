@@ -1,11 +1,7 @@
 import SwiftUI
 import Shared
 
-/// プライバシー・ロック (22). The confirmed design's パスコード / Face ID / すぐにロック
-/// controls are simplified to one ON/OFF toggle (the agreed spec-minimal model):
-/// when on, the app requires Face ID / Touch ID — with the device passcode as
-/// fallback — on launch/resume. A quiet notice appears when the device has no
-/// security set up (enabling the lock would then be ineffective).
+/// プライバシー・ロック: one ON/OFF toggle for the biometric lock (device passcode as fallback).
 struct PrivacyLockView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Environment(\.dismiss) private var dismiss
@@ -48,7 +44,6 @@ struct PrivacyLockView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }

@@ -1,10 +1,7 @@
 import Foundation
 import Shared
 
-/// The diary list's page state, mapped from the shared `UiState<List<DiaryEntry>>`
-/// into a native Swift enum in the observable so the view never touches SKIE
-/// generics. Offline/sync ride along on `.content` as a `SyncPhase` (the quiet
-/// banner); local-first means `.failure` effectively never occurs.
+/// The diary list's page state, decoded from the shared `UiState<List<DiaryEntry>>`.
 enum DiaryListUi {
     case loading
     case empty
@@ -12,9 +9,7 @@ enum DiaryListUi {
     case failure(AppError)
 }
 
-/// ObservableObject bridge over the shared `DiaryListViewModel`. Collects the
-/// SKIE-bridged `StateFlow<UiState<…>>`, maps each emission to [DiaryListUi], and
-/// republishes on the main actor; action methods forward straight to the shared VM.
+/// ObservableObject bridge over the shared `DiaryListViewModel`.
 final class DiaryListObservable: ObservableObject {
     @Published private(set) var ui: DiaryListUi = .loading
 
@@ -58,8 +53,7 @@ final class DiaryEditorObservable: ObservableObject {
 
     private let viewModel: DiaryEditorViewModel
     private var collectTask: Task<Void, Never>?
-    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
-    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    // Koin の factory 束縛で画面ごとに新しい実体になるため、deinit で破棄する。
     private let owner = ViewModelOwner()
 
     init(clientId: String?) {
@@ -67,8 +61,7 @@ final class DiaryEditorObservable: ObservableObject {
         startCollecting()
     }
 
-    /// New entry backdated to a calendar day (12 の空の日から綴る), created_at set to
-    /// that day's local noon.
+    /// New entry backdated to a calendar day; created_at is that day's local noon.
     init(backdateEpochMs: Int64) {
         self.viewModel = resolveNewDiaryEditorViewModelOn(createdAtEpochMs: backdateEpochMs)
         startCollecting()
@@ -95,14 +88,9 @@ final class DiaryEditorObservable: ObservableObject {
     }
 }
 
-// Mood options live in the shared `DiaryMood` (com.runa.shared.feature.diary), the
-// single source the editor's chips and the insight aggregation both read. iOS reaches
-// them through the shared free functions `diaryMoods()` / `diaryMoodValue(mood:)` /
-// `diaryMoodLabelJa(mood:)` (see DiaryMoodKt), the same way the moon phase name is
-// read — no local mirror to drift out of sync.
+// Mood options come from the shared `diaryMoods()` / `diaryMoodLabelJa(mood:)`; no local mirror.
 
-/// Quiet Japanese date formatting for the diary. The design shows the day and the
-/// moon phase — never a clock time — so the record stays timeless.
+/// Japanese date formatting for the diary (day and weekday only, never a clock time).
 enum DiaryDate {
     private static func formatter(_ pattern: String) -> DateFormatter {
         let f = DateFormatter()
@@ -118,7 +106,7 @@ enum DiaryDate {
         dayFmt.string(from: Date(timeIntervalSince1970: Double(epochMs) / 1000.0))
     }
 
-    /// e.g. 日曜 — short Japanese weekday for the editor/detail headers.
+    /// e.g. 日曜.
     static func weekday(_ epochMs: Int64) -> String {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current

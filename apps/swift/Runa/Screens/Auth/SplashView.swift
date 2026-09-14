@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Quiet startup splash, shown while the shared auth state is `Restoring` (the
-/// app is checking the stored session). The glowing moon over the LUNA wordmark.
+/// Startup splash, shown while the shared auth state is `Restoring`.
 struct SplashView: View {
     @Environment(\.runaTheme) private var runaTheme
     var body: some View {

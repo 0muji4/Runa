@@ -14,21 +14,16 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/storage/memobject"
 )
 
-// storedObject is the metadata a client's direct upload would have left behind.
 func storedObject() storage.ObjectInfo {
 	return storage.ObjectInfo{Size: 512, ContentType: "image/jpeg"}
 }
 
-// Everywhere else in this package the background runner is replaced with an
-// inline one (syncBackground in helpers_test.go), so the `go f()` the
-// constructors default to never runs. These build the services without that
-// override; synctest.Wait blocks until the goroutine finishes, which needs no
-// polling or a WaitGroup the production code does not have.
+// These build the services without the inline background runner; synctest.Wait
+// blocks until the default `go f()` goroutine finishes.
 
 func TestGalleryDeletePurgesObjectInBackground(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		objects := memobject.New()
-		// No WithBackgroundRunner: this is the wiring cmd/api builds.
 		svc := service.NewGalleryService(memgallery.New(), objects, galleryConfig(), fixedNow)
 
 		ctx := t.Context()
@@ -43,8 +38,6 @@ func TestGalleryDeletePurgesObjectInBackground(t *testing.T) {
 		if err := svc.Delete(ctx, userA, img.Image.ID); err != nil {
 			t.Fatalf("Delete() error = %v, want nil", err)
 		}
-		// Delete returns once the row is soft-deleted; the removal is still in
-		// flight on its own goroutine.
 		synctest.Wait()
 
 		if !objects.Removed(key) {

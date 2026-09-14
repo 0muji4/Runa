@@ -11,15 +11,10 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 )
 
-// exportSchemaVersion is the export payload's schema version. Bump it on any
-// breaking change to the export shape so clients can branch on it.
+// exportSchemaVersion must be bumped on any breaking change to the export shape.
 const exportSchemaVersion = 1
 
-// Account is the HTTP transport for account-data management: display-name update,
-// self-service export and account deletion. GET /me stays on the Auth handler
-// (identity read); these operations mutate or aggregate the whole account and
-// compose several stores, so they live in their own handler backed by
-// AccountService.
+// Account is the HTTP transport for display-name update, data export and account deletion.
 type Account struct {
 	svc    *service.AccountService
 	logger *slog.Logger
@@ -133,8 +128,7 @@ func (a *Account) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusNoContent, nil, a.logger)
 }
 
-// decode reads a JSON body into dst, rejecting unknown fields. It writes a 400 on
-// failure and reports whether decoding succeeded.
+// decode reads a JSON body into dst (unknown fields rejected), writing a 400 on failure.
 func (a *Account) decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()

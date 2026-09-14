@@ -1,12 +1,4 @@
 // Command api is the Runa backend HTTP server entry point.
-//
-// Boot sequence:
-//  1. load config from env
-//  2. init a JSON slog logger at the configured level
-//  3. try to open a pgx pool with a short retry loop, but DO NOT fail if the DB
-//     is unreachable — /healthz is a pure liveness check and must keep serving
-//  4. if the pool pings, run golang-migrate Up() (ErrNoChange = success)
-//  5. build the chi router and serve with graceful shutdown on SIGINT/SIGTERM
 package main
 
 import (
@@ -42,20 +34,16 @@ const (
 )
 
 const (
-	// dbConnectAttempts / dbConnectBackoff bound the startup retry loop so a
-	// slow-starting Postgres (docker compose) is tolerated without blocking boot.
+	// dbConnectAttempts / dbConnectBackoff bound the startup retry loop.
 	dbConnectAttempts = 5
 	dbConnectBackoff  = 2 * time.Second
 
-	// migrationsPath is the golang-migrate file source. Migrations are copied
-	// next to the binary in the container image (see Dockerfile).
+	// migrationsPath is relative to the binary; the container image copies migrations next to it.
 	migrationsPath = "file://migrations"
 
-	// itunesTimeout bounds one iTunes lookup (plus its artwork check). Admin
-	// registration waits on it; background refreshes never block a reader.
+	// itunesTimeout bounds one iTunes lookup plus its artwork check.
 	itunesTimeout = 5 * time.Second
 
-	// shutdownTimeout bounds graceful shutdown before forced close.
 	shutdownTimeout = 10 * time.Second
 )
 
@@ -66,7 +54,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Best-effort DB pool: nil when unreachable. Liveness never depends on it.
+	// Best-effort DB pool: nil when unreachable. Boot and /healthz must not depend on it.
 	pool := connectDB(ctx, cfg.DatabaseURL, logger)
 	if pool != nil {
 		defer pool.Close()
@@ -75,9 +63,6 @@ func main() {
 
 	healthHandler := handler.NewHealth(service.NewHealth(), logger)
 
-	// Auth wiring. The repository tolerates a nil pool (returns ErrNoDatabase),
-	// so the process still boots for liveness when the DB is down; the auth
-	// endpoints themselves require a live DB.
 	authRepo := repository.NewAuthRepository(pool)
 	issuer := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL)
 	authService := service.NewAuthService(service.AuthConfig{
@@ -90,28 +75,18 @@ func main() {
 	})
 	authHandler := handler.NewAuth(authService, logger)
 
-	// Diary wiring. Same nil-pool tolerance as auth: the repository returns
-	// ErrNoDatabase when the DB is down, so liveness still boots.
 	diaryRepo := repository.NewDiaryRepository(pool)
 	diaryService := service.NewDiaryService(diaryRepo, nil)
 	diaryHandler := handler.NewDiary(diaryService, logger)
 
-	// Today wiring (daily quote + song, archive, play log). Same nil-pool
-	// tolerance as the other features. Song metadata comes from the iTunes
-	// Search API at registration and is refreshed in the background on read.
 	todayRepo := repository.NewTodayRepository(pool)
 	todayService := service.NewTodayService(todayRepo, itunes.NewClient(cfg.ITunesBaseURL, &http.Client{Timeout: itunesTimeout}), nil,
 		service.WithTodayLogger(logger))
 	todayHandler := handler.NewToday(todayService, logger)
 
-	// Insights wiring: the auxiliary server-side aggregation reads the same diary
-	// store (no new table). The client renders from its own local aggregation.
 	insightsService := service.NewInsightsService(diaryRepo)
 	insightsHandler := handler.NewInsights(insightsService, logger)
 
-	// Gallery wiring. The object store is nil when S3_ENDPOINT is unset (the
-	// gallery URL endpoints then answer 503) so the process still boots without
-	// storage. When present, ensure the bucket exists (best-effort).
 	objectStore := newObjectStore(ctx, cfg, logger)
 	galleryRepo := repository.NewGalleryRepository(pool)
 	galleryService := service.NewGalleryService(galleryRepo, objectStore, service.GalleryConfig{
@@ -122,19 +97,11 @@ func main() {
 	}, nil)
 	galleryHandler := handler.NewGallery(galleryService, logger)
 
-	// Account wiring: profile update, self-service export and account deletion.
-	// It composes the auth, diary and gallery stores plus the object store because
-	// "the account" spans all of them. Export presigns image URLs with the same
-	// lifetime as gallery view URLs.
 	accountService := service.NewAccountService(authRepo, diaryRepo, galleryRepo, objectStore, service.AccountConfig{
 		ExportURLTTL: cfg.GalleryViewURLTTL,
 	}, nil)
 	accountHandler := handler.NewAccount(accountService, logger)
 
-	// Devices wiring: registers a client's push token + reminder preference for a
-	// future server-initiated notification path. Same nil-pool tolerance as the
-	// other features. This slice's nightly reminder is a local, on-device
-	// notification, so no push is sent here yet.
 	deviceRepo := repository.NewDeviceRepository(pool)
 	deviceService := service.NewDeviceService(deviceRepo, nil)
 	deviceHandler := handler.NewDevices(deviceService, logger)
@@ -161,7 +128,6 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	// Serve in the background so main can wait on the shutdown signal.
 	serveErr := make(chan error, 1)
 	go func() {
 		logger.Info("server starting", slog.String("addr", srv.Addr), slog.String("env", cfg.AppEnv))
@@ -203,8 +169,7 @@ func newLogger(level string) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl}))
 }
 
-// connectDB opens a pgx pool with a short retry loop. On persistent failure it
-// logs a warning and returns nil so the server keeps serving liveness traffic.
+// connectDB opens a pgx pool with a short retry loop; on persistent failure it returns nil.
 func connectDB(ctx context.Context, url string, logger *slog.Logger) *pgxpool.Pool {
 	for attempt := 1; attempt <= dbConnectAttempts; attempt++ {
 		pool, err := pgxpool.New(ctx, url)
@@ -238,11 +203,8 @@ func connectDB(ctx context.Context, url string, logger *slog.Logger) *pgxpool.Po
 	return nil
 }
 
-// newObjectStore builds the S3-compatible object store from config. It returns
-// nil when storage is unconfigured (S3_ENDPOINT unset), so the server boots with
-// the gallery URL endpoints disabled (503) rather than failing. When present it
-// ensures the bucket exists (best-effort; a failure only defers bucket creation
-// to first use).
+// newObjectStore builds the object store from config, or returns nil when S3_ENDPOINT is
+// unset (gallery URL endpoints then answer 503). Bucket creation is best-effort.
 func newObjectStore(ctx context.Context, cfg config.Config, logger *slog.Logger) storage.ObjectStore {
 	store, err := storage.NewMinioObjectStore(storage.Config{
 		Endpoint:       cfg.S3Endpoint,

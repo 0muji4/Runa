@@ -1,8 +1,4 @@
-// Package auth holds the cryptographic and token primitives for authentication:
-// password hashing, access-token minting/verification, refresh-token generation,
-// OIDC (Apple/Google) ID-token verification, the Bearer middleware and a simple
-// rate limiter. It has no knowledge of HTTP responses or persistence so each
-// piece is independently testable.
+// Package auth holds the cryptographic and token primitives for authentication.
 package auth
 
 import (
@@ -16,9 +12,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// Argon2Params configures the argon2id password hash. Defaults follow the OWASP
-// Password Storage Cheat Sheet (m=19 MiB, t=2, p=1), the current first-choice
-// algorithm for password storage.
+// Argon2Params configures the argon2id password hash.
 type Argon2Params struct {
 	Memory      uint32 // KiB
 	Iterations  uint32
@@ -27,15 +21,13 @@ type Argon2Params struct {
 	KeyLength   uint32 // bytes
 }
 
-// Verification uses the parameters from the stored hash, so these bound the work
-// a corrupt password_hash can cause. Both are far above the defaults below,
-// leaving room to raise the real cost later.
+// Verification uses the parameters from the stored hash; these bound the work a corrupt password_hash can cause.
 const (
 	maxArgon2Memory     = 1 << 20 // KiB (1 GiB)
 	maxArgon2Iterations = 16
 )
 
-// DefaultArgon2Params returns the OWASP-recommended argon2id parameters.
+// DefaultArgon2Params returns the OWASP Password Storage Cheat Sheet argon2id parameters.
 func DefaultArgon2Params() Argon2Params {
 	return Argon2Params{
 		Memory:      19 * 1024, // 19 MiB
@@ -47,17 +39,13 @@ func DefaultArgon2Params() Argon2Params {
 }
 
 var (
-	// ErrInvalidHash is returned when an encoded hash is not a valid argon2id
-	// PHC string.
+	// ErrInvalidHash is returned when an encoded hash is not a valid argon2id PHC string.
 	ErrInvalidHash = errors.New("auth: invalid argon2 hash format")
-	// ErrIncompatibleVersion is returned when the encoded argon2 version differs
-	// from the one this build links against.
+	// ErrIncompatibleVersion is returned when the encoded argon2 version differs from the linked one.
 	ErrIncompatibleVersion = errors.New("auth: incompatible argon2 version")
 )
 
-// HashPassword returns a PHC-formatted argon2id hash embedding the random salt
-// and parameters, e.g. $argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>. Verifying
-// later needs only the encoded string.
+// HashPassword returns a PHC-formatted argon2id hash, e.g. $argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>.
 func HashPassword(password string, p Argon2Params) (string, error) {
 	salt := make([]byte, p.SaltLength)
 	if _, err := rand.Read(salt); err != nil {
@@ -74,8 +62,7 @@ func HashPassword(password string, p Argon2Params) (string, error) {
 	), nil
 }
 
-// VerifyPassword reports whether password matches the encoded argon2id hash. The
-// comparison is constant-time. A non-nil error means the hash was malformed.
+// VerifyPassword reports whether password matches the encoded argon2id hash in constant time; error means malformed hash.
 func VerifyPassword(password, encoded string) (bool, error) {
 	p, salt, want, err := decodeArgon2Hash(encoded)
 	if err != nil {
@@ -89,8 +76,7 @@ func VerifyPassword(password, encoded string) (bool, error) {
 	return subtle.ConstantTimeCompare(want, got) == 1, nil
 }
 
-// decodeArgon2Hash parses a PHC argon2id string back into its params, salt and
-// derived key.
+// decodeArgon2Hash parses a PHC argon2id string back into its params, salt and derived key.
 func decodeArgon2Hash(encoded string) (Argon2Params, []byte, []byte, error) {
 	// Layout: ["", "argon2id", "v=19", "m=..,t=..,p=..", <salt>, <key>].
 	parts := strings.Split(encoded, "$")

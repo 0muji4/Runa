@@ -1,8 +1,4 @@
-// Package memdiary is an in-memory implementation of repository.DiaryStore. It
-// backs the diary unit/integration tests (and lets the API run without Postgres)
-// so the suite stays green in CI, which has no database. It mirrors the pgx
-// implementation's semantics: idempotent upsert by (user_id, client_id), keyset
-// pagination, ownership scoping, soft delete and the updated_at delta.
+// Package memdiary is an in-memory implementation of repository.DiaryStore.
 package memdiary
 
 import (
@@ -39,7 +35,7 @@ func (s *Store) UpsertEntry(_ context.Context, p repository.UpsertDiaryParams) (
 	defer s.mu.Unlock()
 
 	if existing, ok := s.findByClient(p.UserID, p.ClientID); ok {
-		// Update in place, keeping id/created_at (matches ON CONFLICT DO UPDATE).
+		// Update in place, keeping id/created_at.
 		existing.BodyText = p.BodyText
 		existing.Mood = clonePtr(p.Mood)
 		existing.UpdatedAt = s.tick()
@@ -75,7 +71,6 @@ func (s *Store) ListEntries(_ context.Context, p repository.ListDiaryParams) ([]
 		}
 		out = append(out, e)
 	}
-	// Newest first: created_at DESC, then id DESC as a stable tiebreak.
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
 			return out[i].CreatedAt.After(out[j].CreatedAt)
@@ -150,8 +145,6 @@ func (s *Store) CountByLocalDate(_ context.Context, userID string, lo, hi time.T
 		if e.UserID != userID || e.DeletedAt != nil {
 			continue
 		}
-		// [lo, hi) as instants: the month window in loc, so an entry counts iff its
-		// local date falls in the month.
 		if e.CreatedAt.Before(lo) || !e.CreatedAt.Before(hi) {
 			continue
 		}
@@ -160,9 +153,7 @@ func (s *Store) CountByLocalDate(_ context.Context, userID string, lo, hi time.T
 	return counts, nil
 }
 
-// EntriesInRange returns a user's non-deleted entries created in [lo, hi), for the
-// insights aggregation. Ordering is unspecified; the caller aggregates. Mirrors the
-// pgx implementation so server-side insights match the client's local grouping.
+// EntriesInRange returns a user's non-deleted entries created in [lo, hi), in unspecified order.
 func (s *Store) EntriesInRange(_ context.Context, userID string, lo, hi time.Time) ([]repository.DiaryEntry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -180,7 +171,7 @@ func (s *Store) EntriesInRange(_ context.Context, userID string, lo, hi time.Tim
 	return out, nil
 }
 
-// findByClient locates an entry by (userID, clientID). Caller holds the lock.
+// findByClient locates an entry by (userID, clientID); caller holds the lock.
 func (s *Store) findByClient(userID, clientID string) (repository.DiaryEntry, bool) {
 	for _, e := range s.entries {
 		if e.UserID == userID && e.ClientID == clientID {
@@ -190,9 +181,7 @@ func (s *Store) findByClient(userID, clientID string) (repository.DiaryEntry, bo
 	return repository.DiaryEntry{}, false
 }
 
-// tick returns a strictly increasing timestamp so updated_at values never tie,
-// keeping the "updated_at > since" delta deterministic in fast tests. Caller
-// holds the lock.
+// tick returns a strictly increasing timestamp so updated_at values never tie; caller holds the lock.
 func (s *Store) tick() time.Time {
 	t := s.now()
 	if !t.After(s.lastNow) {
@@ -202,8 +191,7 @@ func (s *Store) tick() time.Time {
 	return t
 }
 
-// olderThanCursor reports whether e sorts after the cursor in (created_at DESC,
-// id DESC) order, i.e. belongs on a later page.
+// olderThanCursor reports whether e sorts after the cursor in (created_at DESC, id DESC) order.
 func olderThanCursor(e repository.DiaryEntry, c repository.DiaryCursor) bool {
 	if !e.CreatedAt.Equal(c.CreatedAt) {
 		return e.CreatedAt.Before(c.CreatedAt)
@@ -219,8 +207,7 @@ func clonePtr(p *string) *string {
 	return &v
 }
 
-// newID returns a random v4-style UUID string without pulling in a dependency
-// (same helper shape as memauth).
+// newID returns a random v4-style UUID string.
 func newID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

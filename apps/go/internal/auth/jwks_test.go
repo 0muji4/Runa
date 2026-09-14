@@ -14,17 +14,12 @@ import (
 	"time"
 )
 
-// RemoteJWKS: the path that talks to Apple's and Google's key endpoints. In
-// package auth because the cache clock and TTL are unexported; from outside,
-// testing the cache would mean waiting an hour.
-
 // jwksServer counts requests, so a test can tell a cache hit from a refetch.
 type jwksServer struct {
 	*httptest.Server
 	requests atomic.Int64
 }
 
-// newJWKSServer serves the given keys, keyed by kid.
 func newJWKSServer(t *testing.T, keys map[string]*rsa.PublicKey) *jwksServer {
 	t.Helper()
 	s := &jwksServer{}
@@ -39,7 +34,6 @@ func newJWKSServer(t *testing.T, keys map[string]*rsa.PublicKey) *jwksServer {
 	return s
 }
 
-// jwksDocumentFor renders keys in the JWKS shape the providers publish.
 func jwksDocumentFor(keys map[string]*rsa.PublicKey) map[string]any {
 	entries := make([]map[string]string, 0, len(keys))
 	for kid, pub := range keys {
@@ -187,8 +181,7 @@ func TestRemoteJWKS_SkipsNonRSAKeys(t *testing.T) {
 	t.Parallel()
 
 	priv := newTestKey(t)
-	// An unsupported key type must be skipped, not turned into a decode failure
-	// that blocks every login.
+
 	doc := jwksDocumentFor(map[string]*rsa.PublicKey{"rsa-kid": &priv.PublicKey})
 	doc["keys"] = append(doc["keys"].([]map[string]string), map[string]string{
 		"kty": "EC", "kid": "ec-kid", "crv": "P-256", "x": "abc", "y": "def",
@@ -216,7 +209,6 @@ func TestRemoteJWKS_SkipsNonRSAKeys(t *testing.T) {
 func TestRemoteJWKS_HonoursContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	// A provider that never answers: the context is the only way out.
 	blocked := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-blocked

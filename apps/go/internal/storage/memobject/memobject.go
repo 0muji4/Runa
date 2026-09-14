@@ -1,7 +1,4 @@
-// Package memobject is an in-memory storage.ObjectStore for tests. It signs
-// deterministic presigned URLs with no network I/O and records removals, so a test
-// can seed an object with Put, drive the service, and assert what was removed with
-// Removed/RemovedKeys.
+// Package memobject is an in-memory storage.ObjectStore for tests.
 package memobject
 
 import (
@@ -24,25 +21,22 @@ func New() *Store {
 	return &Store{objects: make(map[string]storage.ObjectInfo)}
 }
 
-// Compile-time check that Store satisfies the boundary the service depends on.
 var _ storage.ObjectStore = (*Store)(nil)
 
-// EnsureBucket is a no-op; there is no bucket to create in memory.
+// EnsureBucket is a no-op.
 func (s *Store) EnsureBucket(context.Context) error { return nil }
 
-// PresignPut returns a deterministic, non-network URL for the upload of key.
+// PresignPut returns a deterministic URL for the upload of key.
 func (s *Store) PresignPut(_ context.Context, key string, _ time.Duration) (string, error) {
 	return "https://objects.test/" + key + "?op=put", nil
 }
 
-// PresignGet returns a deterministic, non-network URL for the download of key.
+// PresignGet returns a deterministic URL for the download of key.
 func (s *Store) PresignGet(_ context.Context, key string, _ time.Duration) (string, error) {
 	return "https://objects.test/" + key + "?op=get", nil
 }
 
-// Stat returns the seeded object's metadata, or ErrObjectNotFound if the client
-// never PUT it (mirrors the real store: a presigned PUT does not create the
-// object, so registration re-verifies it here).
+// Stat returns the seeded object's metadata, or ErrObjectNotFound when Put was never called.
 func (s *Store) Stat(_ context.Context, key string) (storage.ObjectInfo, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -52,8 +46,7 @@ func (s *Store) Stat(_ context.Context, key string) (storage.ObjectInfo, error) 
 	return storage.ObjectInfo{}, storage.ErrObjectNotFound
 }
 
-// Remove records the key and drops it. Removing a missing key is not an error
-// (idempotent), matching the real store.
+// Remove records the key and drops it; a missing key is not an error.
 func (s *Store) Remove(_ context.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -62,7 +55,7 @@ func (s *Store) Remove(_ context.Context, key string) error {
 	return nil
 }
 
-// Put seeds an object as if the client had uploaded it directly to storage.
+// Put seeds an object as if the client had uploaded it.
 func (s *Store) Put(key string, info storage.ObjectInfo) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

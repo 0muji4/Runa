@@ -10,18 +10,15 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// Service-level auth errors. Handlers map these to HTTP status + error codes.
 var (
 	// ErrEmailTaken means signup hit an already-registered email.
 	ErrEmailTaken = errors.New("service: email already registered")
-	// ErrInvalidCredentials means email/password login failed. It is
-	// deliberately generic so it does not reveal whether the email exists.
+	// ErrInvalidCredentials means login failed; deliberately generic so it
+	// does not reveal whether the email exists.
 	ErrInvalidCredentials = errors.New("service: invalid credentials")
-	// ErrInvalidRefreshToken means the presented refresh token is unknown,
-	// revoked or expired.
+	// ErrInvalidRefreshToken means the refresh token is unknown, revoked or expired.
 	ErrInvalidRefreshToken = errors.New("service: invalid refresh token")
-	// ErrUserNotFound means an authenticated request referenced a user that no
-	// longer exists.
+	// ErrUserNotFound means an authenticated request referenced a deleted user.
 	ErrUserNotFound = errors.New("service: user not found")
 )
 
@@ -29,7 +26,7 @@ var (
 type Tokens struct {
 	AccessToken  string
 	RefreshToken string
-	ExpiresIn    int // access-token lifetime in seconds
+	ExpiresIn    int // seconds
 }
 
 // AuthResult pairs freshly issued tokens with the authenticated user.
@@ -51,12 +48,10 @@ type AuthConfig struct {
 	Google         auth.IDTokenVerifier
 	PasswordParams auth.Argon2Params
 	RefreshTTL     time.Duration
-	// Now is overridable in tests; defaults to time.Now.
-	Now func() time.Time
+	Now            func() time.Time
 }
 
-// AuthService implements the authentication use cases: email signup/login,
-// Apple/Google sign-in, refresh-token rotation, logout and self lookup.
+// AuthService implements the authentication use cases.
 type AuthService struct {
 	cfg AuthConfig
 	now func() time.Time
@@ -119,8 +114,7 @@ func (s *AuthService) LoginEmail(ctx context.Context, email, password string) (A
 	return s.completeLogin(ctx, user)
 }
 
-// LoginApple verifies an Apple ID token and signs the user in (creating the
-// account on first sign-in).
+// LoginApple verifies an Apple ID token and signs the user in.
 func (s *AuthService) LoginApple(ctx context.Context, idToken, displayName string) (AuthResult, error) {
 	identity, err := s.cfg.Apple.Verify(ctx, idToken)
 	if err != nil {
@@ -138,11 +132,8 @@ func (s *AuthService) LoginGoogle(ctx context.Context, idToken string) (AuthResu
 	return s.loginWithProvider(ctx, "google", identity, "")
 }
 
-// loginWithProvider gets or creates a user keyed by (provider, subject).
-//
-// Scope note: it links by provider subject only. Cross-provider linking by
-// shared email is deferred to a later slice because it is only safe for
-// verified emails and touches account-takeover concerns.
+// loginWithProvider gets or creates a user keyed by (provider, subject); it
+// never links accounts across providers by shared email.
 func (s *AuthService) loginWithProvider(ctx context.Context, provider string, id auth.OIDCIdentity, displayName string) (AuthResult, error) {
 	user, err := s.cfg.Store.GetUserByProviderSub(ctx, provider, id.Subject)
 	switch {
@@ -174,8 +165,7 @@ func (s *AuthService) loginWithProvider(ctx context.Context, provider string, id
 	return s.completeLogin(ctx, user)
 }
 
-// Refresh validates a refresh token, rotates it (revoke old + issue new) and
-// returns a fresh token bundle.
+// Refresh validates a refresh token, rotates it and returns a fresh token bundle.
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Tokens, error) {
 	hash := auth.HashRefreshToken(refreshToken)
 	stored, err := s.cfg.Store.GetRefreshTokenByHash(ctx, hash)
@@ -196,8 +186,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Tokens,
 	return s.issueTokens(ctx, stored.UserID)
 }
 
-// Logout revokes the presented refresh token. It is idempotent: revoking an
-// unknown token is not an error.
+// Logout revokes the presented refresh token; revoking an unknown token is not an error.
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	return s.cfg.Store.RevokeRefreshToken(ctx, auth.HashRefreshToken(refreshToken))
 }
@@ -214,7 +203,6 @@ func (s *AuthService) Me(ctx context.Context, userID string) (repository.User, e
 	return user, nil
 }
 
-// completeLogin issues tokens for an authenticated user and returns the pair.
 func (s *AuthService) completeLogin(ctx context.Context, user repository.User) (AuthResult, error) {
 	tokens, err := s.issueTokens(ctx, user.ID)
 	if err != nil {
@@ -223,8 +211,7 @@ func (s *AuthService) completeLogin(ctx context.Context, user repository.User) (
 	return AuthResult{Tokens: tokens, User: user}, nil
 }
 
-// issueTokens mints an access token and a rotated refresh token, persisting the
-// refresh token's hash.
+// issueTokens mints an access token and a refresh token, persisting the refresh token's hash.
 func (s *AuthService) issueTokens(ctx context.Context, userID string) (Tokens, error) {
 	access, expiresIn, err := s.cfg.Issuer.Issue(userID)
 	if err != nil {

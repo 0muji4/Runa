@@ -7,8 +7,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// RegisterDeviceInput is the device-registration payload. All fields are
-// client-supplied; the handler validates their shape before this is called.
+// RegisterDeviceInput is the device-registration payload, validated by the handler.
 type RegisterDeviceInput struct {
 	PushToken  string
 	Platform   string
@@ -16,8 +15,7 @@ type RegisterDeviceInput struct {
 	Enabled    bool
 }
 
-// DeviceService implements the devices use case over a DeviceStore. Every method
-// is scoped by userID so a caller can only ever register their own device.
+// DeviceService implements the devices use case over a DeviceStore.
 type DeviceService struct {
 	store repository.DeviceStore
 	now   func() time.Time
@@ -31,9 +29,7 @@ func NewDeviceService(store repository.DeviceStore, now func() time.Time) *Devic
 	return &DeviceService{store: store, now: now}
 }
 
-// Register idempotently registers (or, on a repeated push_token, updates) the
-// caller's device. Registration carries the user's reminder preference so a
-// future server-initiated notification path knows when/whether to push.
+// Register idempotently registers (or, on a repeated push_token, updates) the caller's device.
 func (s *DeviceService) Register(ctx context.Context, userID string, in RegisterDeviceInput) (repository.Device, error) {
 	return s.store.UpsertDevice(ctx, repository.UpsertDeviceParams{
 		UserID:     userID,

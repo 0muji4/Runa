@@ -6,9 +6,7 @@ import (
 	"time"
 )
 
-// baseConfig is the two-endpoint docker setup: the server reaches the store on
-// Endpoint (unreachable from tests) while presigned URLs must target the
-// client-reachable PublicEndpoint.
+// baseConfig is the two-endpoint docker setup; presigned URLs must target PublicEndpoint.
 func baseConfig() Config {
 	return Config{
 		Endpoint:       "minio:9000",
@@ -21,9 +19,6 @@ func baseConfig() Config {
 	}
 }
 
-// assertURL checks a presigned URL for the substrings that must (and must not)
-// appear in it, reporting the whole URL on failure so the mismatch is diagnosable
-// without re-running.
 func assertURL(t *testing.T, got string, wantContains, wantAbsent []string) {
 	t.Helper()
 	for _, want := range wantContains {

@@ -16,8 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Well-known provider endpoints and issuers. Audiences (client IDs) are supplied
-// per-deployment via config since they are app-specific.
+// Well-known provider JWKS endpoints.
 const (
 	AppleJWKSURL  = "https://appleid.apple.com/auth/keys"
 	GoogleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
@@ -26,13 +25,11 @@ const (
 var (
 	// AppleIssuers is the accepted `iss` set for Apple ID tokens.
 	AppleIssuers = []string{"https://appleid.apple.com"}
-	// GoogleIssuers is the accepted `iss` set for Google ID tokens (Google uses
-	// both the bare host and the https form).
+	// GoogleIssuers is the accepted `iss` set for Google ID tokens (Google emits both forms).
 	GoogleIssuers = []string{"https://accounts.google.com", "accounts.google.com"}
 )
 
-// ErrProviderVerification is returned when an Apple/Google ID token fails any
-// verification step (signature, issuer, audience, expiry, subject).
+// ErrProviderVerification is returned when an Apple/Google ID token fails any verification step.
 var ErrProviderVerification = errors.New("auth: provider token verification failed")
 
 // OIDCIdentity is the subset of verified ID-token claims the auth service needs.
@@ -43,8 +40,7 @@ type OIDCIdentity struct {
 	Name          string
 }
 
-// IDTokenVerifier verifies a provider ID token and returns its identity. Both
-// the real OIDCVerifier and test fakes satisfy it.
+// IDTokenVerifier verifies a provider ID token and returns its identity.
 type IDTokenVerifier interface {
 	Verify(ctx context.Context, idToken string) (OIDCIdentity, error)
 }
@@ -54,8 +50,7 @@ type KeySource interface {
 	Keys(ctx context.Context) (map[string]*rsa.PublicKey, error)
 }
 
-// OIDCVerifier verifies RS256 ID tokens against a JWKS, an issuer allow-list and
-// an audience allow-list.
+// OIDCVerifier verifies RS256 ID tokens against a JWKS, an issuer allow-list and an audience allow-list.
 type OIDCVerifier struct {
 	issuers   []string
 	audiences []string
@@ -63,15 +58,12 @@ type OIDCVerifier struct {
 	now       func() time.Time
 }
 
-// NewOIDCVerifier builds a verifier for the given issuers, audiences (client
-// IDs) and key source.
+// NewOIDCVerifier builds a verifier for the given issuers, audiences (client IDs) and key source.
 func NewOIDCVerifier(issuers, audiences []string, keys KeySource) *OIDCVerifier {
 	return &OIDCVerifier{issuers: issuers, audiences: audiences, keys: keys, now: time.Now}
 }
 
-// idTokenClaims covers the claims used across Apple and Google. email_verified
-// is `any` because Apple encodes it as the string "true" while Google uses a
-// JSON boolean.
+// idTokenClaims covers Apple and Google; email_verified is `any` because Apple sends the string "true", Google a bool.
 type idTokenClaims struct {
 	Email         string `json:"email"`
 	EmailVerified any    `json:"email_verified"`
@@ -153,8 +145,7 @@ func truthy(v any) bool {
 	}
 }
 
-// RemoteJWKS fetches and caches a provider's JWKS over HTTP. Providers rotate
-// keys rarely, so a time-based cache avoids a network round trip per token.
+// RemoteJWKS fetches and caches a provider's JWKS over HTTP.
 type RemoteJWKS struct {
 	url    string
 	client *http.Client
@@ -244,8 +235,7 @@ func parseJWKS(r io.Reader) (map[string]*rsa.PublicKey, error) {
 	return out, nil
 }
 
-// rsaPublicKeyFromJWK reconstructs an RSA public key from the base64url modulus
-// and exponent of a JWK.
+// rsaPublicKeyFromJWK reconstructs an RSA public key from a JWK's base64url modulus and exponent.
 func rsaPublicKeyFromJWK(nStr, eStr string) (*rsa.PublicKey, error) {
 	nBytes, err := base64.RawURLEncoding.DecodeString(nStr)
 	if err != nil {

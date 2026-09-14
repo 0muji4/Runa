@@ -12,13 +12,12 @@ import (
 // galleryColumns is the shared SELECT list; keep its order in sync with scanGalleryImage.
 const galleryColumns = `id, user_id, object_key, width, height, theme, created_at, deleted_at`
 
-// GalleryRepository is the pgx-backed implementation of GalleryStore. A nil pool
-// (DB unreachable at boot) makes every method return ErrNoDatabase.
+// GalleryRepository is the pgx-backed implementation of GalleryStore.
 type GalleryRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewGalleryRepository wraps a pgx pool.
+// NewGalleryRepository wraps a pgx pool; a nil pool makes every method return ErrNoDatabase.
 func NewGalleryRepository(pool *pgxpool.Pool) *GalleryRepository {
 	return &GalleryRepository{pool: pool}
 }
@@ -40,8 +39,7 @@ func (r *GalleryRepository) InsertImage(ctx context.Context, p InsertGalleryPara
 	if r.pool == nil {
 		return GalleryImage{}, ErrNoDatabase
 	}
-	// ON CONFLICT on the unique object_key makes a retried registration idempotent
-	// (keeps id/created_at, revives deleted_at → NULL with the latest metadata).
+	// ON CONFLICT on object_key makes a retried registration idempotent and revives deleted_at → NULL.
 	const q = `
 		INSERT INTO gallery_images (user_id, object_key, width, height, theme)
 		VALUES ($1, $2, $3, $4, $5)
@@ -63,7 +61,6 @@ func (r *GalleryRepository) ListImages(ctx context.Context, p ListGalleryParams)
 	if r.pool == nil {
 		return nil, ErrNoDatabase
 	}
-	// Keyset (not OFFSET) so inserts between page fetches never shift rows.
 	var (
 		rows pgx.Rows
 		err  error
@@ -115,8 +112,7 @@ func (r *GalleryRepository) SoftDeleteImage(ctx context.Context, userID, id stri
 	if r.pool == nil {
 		return "", ErrNoDatabase
 	}
-	// RETURNING object_key gives the caller the storage path to remove. COALESCE makes
-	// delete idempotent (an already-deleted own row still returns its key). No row → ErrNotFound.
+	// COALESCE makes delete idempotent: an already-deleted own row still returns its key.
 	const q = `
 		UPDATE gallery_images
 		SET deleted_at = COALESCE(deleted_at, now())
@@ -138,8 +134,7 @@ func (r *GalleryRepository) ListObjectKeys(ctx context.Context, userID string) (
 	if r.pool == nil {
 		return nil, ErrNoDatabase
 	}
-	// No deleted_at filter: account deletion purges every object the user ever stored,
-	// including soft-deleted rows whose background object cleanup may have failed.
+	// No deleted_at filter: soft-deleted rows whose object cleanup failed must be purged too.
 	const q = `SELECT object_key FROM gallery_images WHERE user_id = $1`
 	rows, err := r.pool.Query(ctx, q, userID)
 	if err != nil {
@@ -161,8 +156,7 @@ func (r *GalleryRepository) ListObjectKeys(ctx context.Context, userID string) (
 	return keys, nil
 }
 
-// collectGalleryImages returns a non-nil empty slice for zero rows, so JSON encodes
-// "[]" rather than "null".
+// collectGalleryImages returns a non-nil empty slice for zero rows (JSON "[]", not "null").
 func collectGalleryImages(rows pgx.Rows) ([]GalleryImage, error) {
 	defer rows.Close()
 	images := make([]GalleryImage, 0)

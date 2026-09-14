@@ -37,7 +37,6 @@ func TestDevicesRegisterFlow(t *testing.T) {
 	checkStatus(t, res, http.StatusOK)
 	var updated deviceResp
 	decode(t, res, &updated)
-	// Same push token ⇒ the same row is updated, not a second device.
 	if updated.ID != created.ID {
 		t.Errorf("re-registering the same push token created id %q, want the existing %q",
 			updated.ID, created.ID)

@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// Both targets cover hand-written parsers on the login path, where a panic is a
-// crash rather than a failed login.
-
 func FuzzDecodeArgon2Hash(f *testing.F) {
 	// A valid hash, then each way the layout can be wrong.
 	valid, err := HashPassword("seed", DefaultArgon2Params())
@@ -60,7 +57,7 @@ func FuzzParseJWKS(f *testing.F) {
 		if err != nil {
 			return
 		}
-		// A successful parse must not hand back a key that panics on use.
+
 		for kid, key := range keys {
 			if key == nil {
 				t.Errorf("parseJWKS returned a nil key for kid %q", kid)

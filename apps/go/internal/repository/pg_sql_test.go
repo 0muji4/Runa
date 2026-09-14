@@ -11,8 +11,6 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// Behaviour that only exists in SQL, so no fake can stand in for it.
-
 func requirePostgres(t *testing.T) {
 	t.Helper()
 	if skipReason != "" {
@@ -20,8 +18,6 @@ func requirePostgres(t *testing.T) {
 	}
 }
 
-// TestUpsertReportsInsertVsUpdate pins the (xmax = 0) trick in UpsertEntry, the
-// sole source of the handler's 201-vs-200 answer.
 func TestUpsertReportsInsertVsUpdate(t *testing.T) {
 	requirePostgres(t)
 	t.Parallel()
@@ -52,8 +48,7 @@ func TestUpsertReportsInsertVsUpdate(t *testing.T) {
 		t.Error("second UpsertEntry() created = true, want false")
 	}
 
-	// A soft-deleted row still occupies the (user_id, client_id) unique index, so
-	// re-syncing that client_id is an UPDATE, not a resurrection as a new entry.
+	// A soft-deleted row still occupies the (user_id, client_id) unique index.
 	if err := f.Diary.SoftDeleteEntry(ctx, user, entry.ID); err != nil {
 		t.Fatalf("SoftDeleteEntry() error = %v, want nil", err)
 	}
@@ -72,8 +67,6 @@ func TestUpsertReportsInsertVsUpdate(t *testing.T) {
 	}
 }
 
-// TestKeysetCursorBreaksTiesByID pins the (created_at, id) < ($1, $2) row
-// comparison, which a naive "created_at < cursor" gets wrong for tied rows.
 func TestKeysetCursorBreaksTiesByID(t *testing.T) {
 	requirePostgres(t)
 	t.Parallel()
@@ -82,7 +75,6 @@ func TestKeysetCursorBreaksTiesByID(t *testing.T) {
 	ctx := t.Context()
 	user := f.NewUser(t)
 
-	// Sharing one created_at leaves only the id tiebreak to order them.
 	const tied = 5
 	sameInstant := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	for i := 1; i <= tied; i++ {
@@ -134,9 +126,6 @@ func TestKeysetCursorBreaksTiesByID(t *testing.T) {
 	}
 }
 
-// TestCountByLocalDateUsesPostgresZoneNames pins the AT TIME ZONE grouping. The
-// calendar endpoint passes loc.String() into the query, and Go and Postgres
-// resolve zone names from separate tzdata.
 func TestCountByLocalDateUsesPostgresZoneNames(t *testing.T) {
 	requirePostgres(t)
 	t.Parallel()
@@ -145,7 +134,7 @@ func TestCountByLocalDateUsesPostgresZoneNames(t *testing.T) {
 	ctx := t.Context()
 	user := f.NewUser(t)
 
-	// Either side of a DST boundary, so the zone shifts by a different amount.
+	// Either side of a DST boundary.
 	at := []time.Time{
 		time.Date(2026, 1, 15, 4, 30, 0, 0, time.UTC), // NY: 2026-01-14 23:30 (UTC-5)
 		time.Date(2026, 7, 15, 3, 30, 0, 0, time.UTC), // NY: 2026-07-14 23:30 (UTC-4)
@@ -178,8 +167,6 @@ func TestCountByLocalDateUsesPostgresZoneNames(t *testing.T) {
 	}
 }
 
-// TestDeleteUserCascades pins the ON DELETE CASCADE account deletion relies on:
-// the service removes only the user row and expects the rest to follow.
 func TestDeleteUserCascades(t *testing.T) {
 	requirePostgres(t)
 	t.Parallel()
@@ -226,8 +213,6 @@ func TestDeleteUserCascades(t *testing.T) {
 		t.Fatalf("DeleteUser(%q) error = %v, want nil", user, err)
 	}
 
-	// Account deletion purges storage from this list, so a row surviving the
-	// cascade would leave an object nothing ever removes.
 	keys, err := f.Gallery.ListObjectKeys(ctx, user)
 	if err != nil {
 		t.Fatalf("ListObjectKeys() after cascade error = %v, want nil", err)
@@ -246,7 +231,7 @@ func TestDeleteUserCascades(t *testing.T) {
 		t.Errorf("GetUserByID() after delete error = %v, want %v", err, repository.ErrNotFound)
 	}
 
-	// Curated content is not user-owned and must survive its listener.
+	// Curated content is not user-owned and must survive.
 	if _, err := f.Today.GetSongForDate(ctx, song.Date); err != nil {
 		t.Errorf("GetSongForDate() after the listener was deleted error = %v, want nil", err)
 	}

@@ -74,7 +74,6 @@ func RunAuthStoreSuite(t *testing.T, newFixture NewFixture) {
 		f := newFixture(t)
 		ctx := t.Context()
 
-		// The email uniqueness index is partial (WHERE email IS NOT NULL).
 		first, err := f.Auth.CreateUser(ctx, repository.CreateUserParams{
 			AuthProvider: "apple", AppleSub: ptr("apple-sub-1"), DisplayName: "A",
 		})
@@ -131,7 +130,6 @@ func RunAuthStoreSuite(t *testing.T, newFixture NewFixture) {
 				wantErr:  nil,
 			},
 			{
-				// A subject is only valid for its own provider column.
 				name:     "provider違いのsubjectは引けない",
 				provider: "google",
 				sub:      "apple-sub",
@@ -222,7 +220,6 @@ func RunAuthStoreSuite(t *testing.T, newFixture NewFixture) {
 		if updated.DisplayName != "新しい名前" {
 			t.Errorf("UpdateDisplayName() display_name = %q, want %q", updated.DisplayName, "新しい名前")
 		}
-		// It must persist, not just be echoed back.
 		got, err := f.Auth.GetUserByID(ctx, id)
 		if err != nil {
 			t.Fatalf("GetUserByID(%q) error = %v, want nil", id, err)
@@ -294,7 +291,6 @@ func RunAuthStoreSuite(t *testing.T, newFixture NewFixture) {
 			t.Error("refresh token revoked = false after RevokeRefreshToken, want true")
 		}
 
-		// Logout is idempotent, so revoking an unknown token is a no-op.
 		if err := f.Auth.RevokeRefreshToken(ctx, "never-issued"); err != nil {
 			t.Errorf("RevokeRefreshToken(unknown) error = %v, want nil", err)
 		}

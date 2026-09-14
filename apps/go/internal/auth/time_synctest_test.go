@@ -7,10 +7,7 @@ import (
 	"time"
 )
 
-// ratelimit_test.go and jwt_test.go move time by overriding the unexported `now`
-// field, so the code never runs against the real time package. These cover the
-// same behaviour without the seam: inside a synctest bubble time.Now is virtual
-// and a sleep past a TTL is instant.
+// Unlike ratelimit_test.go / jwt_test.go, these do not override `now`: synctest makes time.Now virtual.
 
 func TestRateLimiterWindowWithRealClock(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
@@ -18,7 +15,7 @@ func TestRateLimiterWindowWithRealClock(t *testing.T) {
 			max    = 3
 			window = time.Minute
 		)
-		// No rl.now override: this is the limiter cmd/api constructs.
+
 		rl := NewRateLimiter(max, window)
 
 		for i := 0; i < max; i++ {
@@ -48,7 +45,7 @@ func TestRateLimiterIsPerClientWithRealClock(t *testing.T) {
 		if rl.Allow("client-1") {
 			t.Error("client-1's second request was allowed, want denied")
 		}
-		// One caller exhausting its quota must not lock anybody else out.
+
 		if !rl.Allow("client-2") {
 			t.Error("client-2's first request was denied, want allowed")
 		}
@@ -58,7 +55,7 @@ func TestRateLimiterIsPerClientWithRealClock(t *testing.T) {
 func TestAccessTokenExpiresWithRealClock(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const ttl = 15 * time.Minute
-		// No ti.now override: signing and verification both use time.Now.
+
 		ti := NewTokenIssuer("secret", ttl)
 
 		token, expiresIn, err := ti.Issue("user-1")

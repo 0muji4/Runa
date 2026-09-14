@@ -16,9 +16,7 @@ import (
 // minPasswordLength is the minimum accepted password length at signup.
 const minPasswordLength = 8
 
-// Auth is the HTTP transport for the authentication endpoints. It translates
-// requests/responses and maps service errors to the shared error envelope; all
-// logic lives in the service layer.
+// Auth is the HTTP transport for the authentication endpoints.
 type Auth struct {
 	svc    *service.AuthService
 	logger *slog.Logger
@@ -175,7 +173,7 @@ func (a *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
 		a.internal(w, r, err)
 		return
 	}
-	// Refresh does not re-send the user object.
+
 	writeJSON(w, http.StatusOK, authTokensResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
@@ -222,8 +220,7 @@ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toUserResponse(user), a.logger)
 }
 
-// Unauthorized writes the 401 body for failed Bearer verification, choosing the
-// code from the underlying error so the client can tell "expired" from "bad".
+// Unauthorized writes the 401 body for failed Bearer verification; the code distinguishes expired from invalid.
 func (a *Auth) Unauthorized(w http.ResponseWriter, r *http.Request, err error) {
 	code := CodeUnauthorized
 	message := "authentication required"
@@ -241,8 +238,7 @@ func (a *Auth) RateLimited(w http.ResponseWriter, _ *http.Request, _ error) {
 	writeError(w, http.StatusTooManyRequests, CodeRateLimited, "too many requests, please try again later", nil, a.logger)
 }
 
-// decode reads a JSON body into dst, rejecting unknown fields. It writes a 400
-// on failure and reports whether decoding succeeded.
+// decode reads a JSON body into dst (unknown fields rejected), writing a 400 on failure.
 func (a *Auth) decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()

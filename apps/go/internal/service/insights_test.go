@@ -11,8 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// moodDist builds the canonical mood distribution (fixed order calm, gentle,
-// tired, hopeful, heavy) the insights aggregation always returns.
+// moodDist builds the mood distribution in the canonical order calm, gentle, tired, hopeful, heavy.
 func moodDist(calm, gentle, tired, hopeful, heavy int) []service.InsightMoodCount {
 	return []service.InsightMoodCount{
 		{

@@ -1,7 +1,4 @@
-// Package repotest holds the contract test suites for the repository stores.
-// Each suite runs against both implementations of a store: the in-memory fake
-// (internal/repository/memstores) and the pgx one against a real Postgres
-// (internal/repository), so the two cannot drift apart unnoticed.
+// Package repotest holds the contract test suites run against every implementation of the repository stores.
 package repotest
 
 import (
@@ -10,9 +7,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// Fixture is one isolated set of stores to test, supplied by a backend. NewUser
-// inserts a users row: every feature table has an FK to it, so Postgres needs one
-// to exist before anything can reference it.
+// Fixture is one isolated set of stores to test; NewUser inserts the users row the feature tables FK to.
 type Fixture struct {
 	Auth    repository.AuthStore
 	Diary   repository.DiaryStore
@@ -23,8 +18,7 @@ type Fixture struct {
 	NewUser func(t *testing.T) string
 }
 
-// NewFixture builds a fixture isolated from every other test. The suites run
-// their subtests in parallel, so each call needs its own storage.
+// NewFixture builds a fixture isolated from every other test; subtests run in parallel.
 type NewFixture func(t *testing.T) Fixture
 
 // RunStoreSuites runs every contract suite against one backend.

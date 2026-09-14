@@ -1,6 +1,4 @@
-// Package objecttest holds the contract test suite for storage.ObjectStore. It
-// runs against both implementations: memobject in its own package, and a real
-// MinIO from internal/storage's test binary.
+// Package objecttest holds the contract test suite for storage.ObjectStore.
 package objecttest
 
 import (
@@ -29,8 +27,6 @@ func RunObjectStoreSuite(t *testing.T, newStore NewStore) {
 		if err != nil {
 			t.Fatalf("Stat(%q) error = %v, want nil", key, err)
 		}
-		// The service re-checks size and content type at registration time,
-		// because the presigned PUT does not enforce either.
 		if info.Size != int64(len("hello moon")) {
 			t.Errorf("Stat(%q) size = %d, want %d", key, info.Size, len("hello moon"))
 		}
@@ -43,8 +39,6 @@ func RunObjectStoreSuite(t *testing.T, newStore NewStore) {
 		t.Parallel()
 		s := newStore(t)
 
-		// The service maps this to a 400: metadata registered for bytes that were
-		// never uploaded.
 		if _, err := s.Stat(t.Context(), "gallery/user-1/never-uploaded"); !errors.Is(err, storage.ErrObjectNotFound) {
 			t.Errorf("Stat(missing) error = %v, want %v", err, storage.ErrObjectNotFound)
 		}
@@ -63,7 +57,6 @@ func RunObjectStoreSuite(t *testing.T, newStore NewStore) {
 		if _, err := s.Stat(ctx, key); !errors.Is(err, storage.ErrObjectNotFound) {
 			t.Errorf("Stat() after Remove error = %v, want %v", err, storage.ErrObjectNotFound)
 		}
-		// Purging runs in the background and may be retried.
 		if err := s.Remove(ctx, key); err != nil {
 			t.Errorf("second Remove(%q) error = %v, want nil", key, err)
 		}
@@ -76,7 +69,6 @@ func RunObjectStoreSuite(t *testing.T, newStore NewStore) {
 		t.Parallel()
 		s := newStore(t)
 
-		// It runs at every boot.
 		if err := s.EnsureBucket(t.Context()); err != nil {
 			t.Errorf("EnsureBucket() on an existing bucket error = %v, want nil", err)
 		}
@@ -116,8 +108,7 @@ func putObject(t *testing.T, s storage.ObjectStore, key string, body []byte, con
 	}
 }
 
-// Writer is the seam the suite uses to create objects. ObjectStore has no write
-// method because production never uploads bytes: clients PUT to a presigned URL.
+// Writer is the seam the suite uses to seed objects; ObjectStore itself has no write method.
 type Writer interface {
 	PutForTest(ctx context.Context, key string, body []byte, contentType string) error
 }

@@ -33,8 +33,7 @@ var allEnvKeys = []string{
 	"GALLERY_ALLOWED_CONTENT_TYPES",
 }
 
-// applyEnv sets every key in allEnvKeys to env[key], defaulting to "" which every
-// helper treats as unset, so results are deterministic regardless of the shell.
+// applyEnv sets every key in allEnvKeys (missing ones to "", i.e. unset) so the shell cannot leak in.
 func applyEnv(t *testing.T, env map[string]string) {
 	t.Helper()
 	for _, key := range allEnvKeys {
@@ -153,7 +152,6 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			applyEnv(t, tt.env)
 			if diff := cmp.Diff(tt.want, Load()); diff != "" {
 				t.Errorf("Load() mismatch (-want +got):\n%s", diff)
@@ -198,7 +196,6 @@ func TestGetenv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
@@ -280,7 +277,6 @@ func TestGetbool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
@@ -362,7 +358,6 @@ func TestGetint64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
@@ -437,7 +432,6 @@ func TestGetduration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}
@@ -543,7 +537,6 @@ func TestSplitListDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数を扱うため並列化しない
 			if tt.set {
 				t.Setenv(key, tt.value)
 			}

@@ -1,10 +1,8 @@
 import CoreGraphics
 import Foundation
 
-/// The moon phase for a diary entry's day. Kept self-contained on the Swift side
-/// (no Kotlin/KMM call needed) but a faithful port of the shared
-/// `MoonPhaseCalculator` — same constants, same buckets — so it matches Android's
-/// diary moons. Purely offline.
+/// The moon phase for a diary entry's day. A port of the shared `MoonPhaseCalculator`;
+/// keep constants and buckets identical to it.
 struct DiaryMoon {
     let illumination: CGFloat // 0 (new) .. 1 (full)
     let waxing: Bool          // lit limb on the right
@@ -26,7 +24,7 @@ enum DiaryMoonCalc {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
         let date = Date(timeIntervalSince1970: Double(epochMs) / 1000)
-        // Represent the day at local noon — a stable mid-day instant (mirrors shared).
+        // Local noon, as in shared.
         var comps = cal.dateComponents([.year, .month, .day], from: date)
         comps.hour = 12
         comps.minute = 0

@@ -1,18 +1,14 @@
 import SwiftUI
 import Shared
 
-/// The home's page state, decoded from the shared `UiState<Today>` into a native Swift
-/// enum in the observable so the view never touches SKIE generics. The home always has
-/// content (the moon is computed locally); offline rides on `.content` as a `SyncPhase`.
+/// Home page state, decoded from the shared `UiState<Today>` (offline rides on `.content`).
 enum HomeUi {
     case loading
     case content(today: Today, sync: SyncPhase)
     case failure(AppError)
 }
 
-/// ObservableObject bridge over the shared `HomeViewModel`. Collects the SKIE-bridged
-/// `StateFlow<UiState<Today>>`, decodes each emission to [HomeUi], and republishes on
-/// the main actor.
+/// ObservableObject bridge over the shared `HomeViewModel`.
 @MainActor
 final class HomeObservable: ObservableObject {
     @Published private(set) var ui: HomeUi = .loading
@@ -36,7 +32,7 @@ final class HomeObservable: ObservableObject {
 
     func reload() { viewModel.load() }
 
-    /// Today's song, if the home has content (used by the player as its default).
+    /// Today's song, if loaded (the player's default).
     var todaySong: SongDto? {
         if case .content(let today, _) = ui { return today.song }
         return nil
@@ -45,9 +41,7 @@ final class HomeObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// 06 Home. A quiet screen: a large 明朝 daily quote centered in generous
-/// whitespace, with the day's moon phase + date above it. The quote and moon still
-/// render when offline (the moon is always computed on-device).
+/// Home: the day's moon + date over the daily quote.
 struct HomeView: View {
     @Environment(\.runaTheme) private var runaTheme
     let displayName: String
@@ -59,7 +53,6 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
                 runaTheme.background.ignoresSafeArea()
-                // A whisper of warm moonlight behind the moon, matching the design's glow.
                 RadialGradient(
                     gradient: Gradient(colors: [
                         Color(red: 0.97, green: 0.95, blue: 0.89).opacity(0.10),
@@ -72,9 +65,6 @@ struct HomeView: View {
                 .ignoresSafeArea()
                 content
             }
-            // No nav bar — like the other tabs, the header is the page, so all four
-            // start their content at RunaHeaderMetrics.topTab below the safe area (the
-            // gear rides on Home's header row).
             .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -97,10 +87,7 @@ struct HomeView: View {
 
     private func todayView(_ today: Today, offline: Bool) -> some View {
         VStack(spacing: 0) {
-            // Header row: drawn moon + date centered (tap → 15 今日の月), settings gear
-            // at the trailing edge. Home carries no screen title — the moon and the
-            // quote are the page — but it starts at the shared tab offset so all four
-            // tabs begin at the same height.
+            // Home has no screen title, but starts at the shared tab offset so all four tabs align.
             ZStack {
                 NavigationLink {
                     TodaysMoonView()
@@ -132,7 +119,6 @@ struct HomeView: View {
 
             Spacer()
 
-            // The daily quote — the emotional center of the screen.
             Text(today.quote?.bodyText ?? L.homeNoQuote)
                 .font(RunaFonts.heading(26))
                 .foregroundStyle(runaTheme.heading)

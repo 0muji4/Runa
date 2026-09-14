@@ -1,18 +1,7 @@
 import SwiftUI
 
-/// Runa design-system fonts.
-///
-/// Family names are the shared contract:
-///   - headings: "Shippori Mincho"
-///   - body:     "Zen Kaku Gothic New"
-///   - logo:     "Cormorant Garamond"
-///
-/// The OFL binaries are bundled under Runa/Fonts/ and registered via `UIAppFonts`
-/// in Info.plist (XcodeGen copies the folder's files as bundle resources). The
-/// strings below are the registered FAMILY names — they must match the family name
-/// inside each .ttf (verified: "Shippori Mincho", "Zen Kaku Gothic New",
-/// "Cormorant Garamond"). `Font.custom(_:size:)` still falls back to the system
-/// font gracefully if a family is ever missing. See Runa/Fonts/README.md.
+/// Runa design-system fonts. The family strings are the registered FAMILY names inside the
+/// bundled .ttf files (Runa/Fonts/); a mismatch silently falls back to the system font.
 enum RunaFonts {
     private static let headingFamily = "Shippori Mincho"
     private static let bodyFamily = "Zen Kaku Gothic New"
@@ -33,11 +22,9 @@ enum RunaFonts {
         Font.custom(logoFamily, size: size, relativeTo: style)
     }
 
-    /// The one screen-title style, used by `RunaScreenHeader` and nothing else.
-    /// Pinned by the canon table in README「画面ヘッダー（全画面共通の型）」— it must
-    /// match Android's `headlineLarge` (see `hack/check-header-tokens.sh`).
+    /// Screen-title style; used by `RunaScreenHeader` only.
     static let screenTitle = heading(34, relativeTo: .largeTitle)
 
-    /// The「‹ 戻る」and header-action style, the label half of the same canon.
+    /// 「‹ 戻る」and header-action label style.
     static let headerLabel = body(13, relativeTo: .footnote)
 }

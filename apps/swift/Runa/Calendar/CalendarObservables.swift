@@ -1,26 +1,21 @@
 import Foundation
 import Shared
 
-/// The calendar's page state, decoded from the shared `UiState<CalendarMonth>` into a
-/// native Swift enum (local-first: effectively loading → content; offline rides on
-/// `.content` as a `SyncPhase`).
+/// The calendar's page state, decoded from the shared `UiState<CalendarMonth>`.
 enum CalendarUi {
     case loading
     case content(month: CalendarMonth, sync: SyncPhase)
     case failure(AppError)
 }
 
-/// ObservableObject bridge over the shared `CalendarViewModel`. Collects the SKIE-bridged
-/// `StateFlow`, decodes to [CalendarUi], and republishes on the main actor; month
-/// navigation forwards straight to the shared VM.
+/// ObservableObject bridge over the shared `CalendarViewModel`.
 @MainActor
 final class CalendarObservable: ObservableObject {
     @Published private(set) var ui: CalendarUi = .loading
 
     private let viewModel: CalendarViewModel
     private var collectTask: Task<Void, Never>?
-    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
-    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    // Koin の factory 束縛で画面ごとに新しい実体になるため、deinit で破棄する。
     private let owner = ViewModelOwner()
 
     init(viewModel: CalendarViewModel = resolveCalendarViewModel()) {
@@ -49,13 +44,13 @@ final class CalendarObservable: ObservableObject {
     }
 }
 
-/// The today's-moon page state (pure local computation: loading → content).
+/// The today's-moon page state.
 enum TodayMoonUi {
     case loading
     case content(moon: TodayMoon)
 }
 
-/// ObservableObject bridge over the shared `TodayMoonViewModel` (15 今日の月).
+/// ObservableObject bridge over the shared `TodayMoonViewModel`.
 @MainActor
 final class TodayMoonObservable: ObservableObject {
     @Published private(set) var ui: TodayMoonUi = .loading
@@ -80,8 +75,7 @@ final class TodayMoonObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// ObservableObject bridge over a per-day `DayRecordsViewModel`. The tapped day is
-/// passed as an ISO `yyyy-MM-dd` string; the shared VM streams that day's entries.
+/// ObservableObject bridge over a per-day `DayRecordsViewModel` (`isoDate` is `yyyy-MM-dd`).
 @MainActor
 final class DayRecordsObservable: ObservableObject {
     @Published private(set) var entries: [DiaryEntry] = []
@@ -89,8 +83,7 @@ final class DayRecordsObservable: ObservableObject {
 
     private let viewModel: DayRecordsViewModel
     private var collectTask: Task<Void, Never>?
-    // Koin では factory 束縛なので画面ごとに新しい実体になる。Android の
-    // ViewModelStore に相当する破棄を、この所有者が deinit で行う。
+    // Koin の factory 束縛で画面ごとに新しい実体になるため、deinit で破棄する。
     private let owner = ViewModelOwner()
 
     init(isoDate: String) {

@@ -1,9 +1,7 @@
 import SwiftUI
 import Shared
 
-/// Diary detail (11) — reading a record back. A moon-led header (phase disc, date,
-/// phase · weekday) over the body in #C8C6CE 明朝 for calm legibility, with quiet
-/// edit/delete affordances. The entry is read from the (shared) list model's cache.
+/// Diary detail; the entry is read from the shared list model's cache.
 struct DiaryDetailView: View {
     @Environment(\.runaTheme) private var runaTheme
     let clientId: String
@@ -19,8 +17,6 @@ struct DiaryDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     let entry = model.entry(clientId: clientId)
-                    // The date is the screen title; the moon and weekday sit under it
-                    // as meta.
                     RunaScreenHeader(
                         title: entry.map { DiaryDate.day($0.createdAtEpochMs) },
                         onBack: { if !path.isEmpty { path.removeLast() } }

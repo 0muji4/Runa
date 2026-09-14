@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// テーマ (20). The three app themes as selectable cards; the active one is bordered
-/// with a filled radio. Selecting one drives the shared view model, which persists it
-/// and re-emits — the environment palette swaps and the whole app (this screen
-/// included) recolors in place, giving the live preview the design calls for while
-/// keeping the user on this screen.
+/// テーマ: selectable theme cards. Selecting one persists via the shared view model; the
+/// environment palette re-emits and the whole app (this screen included) recolors in place.
 struct ThemeView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Environment(\.dismiss) private var dismiss
@@ -41,7 +38,6 @@ struct ThemeView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
     }

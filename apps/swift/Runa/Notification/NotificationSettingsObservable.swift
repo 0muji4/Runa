@@ -1,10 +1,8 @@
 import Foundation
 import Shared
 
-/// Bridge over the shared `NotificationSettingsViewModel` for 通知設定 (21). Publishes
-/// the reminder on/off, the chosen time and the preset chips, and forwards the
-/// toggle / time-selection intents. Seeded synchronously so the screen opens on the
-/// saved state (no flash).
+/// Bridge over the shared `NotificationSettingsViewModel`.
+/// Seeded synchronously so the screen opens on the saved state.
 @MainActor
 final class NotificationSettingsObservable: ObservableObject {
     @Published private(set) var enabled: Bool

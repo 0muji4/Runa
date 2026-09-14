@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// Apple's official "Apple Music で聴く" badge, opening the track's Apple Music
-/// page. Apple's Promo Content terms require it next to any preview or artwork
-/// (docs/prd/todays-song-itunes-preview.md, N1), so 07 and each 08 row carry it.
-/// The asset is Apple's own (Assets.xcassets/AppleMusicBadge, also kept at
-/// design/apple_music_badge_ja.svg), never redrawn.
+/// Apple's official badge opening the track's Apple Music page. Apple's Promo Content terms
+/// require it next to any preview or artwork; the asset is Apple's own, never redrawn.
 struct AppleMusicBadge: View {
     let storeUrl: String
     var height: CGFloat = 40

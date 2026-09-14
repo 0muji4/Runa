@@ -2,10 +2,7 @@ import SwiftUI
 import UserNotifications
 import Shared
 
-/// 通知設定 (21) — 夜のリマインダー. A quiet toggle, a large time display, three preset
-/// chips (21:00 / 22:00 / 23:00) plus a free time picker, over a poetic footer.
-/// Turning the reminder on asks for notification authorization; a denial doesn't
-/// break the screen — the preference is still saved (DoD#3).
+/// Reminder settings. Enabling asks notification authorization; a denial still saves the on state.
 struct NotificationSettingsView: View {
     @Environment(\.runaTheme) private var runaTheme
     @Environment(\.dismiss) private var dismiss
@@ -60,7 +57,6 @@ struct NotificationSettingsView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(runaTheme.background)
-        // The page draws its own header, so the system bar stays hidden.
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showPicker) {

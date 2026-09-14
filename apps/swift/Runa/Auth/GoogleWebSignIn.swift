@@ -1,16 +1,9 @@
 import AuthenticationServices
 import UIKit
 
-/// Sign in with Google on iOS using the system `ASWebAuthenticationSession` — no
-/// third-party SDK, so the app stays self-contained.
-///
-/// It runs Google's OpenID Connect implicit flow, returning an `id_token` in the
-/// callback URL fragment. The token's audience is the iOS OAuth **client ID**
-/// (`GIDClientID` in Info.plist); the backend must list that client ID in
-/// `GOOGLE_CLIENT_IDS`. The shared `AuthRepository.loginGoogle` posts the token.
-///
-/// Requires `GIDClientID` in Info.plist and its reversed-client-id URL scheme in
-/// `CFBundleURLTypes` (see README). Absent config surfaces a friendly error.
+/// Sign in with Google via `ASWebAuthenticationSession` (OIDC implicit; `id_token` in fragment).
+/// Requires `GIDClientID` in Info.plist and its reversed-client-id scheme in `CFBundleURLTypes`;
+/// the backend must list that client ID in `GOOGLE_CLIENT_IDS`.
 final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextProviding {
 
     private var session: ASWebAuthenticationSession?
@@ -28,8 +21,7 @@ final class GoogleWebSignIn: NSObject, ASWebAuthenticationPresentationContextPro
             return
         }
 
-        // Reversed client ID is the callback scheme, e.g.
-        // com.googleusercontent.apps.<client-id-without-suffix>.
+        // Callback scheme is the reversed client ID; it must match the Info.plist URL scheme.
         let suffix = ".apps.googleusercontent.com"
         let reversed = "com.googleusercontent.apps." + clientID.replacingOccurrences(of: suffix, with: "")
         let redirectURI = reversed + ":/oauth2redirect"

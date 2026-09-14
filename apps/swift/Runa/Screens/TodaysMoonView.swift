@@ -1,10 +1,7 @@
 import SwiftUI
 import Shared
 
-/// 15 今日の月. A large, quiet moon under the "今日の月" label, its phase name, 月齢 and
-/// date, a hushed 明朝 line for the phase, and a whisper of the next principal phase.
-/// Reached from the home screen's moon. Fully offline — every value is computed on
-/// device by the shared moon calculator.
+/// 今日の月: today's phase, 月齢 and the next principal phase, all computed on device.
 struct TodaysMoonView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = TodayMoonObservable()

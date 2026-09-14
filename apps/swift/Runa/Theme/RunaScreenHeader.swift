@@ -1,22 +1,8 @@
 import SwiftUI
 
-/// The one screen header. Every screen that carries a title uses this and writes no
-/// header of its own, so the title size, the back affordance and the vertical rhythm
-/// are identical everywhere (README「画面ヘッダー（全画面共通の型）」is the canon).
-///
-/// `onBack` decides the variant: `nil` means a bottom-tab root (starts at
-/// `RunaHeaderMetrics.topTab`, no back row), otherwise a pushed screen (starts at
-/// `topPushed` with the「‹ 戻る」row above the title). Pushed screens hide the system
-/// navigation bar and pass their own dismiss here, so the affordance reads the same
-/// on both platforms.
-///
-/// `title` is nil on the one pushed screen that carries no screen title (the
-/// retrospective calendar, whose month stepper is content rather than a heading), so
-/// it still gets the same back affordance and the same top offset as its siblings.
-///
-/// Horizontal padding is deliberately absent — the caller's container supplies it, so
-/// the title always lines up with the body beneath it rather than with a value chosen
-/// here.
+/// The one screen header; screens write no header of their own. `onBack == nil` means a
+/// bottom-tab root, otherwise a pushed screen with the「‹ 戻る」row. No horizontal padding:
+/// the caller's container supplies it.
 struct RunaScreenHeader<Actions: View>: View {
     @Environment(\.runaTheme) private var runaTheme
 

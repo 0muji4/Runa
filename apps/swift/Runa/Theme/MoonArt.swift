@@ -1,20 +1,16 @@
 import SwiftUI
 
-/// Runa moon motif, drawn with SwiftUI `Canvas` — NO SF Symbols, NO emoji, NO text
-/// glyphs. Mirrors the Android `MoonArt.kt` so both platforms share one world-view:
-/// a glowing hero moon, a phase disc for diary records, and the empty / offline /
-/// error / notification emblems.
+/// Runa moon motif, drawn with SwiftUI `Canvas` (no SF Symbols, emoji, or text glyphs).
 
-// The moon is a FIXED cross-theme motif (design decision): it never recolors with
-// the app theme, so it holds its own dark-motif constants rather than reading the
-// theme tokens. Values match the original dark palette.
+// The moon is a fixed cross-theme motif: it never recolors with the app theme, so it holds
+// its own constants instead of reading the theme tokens.
 private let moonLit = Color(hex: 0xF7F2E4)
 private let moonCream = Color(hex: 0xE8E2D0)
 private let moonDark = Color(hex: 0x34343E)
 private let moonRing = Color(hex: 0x3E3E48)
-private let moonMuted = Color(hex: 0x9A9AA5)      // subtle
-private let moonAccent = Color(hex: 0xF4A9C0)     // moonlight accent
-private let moonBackground = Color(hex: 0x0E0E12) // background
+private let moonMuted = Color(hex: 0x9A9AA5)
+private let moonAccent = Color(hex: 0xF4A9C0)
+private let moonBackground = Color(hex: 0x0E0E12)
 
 private func drawGlow(_ ctx: inout GraphicsContext, center: CGPoint, radius: CGFloat, tint: Color, alpha: Double) {
     guard radius > 0 else { return }
@@ -30,7 +26,7 @@ private func disc(_ center: CGPoint, _ r: CGFloat) -> Path {
     Path(ellipseIn: CGRect(x: center.x - r, y: center.y - r, width: r * 2, height: r * 2))
 }
 
-/// A full, softly glowing moon — the hero mark for sign-in / onboarding / splash.
+/// A full, softly glowing moon (sign-in / onboarding / splash).
 struct GlowingMoon: View {
     var diameter: CGFloat = 132
     var haloTint: Color = moonCream
@@ -53,8 +49,8 @@ struct GlowingMoon: View {
     }
 }
 
-/// A small moon-phase disc for diary cards / detail. [illumination] 0..1 is the lit
-/// fraction; [waxing] puts the lit limb on the right. Offset-shadow method.
+/// A small moon-phase disc. [illumination] 0..1 is the lit fraction; [waxing] puts the lit
+/// limb on the right.
 struct MoonPhaseDisc: View {
     var illumination: CGFloat
     var waxing: Bool
@@ -80,7 +76,7 @@ struct MoonPhaseDisc: View {
     }
 }
 
-/// New-moon emblem for the empty state (24): a dark disc inside a faint ring.
+/// New-moon emblem for the empty state.
 struct NewMoonEmblem: View {
     var diameter: CGFloat = 108
     var body: some View {
@@ -101,7 +97,7 @@ struct NewMoonEmblem: View {
     }
 }
 
-/// Clouded moon for the offline state (25): a dim disc crossed by a soft stroke.
+/// Clouded moon for the offline state.
 struct CloudedMoon: View {
     var diameter: CGFloat = 108
     var body: some View {
@@ -124,7 +120,7 @@ struct CloudedMoon: View {
     }
 }
 
-/// Gentle "stumble" emblem for the error state (27): a soft disc holding an ! mark.
+/// "Stumble" emblem for the error state.
 struct StumbleEmblem: View {
     var diameter: CGFloat = 108
     var body: some View {
@@ -149,9 +145,7 @@ struct StumbleEmblem: View {
     }
 }
 
-/// The privacy-lock emblem (22): a padlock inside a soft rounded square, stroked in
-/// cream — the quiet motif the lock screen and the settings screen share. Mirrors
-/// the Android `LockEmblem`.
+/// The privacy-lock emblem shared by the lock screen and settings.
 struct LockEmblem: View {
     var diameter: CGFloat = 120
     var body: some View {
@@ -188,8 +182,7 @@ struct LockEmblem: View {
     }
 }
 
-/// The notification mark (04): the glowing moon with a small moonlight-pink badge
-/// carrying a minimal drawn bell.
+/// The notification mark: the glowing moon with a small accent badge carrying a bell.
 struct NotificationMoon: View {
     var diameter: CGFloat = 132
     var body: some View {

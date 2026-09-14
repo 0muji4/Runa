@@ -1,8 +1,7 @@
 import SwiftUI
 import Shared
 
-/// ObservableObject bridge over the shared `SongPlayerViewModel`. It is resolved
-/// from the Koin single, so every screen that plays a song shares one player.
+/// Bridge over the shared `SongPlayerViewModel` (a Koin single, so every screen shares one player).
 @MainActor
 final class SongPlayerObservable: ObservableObject {
     @Published private(set) var state: PlayerUiState?
@@ -27,13 +26,9 @@ final class SongPlayerObservable: ObservableObject {
     deinit { collectTask?.cancel() }
 }
 
-/// 07 きょうの一曲. Introduces the day's track from Apple's catalog: artwork, title,
-/// the Apple Music badge as the main action, and a 30-second preview below it.
-/// Defaults to today's song (from the shared `HomeObservable`); once a preview is
-/// playing (today's or one chosen from the archive) it reflects the shared
-/// `SongPlayerViewModel`'s live state. The layout follows Apple's Promo Content
-/// terms (docs/dd/todays-song-itunes-preview.md, Q4): badge and attribution on
-/// the same screen, no seek.
+/// きょうの一曲: introduces the day's track (defaults to today's song from `HomeObservable`).
+/// Apple's Promo Content terms (docs/dd/todays-song-itunes-preview.md): badge and
+/// attribution on this screen, no seek.
 struct TodaysSongView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var player = SongPlayerObservable()
@@ -46,7 +41,6 @@ struct TodaysSongView: View {
             ZStack {
                 runaTheme.background.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    // No nav bar — the header is the page, like the other tabs.
                     RunaScreenHeader(title: L.tabTodaysSong) {
                         NavigationLink(destination: SongArchiveView()) {
                             Text(L.todaySongOpenArchive)
@@ -98,8 +92,6 @@ struct TodaysSongView: View {
             }
             .padding(.top, RunaSpacing.xs)
 
-            // The badge is the screen's main action: the preview below only
-            // introduces the track, so it sits under the badge and cannot be scrubbed.
             AppleMusicBadge(storeUrl: song.storeUrl, height: 48)
                 .padding(.top, RunaSpacing.sm)
 

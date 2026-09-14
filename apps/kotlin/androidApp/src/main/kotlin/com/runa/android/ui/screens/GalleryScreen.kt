@@ -69,10 +69,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 13 ギャラリー. A whitespace-rich masonry grid of the user's images
- * with a gallery-scoped display-theme toggle (monotone ⇔ pink) that re-grades the
- * whole grid — this is NOT the app-wide theme. Tapping a cell opens the lightbox (14).
- * Everything renders from the local DB; adds queue offline and flush on reconnect.
+ * ギャラリー: masonry grid with a gallery-scoped display theme (monotone ⇔ pink) — NOT the
+ * app-wide theme. Renders from the local DB; adds queue offline and flush on reconnect.
  */
 @Composable
 fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
@@ -97,8 +95,6 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             GalleryHeader(onAdd = launchPicker)
-            // Grid chrome (the display-theme toggle) + the quiet sync line show over
-            // both content and empty; the shared state surfaces drive the grid region.
             ThemeToggle(displayTheme, viewModel::setDisplayTheme)
             val sync = (state as? UiState.Content<List<GalleryImage>>)?.sync ?: SyncPhase.Idle
             RunaSyncBanner(sync)
@@ -120,7 +116,6 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
             }
         }
 
-        // Lightbox (14) as a full-screen overlay over the grid state.
         val current = state
         val index = lightboxIndex
         if (current is UiState.Content<List<GalleryImage>> && index != null) {

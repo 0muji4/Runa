@@ -6,15 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-/**
- * The app's own icon set, defined as [ImageVector]s so we depend on neither the
- * material-icons artifact (which the project deliberately avoids) nor emoji/text
- * glyphs. Each icon is a single-color vector; render it through the material3
- * `Icon` composable so the current content color tints it (bottom-nav selection,
- * subtle settings rows, etc.). Paths are 24x24, matching the design's line motifs.
- *
- * Companion to [MoonArt] (the drawn moon motif); this covers the flat UI icons.
- */
+/** The app's own 24x24 single-color icons; render via material3 `Icon` so content color tints. */
 object RunaIcons {
 
     /** Bottom-nav ホーム / テーマ row: a crescent moon. */

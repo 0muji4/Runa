@@ -7,15 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.runa.shared.feature.settings.AppTheme
 
-/**
- * Runa semantic color tokens. The seven roles are the single source of truth every
- * screen references (never a raw hex); a theme change swaps the whole scheme.
- *
- * Values are IDENTICAL to the iOS `RunaColors` and to the canonical table in the
- * repo README — the three clients must not drift. Property names are capitalized so
- * existing call sites (`RunaColors.Background`) keep compiling unchanged after the
- * move from a static `object` to this injected scheme.
- */
+/** Semantic color tokens; values are shared with iOS/README (drift-guarded by hack/). */
 @Immutable
 data class RunaColorScheme(
     val Background: Color,
@@ -27,7 +19,7 @@ data class RunaColorScheme(
     val SubAccent: Color,
 )
 
-/** 夜（ダーク・既定）— the look the app was designed around first. */
+/** 夜（ダーク・既定） */
 val RunaDarkColors = RunaColorScheme(
     Background = Color(0xFF0E0E12),
     Surface = Color(0xFF16161C),
@@ -38,8 +30,7 @@ val RunaDarkColors = RunaColorScheme(
     SubAccent = Color(0xFFE8E2D0),
 )
 
-/** あさ（ライト）— bright cream base, dark text, soft pink accent. Values beyond the
- *  cream background are derived from the design swatch + spec (pending sign-off). */
+/** あさ（ライト） */
 val RunaLightColors = RunaColorScheme(
     Background = Color(0xFFFAF7F5),
     Surface = Color(0xFFFFFFFF),
@@ -50,8 +41,7 @@ val RunaLightColors = RunaColorScheme(
     SubAccent = Color(0xFFC9B8A0),
 )
 
-/** ピンク×ピンク — dark base with the accent pink pushed further. Derived from the
- *  spec (dark base + strong accent), pending sign-off. */
+/** ピンク×ピンク */
 val RunaPinkColors = RunaColorScheme(
     Background = Color(0xFF141017),
     Surface = Color(0xFF1E1622),
@@ -69,15 +59,9 @@ fun runaColorsFor(theme: AppTheme): RunaColorScheme = when (theme) {
     AppTheme.PINK -> RunaPinkColors
 }
 
-/** The active scheme, provided by [RunaTheme]. Static because a theme change should
- *  recompose the whole tree (like MaterialTheme's own color local). */
+/** Provided by [RunaTheme]. Static so a theme change recomposes the whole tree. */
 val LocalRunaColors = staticCompositionLocalOf { RunaDarkColors }
 
-/**
- * Idiomatic accessor mirroring `MaterialTheme.colorScheme`: call sites keep writing
- * `RunaColors.Background` and transparently read the active theme's token. Usable
- * only in composable scope; non-composable draw code (e.g. MoonArt) holds its own
- * fixed constants instead.
- */
+/** Active theme's tokens; composable scope only (non-composable draw code holds its own constants). */
 val RunaColors: RunaColorScheme
     @Composable @ReadOnlyComposable get() = LocalRunaColors.current

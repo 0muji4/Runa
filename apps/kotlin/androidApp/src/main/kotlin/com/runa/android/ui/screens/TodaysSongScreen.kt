@@ -45,13 +45,8 @@ import com.runa.shared.network.dto.SongDto
 import org.koin.compose.koinInject
 
 /**
- * 07 きょうの一曲. Introduces the day's track from Apple's catalog: artwork, title,
- * the Apple Music badge as the main action, and a 30-second preview below it.
- * Defaults to today's song (from the shared [HomeViewModel]); once a preview is
- * playing (today's or one chosen from the archive) it reflects the shared
- * [SongPlayerViewModel]'s live state. The layout follows Apple's Promo Content
- * terms (docs/dd/todays-song-itunes-preview.md, Q4): badge and attribution on
- * the same screen, no seek.
+ * きょうの一曲: today's song from [HomeViewModel], or whatever [SongPlayerViewModel] is
+ * playing. Apple's Promo Content terms: badge + attribution on the same screen, no seek.
  */
 @Composable
 fun TodaysSongScreen(
@@ -86,7 +81,6 @@ fun TodaysSongScreen(
                 )
             }
 
-            // Player (or empty state) centered in the space below the header.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -138,8 +132,6 @@ private fun SongIntroduction(
     Text(song.title, style = MaterialTheme.typography.headlineMedium, color = RunaColors.Heading, textAlign = TextAlign.Center)
     Text(song.artist, style = MaterialTheme.typography.bodyLarge, color = RunaColors.Subtle)
 
-    // The badge is the screen's main action: the preview below only introduces
-    // the track, so it sits under the badge and cannot be scrubbed.
     Spacer(Modifier.height(28.dp))
     AppleMusicBadge(storeUrl = song.storeUrl, height = 48.dp)
 

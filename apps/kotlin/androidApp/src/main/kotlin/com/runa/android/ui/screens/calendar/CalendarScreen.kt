@@ -47,10 +47,7 @@ import org.koin.compose.koinInject
 private val WEEKDAYS = listOf("日", "月", "火", "水", "木", "金", "土")
 
 /**
- * 12 ふりかえりカレンダー. A quiet month grid: a serif "YYYY M月" header flanked by
- * prev/next chevrons (the title taps back to today), the 日〜土 week row, then the
- * days. Per the confirmed design the moon is drawn ONLY on days that have a record
- * ("記録のある日に、月あかり"); today wears a soft moonlight-pink rounded outline.
+ * ふりかえりカレンダー: month grid where the moon is drawn ONLY on days with a record.
  * Tapping a day opens its records, or the backdated writer when it has none.
  */
 @Composable
@@ -68,13 +65,10 @@ fun CalendarScreen(
             .background(RunaColors.Background)
             .padding(horizontal = 20.dp),
     ) {
-        // No screen title here — the month stepper below is the heading, so this
-        // screen takes the header's back affordance and top offset only.
+        // No title: the month stepper is the heading; the header gives back + top offset only.
         RunaScreenHeader(onBack = onBack)
 
-        // Local-first: the grid is effectively always Loading then Content (a month
-        // with no records is all-zero counts). Non-content branches fall back to the
-        // shared state surfaces; the sync phase rides along as a quiet banner.
+        // Local-first: always Loading then Content (a month with no records is all-zero counts).
         when (val current = state) {
             is UiState.Content -> MonthContent(
                 month = current.data,
@@ -210,7 +204,6 @@ private fun DayCell(day: CalendarDay, onDayClick: (CalendarDay) -> Unit) {
             style = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 15.sp),
             color = if (bright) RunaColors.Heading else RunaColors.Subtle,
         )
-        // The moon lights only on days that hold a record.
         if (day.entryCount > 0) {
             MoonPhaseDisc(
                 illumination = day.illumination.toFloat(),

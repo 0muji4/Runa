@@ -50,11 +50,8 @@ import com.runa.shared.feature.settings.ExportStatus
 import org.koin.compose.koinInject
 
 /**
- * アカウント・データ (23). Profile display + display-name editing, data export
- * (text or JSON via the system share sheet) and account deletion (with a
- * confirmation step). Sign-out lives here per the confirmed design. On successful
- * deletion the shared auth state drops to unauthenticated, so the app root returns
- * to sign-in on its own — no navigation needed here.
+ * アカウント・データ: display-name editing, export via the share sheet, sign-out, deletion.
+ * On deletion the shared auth state drops to unauthenticated, so the root returns to sign-in.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +63,6 @@ fun AccountScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // When an export is ready, offer the two formats and hand off to the OS share sheet.
     (state.export as? ExportStatus.Ready)?.let { ready ->
         val shareTitle = stringResource(R.string.account_export_share_title)
         val jsonLabel = stringResource(R.string.account_export_json)
@@ -95,7 +91,6 @@ fun AccountScreen(
         )
     }
 
-    // Deletion confirmation.
     if (state.deletion == DeletionStatus.Confirming) {
         AlertDialog(
             onDismissRequest = viewModel::cancelDelete,

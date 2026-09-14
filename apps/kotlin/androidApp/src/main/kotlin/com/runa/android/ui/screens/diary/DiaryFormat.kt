@@ -9,18 +9,15 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/**
- * Quiet date formatting for the diary. The design shows the day and the moon phase
- * — never a clock time — so the record stays timeless in tone.
- */
+/** Diary dates are day + moon phase in the device zone — never a clock time. */
 private val dayFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("M月d日", Locale.JAPAN)
 
-/** e.g. 7月4日 (no time — the design never shows a clock). */
+/** e.g. 7月4日 */
 fun formatDiaryDate(epochMs: Long): String =
     Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(dayFormatter)
 
-/** e.g. 日曜 — the short Japanese weekday used in the editor/detail headers. */
+/** e.g. 日曜 */
 fun formatDiaryWeekday(epochMs: Long): String {
     val dow = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).dayOfWeek
     return when (dow) {
@@ -35,14 +32,13 @@ fun formatDiaryWeekday(epochMs: Long): String {
 }
 
 /**
- * The epoch-millis of local noon on an ISO `yyyy-MM-dd` day — the backdate used when
- * writing on a past calendar day, so the new entry lands on that day (local noon is
- * a stable mid-day instant that never slips across the date boundary).
+ * Backdate for a past `yyyy-MM-dd` day: local noon, so the entry never slips across
+ * the date boundary in any zone.
  */
 fun isoDateToNoonEpochMs(isoDate: String): Long =
     LocalDate.parse(isoDate).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-/** The moon phase for a diary entry's day: disc geometry + the shared Japanese name. */
+/** Moon phase for a diary entry's day: disc geometry + the shared Japanese name. */
 data class DiaryMoon(val illumination: Float, val waxing: Boolean, val name: String)
 
 private const val SYNODIC_HALF = 29.530588853 / 2.0

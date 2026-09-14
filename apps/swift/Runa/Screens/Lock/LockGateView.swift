@@ -1,14 +1,9 @@
 import SwiftUI
 import Shared
 
-/// Privacy-lock gate — a layer SEPARATE from the auth gate. While the lock is
-/// engaged the real `content` is NOT built (nothing private can flash behind the
-/// lock); a quiet moon-motif lock screen with an unlock affordance is shown
-/// instead. When the lock is off (or auth succeeds, or the device has no security)
-/// the content renders normally.
-///
-/// Drives the shared view model from the scene lifecycle: foreground on `.active`
-/// (and at launch, via `.onAppear`), background on `.background`.
+/// Privacy-lock gate, separate from the auth gate. While locked the real `content` is NOT
+/// built, so nothing private can flash behind the lock screen. Foregrounds the view model
+/// on `.active` and, at launch, via `.onAppear`.
 struct LockGateView<Content: View>: View {
     @ObservedObject var lock: AppLockObservable
     @Environment(\.scenePhase) private var scenePhase
@@ -36,8 +31,7 @@ struct LockGateView<Content: View>: View {
     }
 }
 
-/// The quiet lock screen: a glowing moon, a poetic line, and an unlock affordance
-/// (or a "確認しています…" note while the biometric prompt is up).
+/// The lock screen: an unlock affordance, or a waiting note while the biometric prompt is up.
 private struct LockScreen: View {
     @Environment(\.runaTheme) private var runaTheme
     let authenticating: Bool

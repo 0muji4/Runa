@@ -1,18 +1,13 @@
 import SwiftUI
 import Shared
 
-/// Diary editor (10) — "書く". A whitespace-first 明朝 canvas: the day's date, a
-/// quiet prompt, then the writing surface (Dynamic Type–aware). The character count
-/// is never shown; autosave is durable with a whisper of an indicator. 「閉じる」
-/// flushes and leaves. A quiet mood chip row sits under the prompt — one gentle word
-/// for the night, feeding the insight read-back; leaving it unset is natural.
+/// Diary editor: autosaving body text plus an optional mood chip; 閉じる flushes and leaves.
 struct DiaryEditorView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model: DiaryEditorObservable
     @Environment(\.dismiss) private var dismiss
 
-    // The day being written; the header shows it. For a backdated entry (calendar
-    // "write on this day") it is that day's local noon.
+    // The day being written; for a backdated entry it is that day's local noon.
     private let dayMs: Int64
 
     init(clientId: String?) {
@@ -27,8 +22,8 @@ struct DiaryEditorView: View {
         dayMs = epoch
     }
 
-    /// Epoch-millis of local noon on an ISO yyyy-MM-dd day — a stable mid-day instant
-    /// that never slips across the date boundary.
+    /// Epoch-millis of local noon on an ISO yyyy-MM-dd day — mid-day so it never slips
+    /// across a date boundary.
     private static func noonEpochMs(isoDate: String) -> Int64 {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = .current
@@ -100,9 +95,6 @@ struct DiaryEditorView: View {
         .onDisappear { model.saveNow() }
     }
 
-    /// The quiet mood row: one gentle word for the night. Tapping the selected chip
-    /// again clears it (未選択). Options come from the shared `DiaryMood`, so what's
-    /// written is exactly what the insight aggregation reads.
     private func moodChips(_ selected: String?) -> some View {
         // fixedSize(vertical:) keeps the horizontal scroll strip hugging its content
         // height, so it never competes with the greedy TextEditor below for space.

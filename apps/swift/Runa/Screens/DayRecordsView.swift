@@ -1,9 +1,7 @@
 import SwiftUI
 import Shared
 
-/// The records of one calendar day, reached by tapping a day that has entries. A
-/// quiet "M月d日" header over the day's record cards (each taps into the existing
-/// diary detail), plus a subtle "この日を綴る" invitation into the backdated writer.
+/// The records of one calendar day, plus a link into the backdated writer.
 struct DayRecordsView: View {
     @Environment(\.runaTheme) private var runaTheme
     let isoDate: String

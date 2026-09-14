@@ -1,9 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// Onboarding (①②). Whitespace-first and spare, exactly as the design intends: a
-/// softly glowing moon, one large left-aligned 明朝 line, and a quiet "すすむ" to
-/// advance — no filled buttons, no body paragraph.
+/// One onboarding page: a glowing moon, one heading line, and a tap-to-advance hint.
 struct OnboardingView: View {
     @Environment(\.runaTheme) private var runaTheme
     let title: String
@@ -37,8 +35,7 @@ struct OnboardingView: View {
     }
 }
 
-/// Notification permission (④). A quiet night-time request: the moon with a small
-/// moonlight-pink bell badge, a poetic 明朝 line, and a gentle ask.
+/// The notification-permission ask shown during onboarding.
 struct NotificationPermissionView: View {
     @Environment(\.runaTheme) private var runaTheme
     let onContinue: () -> Void
@@ -86,8 +83,7 @@ struct NotificationPermissionView: View {
         }
     }
 
-    /// Fire the real POST-notification authorization request, then advance whether
-    /// granted or denied — a denial must never break onboarding (DoD#3).
+    /// Advances whether granted or denied — a denial must never block onboarding.
     private func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
             DispatchQueue.main.async { onContinue() }

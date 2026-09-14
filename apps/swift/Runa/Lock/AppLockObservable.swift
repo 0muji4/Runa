@@ -1,11 +1,8 @@
 import Foundation
 import Shared
 
-/// Bridge over the shared `AppLockViewModel`. Drives both the privacy-lock gate
-/// (`state`) and the 22 プライバシー・ロック toggle (`lockEnabled`). This is a layer
-/// separate from auth: the gate hides content until the biometric prompt succeeds.
-/// Seeded synchronously so the gate is correct before the first frame (no content
-/// flashes behind an engaged lock).
+/// Bridge over the shared `AppLockViewModel`: lock gate (`state`) and toggle (`lockEnabled`).
+/// Seeded synchronously so the gate is correct before the first frame.
 @MainActor
 final class AppLockObservable: ObservableObject {
     @Published private(set) var state: AppLockUiState

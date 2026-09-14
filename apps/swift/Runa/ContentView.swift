@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Authenticated tab shell: 4 bottom tabs. Settings is NOT a tab — it is reached
-/// from the Home tab's top bar (see HomeView's toolbar), which also hosts
-/// sign-out. [displayName] comes from the shared /me lookup; [onSignOut] flips
-/// the shared auth state back to unauthenticated.
+/// Authenticated tab shell. Settings is not a tab; it is reached from HomeView's toolbar.
 struct ContentView: View {
     @Environment(\.runaTheme) private var runaTheme
     let displayName: String

@@ -2,11 +2,7 @@ import PhotosUI
 import Shared
 import SwiftUI
 
-/// 13 ギャラリー. A whitespace-rich two-column masonry of the user's
-/// images with a gallery-scoped display-theme toggle (monotone ⇔ pink) that re-grades
-/// the whole grid — NOT the app-wide theme. Tapping a cell opens the lightbox (14).
-/// Everything renders from the local DB; adds queue offline and flush on reconnect.
-/// Matches the Android GalleryScreen so both OSes agree.
+/// ギャラリー: two-column masonry of the user's images, rendered from the local DB.
 struct GalleryView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = GalleryObservable()
@@ -39,8 +35,6 @@ struct GalleryView: View {
     }
 
     @ViewBuilder private var content: some View {
-        // The display-theme toggle (grid chrome) shows over content and empty alike;
-        // the shared state surfaces drive the grid region.
         themeToggle(model.displayTheme)
         switch model.ui {
         case .content(let images, let sync):
@@ -113,8 +107,7 @@ struct GalleryView: View {
 
     private func cell(_ image: GalleryImage, allImages: [GalleryImage], theme: GalleryDisplayTheme) -> some View {
         let ratio = image.height > 0 ? CGFloat(image.width) / CGFloat(image.height) : 1
-        // A fixed-ratio surface box (width = column width, height = width/ratio) with
-        // the image filling and clipped — the reliable masonry-cell idiom.
+        // Fixed-ratio box with the image filling and clipped — the masonry-cell idiom.
         return RoundedRectangle(cornerRadius: 20)
             .fill(runaTheme.surface)
             .aspectRatio(min(max(ratio, 0.6), 1.6), contentMode: .fit)
@@ -169,8 +162,7 @@ struct GalleryView: View {
     }
 }
 
-/// The image itself: the presigned GET URL for an uploaded image (cached by
-/// URLCache for offline viewing), or a placeholder + progress while it uploads.
+/// The image (presigned GET URL, cached by URLCache) or a placeholder + progress while uploading.
 struct GalleryImageView: View {
     @Environment(\.runaTheme) private var runaTheme
     let image: GalleryImage
@@ -204,9 +196,7 @@ struct GalleryImageView: View {
     }
 }
 
-/// 14 画像詳細 — the lightbox. Full-screen, swipe between images, with a ✕ close and a
-/// delete affordance. Presented over a static snapshot of the grid list; deleting
-/// dismisses (matching Android).
+/// Static snapshot of the grid handed to the lightbox (full-screen paging; deleting dismisses).
 private struct LightboxContext: Identifiable {
     let id = UUID()
     let images: [GalleryImage]
@@ -270,16 +260,14 @@ private struct LightboxView: View {
     }
 }
 
-/// Monotone = full desaturation; pink = a desaturate-then-tint duotone toward the
-/// #F4A9C0 accent. Applied to grid cells and the lightbox alike, matching Android.
+/// Monotone = full desaturation; pink = a desaturate-then-tint duotone.
 private extension View {
     @ViewBuilder func galleryTheme(_ theme: GalleryDisplayTheme) -> some View {
         switch theme {
         case .monotone:
             self.saturation(0)
         case .pink:
-            // The gallery's pink duotone is a fixed, gallery-scoped treatment (NOT the
-            // app theme), so it uses the fixed brand pink rather than the theme accent.
+            // Gallery-scoped, NOT the app theme: the fixed brand pink, not runaTheme.accent.
             self.saturation(0).colorMultiply(Color(hex: 0xF4A9C0))
         default:
             self

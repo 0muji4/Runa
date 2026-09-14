@@ -1,11 +1,7 @@
 import SwiftUI
 import Shared
 
-/// 16 インサイト — "あなたへの、手紙". A quiet retrospective letter: the period label, a
-/// 明朝 heading, the rule-based summary, then the moon-phase overlap histogram (the
-/// hero, a lone pink peak) and a soft mood-dot line, closed by a still footnote card.
-/// A minimal 週/月 toggle and ‹ › period nav sit above. Everything renders from the
-/// local diary — no network. Matches the Android InsightScreen so both OSes agree.
+/// インサイト letter: period nav, summary, moon-phase histogram and mood dots (local diary only).
 struct InsightView: View {
     @Environment(\.runaTheme) private var runaTheme
     @StateObject private var model = InsightObservable()
@@ -16,8 +12,6 @@ struct InsightView: View {
             runaTheme.background.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // The letter title is the screen title, so it shows over every
-                    // state — not just when a letter has been composed.
                     RunaScreenHeader(title: L.insightLetterTitle, onBack: { dismiss() })
 
                     content
@@ -31,8 +25,6 @@ struct InsightView: View {
     }
 
     @ViewBuilder private var content: some View {
-        // The period chrome always shows (over content and empty alike); the shared
-        // state surfaces drive the letter body below it.
         if let header = model.header {
             periodBar(label: header.periodLabel, type: header.periodType)
         }
@@ -140,8 +132,7 @@ struct InsightView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The hero histogram: entries bucketed across the lunar cycle (新月 → 満月 → 新月).
-    /// The busiest phase glows moonlight-pink; the rest stay muted.
+    /// Entries bucketed across the lunar cycle (新月 → 満月 → 新月); the busiest phase glows.
     private func moonOverlapChart(_ buckets: [MoonPhaseBucket]) -> some View {
         let counts = buckets.map { Int($0.count) }
         let maxCount = counts.max() ?? 0
@@ -168,7 +159,7 @@ struct InsightView: View {
         }
     }
 
-    /// The soft mood line: a few dots per recorded mood, and a quiet note for the unmarked nights.
+    /// A few dots per recorded mood, plus a note for the unmarked nights.
     private func moodDots(_ distribution: [MoodCount], unmooded: Int) -> some View {
         let present = distribution.filter { $0.count > 0 }
         return VStack(alignment: .leading, spacing: 12) {

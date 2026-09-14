@@ -1,11 +1,8 @@
 import SwiftUI
 import Shared
 
-/// The unauthenticated flow: onboarding ①② → notification shell → sign-in. Shown
-/// by the root gate whenever the shared `AuthState` is not `Authenticated`.
-/// Actions delegate to the shared `AuthObservable`; provider-side errors (Apple
-/// cancelled, Google unconfigured, ...) are surfaced locally alongside the shared
-/// `AuthState.Error`.
+/// The unauthenticated flow (onboarding → notification ask → sign-in), shown while the
+/// shared `AuthState` is not `Authenticated`.
 struct AuthFlowView: View {
     @ObservedObject var auth: AuthObservable
     let state: AuthState

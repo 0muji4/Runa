@@ -11,12 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * Generous, near-empty shell shared by every tab that has no feature yet.
- * Title in a heading style, one line of subtle placeholder copy — nothing else.
- *
- * TODO: replace call sites with real feature UIs as vertical slices land.
- */
+/** Shell for tabs that have no feature yet. TODO: replace call sites as slices land. */
 @Composable
 fun PlaceholderScreen(
     title: String,

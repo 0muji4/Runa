@@ -18,10 +18,8 @@ import com.runa.android.R
 import com.runa.android.ui.theme.RunaColors
 
 /**
- * Apple's official "Apple Music で聴く" badge, opening the track's Apple Music
- * page. Apple's Promo Content terms require it next to any preview or artwork
- * (docs/prd/todays-song-itunes-preview.md, N1), so 07 and each 08 row carry it.
- * The asset is Apple's own (design/apple_music_badge_ja.svg), never redrawn.
+ * Apple's official badge (asset is Apple's own, never redrawn); Apple's terms require it
+ * next to any preview or artwork.
  */
 @Composable
 fun AppleMusicBadge(storeUrl: String, modifier: Modifier = Modifier, height: Dp = 40.dp) {

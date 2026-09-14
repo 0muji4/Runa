@@ -20,11 +20,7 @@ import com.runa.android.R
 import com.runa.android.ui.components.GlowingMoon
 import com.runa.android.ui.theme.RunaColors
 
-/**
- * Onboarding (①②). Whitespace-first and spare, exactly as the design intends: a
- * softly glowing moon, one large left-aligned 明朝 line, and a quiet "すすむ" to
- * advance — no filled buttons, no body paragraph.
- */
+/** Onboarding page ①/②: a moon, one title line, and 「すすむ」 to advance. */
 @Composable
 fun OnboardingScreen(
     titleRes: Int,

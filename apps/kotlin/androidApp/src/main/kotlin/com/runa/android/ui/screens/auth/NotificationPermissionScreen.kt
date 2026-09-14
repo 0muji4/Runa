@@ -30,10 +30,8 @@ import com.runa.android.ui.components.NotificationMoon
 import com.runa.android.ui.theme.RunaColors
 
 /**
- * Notification permission (④). A quiet night-time request: the moon with a small
- * moonlight-pink bell badge, a poetic 明朝 line, and a gentle ask. Tapping 許可する
- * fires the real POST_NOTIFICATIONS request on API 33+; the flow advances whether
- * granted or denied (a denial never breaks onboarding — DoD#3).
+ * Onboarding ④: 許可する fires the real POST_NOTIFICATIONS request on API 33+; the flow
+ * advances whether granted or denied.
  */
 @Composable
 fun NotificationPermissionScreen(

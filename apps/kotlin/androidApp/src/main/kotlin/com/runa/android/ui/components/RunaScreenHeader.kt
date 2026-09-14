@@ -20,21 +20,9 @@ import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.RunaHeader
 
 /**
- * The one screen header. Every screen that carries a title uses this and writes no
- * header of its own, so the title size, the back affordance and the vertical rhythm
- * are identical everywhere (README「画面ヘッダー（全画面共通の型）」is the canon).
- *
- * [onBack] decides the variant: `null` means a bottom-tab root (starts at
- * [RunaHeader.TopTab], no back row), otherwise a pushed screen (starts at
- * [RunaHeader.TopPushed] with the「‹ 戻る」row above the title).
- *
- * [title] is null on the one pushed screen that carries no screen title (the
- * retrospective calendar, whose month stepper is content rather than a heading), so
- * it still gets the same back affordance and the same top offset as its siblings.
- *
- * Horizontal padding is deliberately absent — the caller's container supplies it, so
- * the title always lines up with the body beneath it rather than with a value chosen
- * here.
+ * The one screen header (offsets shared with iOS/README, drift-guarded). `onBack == null` means a
+ * bottom-tab root; a null [title] keeps the back row and top offset. No horizontal padding:
+ * the caller's container supplies it.
  */
 @Composable
 fun RunaScreenHeader(
@@ -54,7 +42,6 @@ fun RunaScreenHeader(
                 color = RunaColors.Subtle,
                 modifier = Modifier
                     .clickable(onClick = onBack)
-                    // Widens the touch target without moving the glyph off the margin.
                     .padding(top = 6.dp, bottom = 6.dp, end = 12.dp),
             )
             if (title != null) Spacer(Modifier.height(RunaHeader.BackGap))

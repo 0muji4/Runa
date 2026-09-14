@@ -17,16 +17,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Runa moon motif, drawn with the Canvas — NO emoji, NO text glyphs. Every screen
- * that needs a moon (sign-in, onboarding, notification, diary cards/detail, and
- * the empty/offline/error states) shares these primitives so the world-view stays
- * consistent across the app and identical in spirit to the iOS MoonArt.
- */
-
-// The moon is a FIXED cross-theme motif (design decision): it never recolors with
-// the app theme, so it holds its own dark-motif constants rather than reading the
-// theme tokens. Values match the original dark palette.
+// Drawn moon motif (no emoji/glyphs). The moon is fixed across themes, so it keeps its own
+// dark-palette constants instead of reading the theme tokens.
 private val MoonLit = Color(0xFFF7F2E4)         // bright limb
 private val MoonCream = Color(0xFFE8E2D0)        // sub-accent cream
 private val MoonDark = Color(0xFF34343E)         // unlit disc, a touch above the surface
@@ -48,10 +40,7 @@ private fun DrawScope.drawGlow(center: Offset, radius: Float, tint: Color, alpha
     )
 }
 
-/**
- * A full, softly glowing moon — the hero mark for sign-in / onboarding / splash.
- * The whole mark (glow included) fits within [diameter].
- */
+/** Full glowing moon (hero mark). The whole mark, glow included, fits within [diameter]. */
 @Composable
 fun GlowingMoon(
     modifier: Modifier = Modifier,
@@ -61,10 +50,8 @@ fun GlowingMoon(
     Canvas(modifier.size(diameter)) {
         val c = center
         val moonR = size.minDimension * 0.30f
-        // Outer halo, then a warmer inner glow.
         drawGlow(c, size.minDimension * 0.5f, haloTint, 0.22f)
         drawGlow(c, moonR * 1.7f, MoonLit, 0.30f)
-        // Moon body with an off-centre highlight for a little dimension.
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(MoonLit, MoonCream),
@@ -78,10 +65,8 @@ fun GlowingMoon(
 }
 
 /**
- * A small moon-phase disc for diary cards / detail. The lit fraction comes from the
- * shared moon calculator ([illumination] 0..1); [waxing] puts the lit limb on the
- * right. Rendered with the offset-shadow method: a lit disc with a same-size shadow
- * disc slid toward the dark limb, clipped to the moon.
+ * Small moon-phase disc. [illumination] is 0..1; [waxing] puts the lit limb on the right.
+ * Drawn as a lit disc with a same-size shadow disc slid toward the dark limb.
  */
 @Composable
 fun MoonPhaseDisc(
@@ -99,20 +84,17 @@ private fun DrawScope.drawMoonPhase(illumination: Float, waxing: Boolean) {
     val c = center
     val r = size.minDimension / 2f * 0.92f
     val moon = Path().apply { addOvalCompat(c, r) }
-    // Faint halo for the bright phases so a full moon glows a little.
     if (illumination > 0.55f) drawGlow(c, r * 1.9f, MoonCream, 0.18f * illumination)
     clipPath(moon) {
-        // Fully lit disc, then darken the unlit limb.
         drawCircle(MoonCream, r, c)
         val dir = if (waxing) -1f else 1f // shadow slides toward the dark side
         val shadowX = c.x + dir * 2f * r * illumination
         drawCircle(MoonDark, r, Offset(shadowX, c.y))
     }
-    // Thin rim keeps the disc legible on the near-black background.
     drawCircle(MoonRing, r, c, style = Stroke(width = 1.2f))
 }
 
-/** New-moon emblem for the empty state (24): a dark disc inside a faint ring. */
+/** New-moon emblem (empty state): a dark disc inside a faint ring. */
 @Composable
 fun NewMoonEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     Canvas(modifier.size(diameter)) {
@@ -132,7 +114,7 @@ fun NewMoonEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     }
 }
 
-/** Clouded moon for the offline state (25): a dim disc crossed by a soft stroke. */
+/** Clouded moon (offline state): a dim disc crossed by a soft stroke. */
 @Composable
 fun CloudedMoon(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     Canvas(modifier.size(diameter)) {
@@ -157,7 +139,7 @@ fun CloudedMoon(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     }
 }
 
-/** Gentle "stumble" emblem for the error state (27): a soft disc holding an ! mark. */
+/** Stumble emblem (error state): a soft disc holding a drawn ! mark. */
 @Composable
 fun StumbleEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     Canvas(modifier.size(diameter)) {
@@ -173,7 +155,6 @@ fun StumbleEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
             radius = r,
             center = c,
         )
-        // ! mark, drawn (no glyph): a stem and a dot in the background colour.
         val stemTop = Offset(c.x, c.y - r * 0.42f)
         val stemBottom = Offset(c.x, c.y + r * 0.10f)
         drawLine(MoonBackground, stemTop, stemBottom, strokeWidth = r * 0.16f, cap = StrokeCap.Round)
@@ -181,10 +162,7 @@ fun StumbleEmblem(modifier: Modifier = Modifier, diameter: Dp = 108.dp) {
     }
 }
 
-/**
- * The notification mark (04): the glowing moon with a small moonlight-pink badge
- * carrying a minimal bell — drawn, not an emoji.
- */
+/** Notification mark: the glowing moon with a small pink badge carrying a bell. */
 @Composable
 fun NotificationMoon(modifier: Modifier = Modifier, diameter: Dp = 132.dp) {
     Canvas(modifier.size(diameter)) {
@@ -201,7 +179,6 @@ fun NotificationMoon(modifier: Modifier = Modifier, diameter: Dp = 132.dp) {
             radius = moonR,
             center = c,
         )
-        // Pink badge up and to the right of the moon.
         val badgeC = Offset(c.x + moonR * 0.95f, c.y - moonR * 0.95f)
         val badgeR = moonR * 0.6f
         drawGlow(badgeC, badgeR * 2.1f, MoonAccent, 0.35f)
@@ -210,13 +187,11 @@ fun NotificationMoon(modifier: Modifier = Modifier, diameter: Dp = 132.dp) {
     }
 }
 
-/** A minimal bell: a rounded dome body, a base line and a clapper dot. */
 private fun DrawScope.drawBell(c: Offset, s: Float, color: Color) {
     val w = s * 0.9f
     val h = s * 1.0f
     val body = Path().apply {
         moveTo(c.x - w * 0.5f, c.y + h * 0.28f)
-        // sides sweep up into a dome
         cubicTo(
             c.x - w * 0.5f, c.y - h * 0.15f,
             c.x - w * 0.32f, c.y - h * 0.5f,
@@ -230,7 +205,6 @@ private fun DrawScope.drawBell(c: Offset, s: Float, color: Color) {
         close()
     }
     drawPath(body, color, style = Fill)
-    // base line + clapper
     drawLine(
         color,
         Offset(c.x - w * 0.6f, c.y + h * 0.30f),
@@ -241,11 +215,7 @@ private fun DrawScope.drawBell(c: Offset, s: Float, color: Color) {
     drawCircle(color, s * 0.12f, Offset(c.x, c.y + h * 0.5f))
 }
 
-/**
- * The privacy-lock emblem (22): a padlock inside a soft rounded square, stroked in
- * cream — the quiet motif the lock screen and the settings screen share. Drawn, no
- * glyph.
- */
+/** Privacy-lock emblem: a padlock inside a soft rounded square. */
 @Composable
 fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
     Canvas(modifier.size(diameter)) {
@@ -253,7 +223,6 @@ fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
         val boxHalf = size.minDimension * 0.30f
         val corner = boxHalf * 0.5f
         drawGlow(c, size.minDimension * 0.5f, MoonCream, 0.10f)
-        // Rounded-square container.
         drawRoundRect(
             color = MoonRing,
             topLeft = Offset(c.x - boxHalf, c.y - boxHalf),
@@ -261,7 +230,6 @@ fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner, corner),
             style = Stroke(width = 2f),
         )
-        // Padlock body.
         val bodyW = boxHalf * 0.9f
         val bodyH = boxHalf * 0.72f
         val bodyTop = c.y - bodyH * 0.1f
@@ -272,7 +240,6 @@ fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(bodyW * 0.16f, bodyW * 0.16f),
             style = Stroke(width = 2.4f),
         )
-        // Shackle arc above the body.
         val shackleR = bodyW * 0.32f
         val shacklePath = Path().apply {
             moveTo(c.x - shackleR, bodyTop)
@@ -283,7 +250,6 @@ fun LockEmblem(modifier: Modifier = Modifier, diameter: Dp = 120.dp) {
             )
         }
         drawPath(shacklePath, MoonCream, style = Stroke(width = 2.4f))
-        // Keyhole dot.
         drawCircle(MoonCream, bodyW * 0.09f, Offset(c.x, bodyTop + bodyH * 0.5f))
     }
 }

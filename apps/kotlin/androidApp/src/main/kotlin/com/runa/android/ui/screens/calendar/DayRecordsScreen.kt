@@ -40,12 +40,7 @@ import com.runa.shared.feature.diary.DiaryEntry
 import org.koin.compose.getKoin
 import org.koin.core.parameter.parametersOf
 
-/**
- * The records of one calendar day, reached by tapping a day that has entries. A
- * quiet "M月d日" header over the day's record cards (each leads with the day's moon
- * and taps into the existing diary detail), plus a subtle "この日を綴る" invitation
- * that opens the backdated writer.
- */
+/** One calendar day's record cards, plus 「この日を綴る」 into the backdated writer. */
 @Composable
 fun DayRecordsScreen(
     isoDate: String,

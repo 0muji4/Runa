@@ -79,36 +79,24 @@ object Routes {
     const val ACCOUNT = "settings/account"
 }
 
-/** Route builders for the diary sub-screens (clientId is a UUID, path-safe). */
+/** clientId is a UUID (path-safe). */
 fun diaryEditorRoute(clientId: String): String = "diary/editor/$clientId"
 fun diaryDetailRoute(clientId: String): String = "diary/detail/$clientId"
 
-/** Route builders for the calendar sub-screens (date is ISO yyyy-MM-dd, path-safe). */
+/** date is ISO yyyy-MM-dd (path-safe). */
 fun dayRecordsRoute(isoDate: String): String = "calendar/day/$isoDate"
 fun diaryWriteOnRoute(isoDate: String): String = "diary/write-on/$isoDate"
 
-/**
- * Root auth gate. Subscribes to the shared [AuthViewModel] and switches the whole
- * app between the startup splash, the unauthenticated flow, and the tab body:
- *  - [AuthState.Restoring]      → splash (checking the stored session)
- *  - [AuthState.Authenticated]  → the tabbed app, greeting the /me display name
- *  - anything else              → onboarding → sign-in
- *
- * Signing out from Settings flips the state back to unauthenticated, so this gate
- * returns to the sign-in flow automatically.
- */
+/** Root auth gate: splash while restoring, tab body when authenticated, else the sign-in flow. */
 @Composable
 fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
     val state by authViewModel.state.collectAsStateWithLifecycle()
-    // Stable identity so providing it (a static CompositionLocal) doesn't recompose the
-    // whole tab tree when RunaApp recomposes (e.g. the user profile re-emits).
+    // Stable identity: a new lambda per recomposition would recompose the whole tab tree.
     val reauthenticate = remember(authViewModel) { { authViewModel.logout() } }
 
     when (val current = state) {
         is AuthState.Restoring -> SplashScreen()
         is AuthState.Authenticated ->
-            // Provide the shared re-authenticate action (clears the session → sign-in)
-            // so the RunaErrorView auth CTA works app-wide without threading a callback.
             CompositionLocalProvider(LocalReauthenticate provides reauthenticate) {
                 RunaAuthenticatedApp(
                     displayName = current.user.displayName,
@@ -119,13 +107,7 @@ fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
     }
 }
 
-/**
- * The authenticated app. A single outer [NavHost] with NO bottom bar hosts the tab
- * shell plus every pushed screen (settings subtree, diary/calendar/insight detail,
- * song archive, today's moon). The bottom tab bar therefore appears ONLY on the four
- * root tabs and is covered on every pushed screen — matching the design, where detail
- * and settings screens are full-screen.
- */
+/** Outer [NavHost] without a bottom bar: pushed screens cover the tab bar entirely. */
 @Composable
 fun RunaAuthenticatedApp(
     displayName: String,
@@ -245,12 +227,7 @@ fun RunaAuthenticatedApp(
     }
 }
 
-/**
- * Wraps a pushed (non-tab) screen so it keeps the system-bar insets the tab
- * [Scaffold] used to provide: without this, the top back-affordance would sit under
- * the status bar and bottom content under the gesture bar, since these screens now
- * live in the bottom-bar-less outer NavHost.
- */
+/** Pushed screens have no [Scaffold], so system-bar insets are applied here. */
 @Composable
 private fun Pushed(content: @Composable () -> Unit) {
     Box(
@@ -263,11 +240,7 @@ private fun Pushed(content: @Composable () -> Unit) {
     }
 }
 
-/**
- * The tab shell: four bottom tabs over an inner [NavHost]. Pushes that should cover
- * the tab bar (settings, detail screens) navigate on [rootNav] instead of the inner
- * controller, so they leave the shell entirely.
- */
+/** Tab shell. Screens that should cover the tab bar navigate on [rootNav], not [tabNav]. */
 @Composable
 private fun RunaTabs(
     displayName: String,
@@ -335,11 +308,7 @@ private fun RunaTabs(
     }
 }
 
-/**
- * The four bottom-navigation tabs. Icons come from [RunaIcons] (drawn vectors, no
- * emoji/text glyphs), and the design shows no text labels — the label string is kept
- * only as each item's content description for accessibility.
- */
+/** Bottom tabs. No visible text labels; [labelRes] is the content description only. */
 private enum class RunaTab(
     val route: String,
     @StringRes val labelRes: Int,

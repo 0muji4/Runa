@@ -8,16 +8,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.runa.android.R
 
-/**
- * Runa typography. The design system calls for three families:
- *   - headings: "Shippori Mincho"       (明朝 — long-form and titles)
- *   - body:     "Zen Kaku Gothic New"   (本文)
- *   - logo:     "Cormorant Garamond"    (ロゴ「LUNA」)
- *
- * The OFL binaries live in androidApp/src/main/res/font/ (see androidApp/FONTS.md).
- * Only Regular + Medium are bundled per family; emphasis is carried by size and
- * colour, not heavy weights — in keeping with the quiet, spare design tone.
- */
+// Families: headings "Shippori Mincho", body "Zen Kaku Gothic New", logo "Cormorant Garamond".
+// Only Regular + Medium are bundled (res/font/, see androidApp/FONTS.md).
 val ShipporiMincho: FontFamily = FontFamily(
     Font(R.font.shippori_mincho_regular, FontWeight.Normal),
     Font(R.font.shippori_mincho_medium, FontWeight.Medium),
@@ -32,14 +24,8 @@ val CormorantGaramond: FontFamily = FontFamily(
 )
 
 /**
- * Maps the families onto Material3 type roles:
- *   - display roles  -> logo (Cormorant Garamond)
- *   - headline/title -> headings (Shippori Mincho)
- *   - body/label     -> body (Zen Kaku Gothic New)
- *
- * `headlineLarge` is the single screen-title style every header uses, and
- * `labelMedium` the「‹ 戻る」/ header-action style. Both are pinned by the canon
- * table in README「画面ヘッダー（全画面共通の型）」— change them there first.
+ * display -> logo, headline/title -> headings, body/label -> body. `headlineLarge` (screen
+ * title) and `labelMedium` (header label) sizes are shared with iOS/README (drift-guarded).
  */
 val RunaTypography = Typography(
     displayLarge = TextStyle(

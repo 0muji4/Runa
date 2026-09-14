@@ -39,11 +39,7 @@ import com.runa.shared.feature.diary.DiaryEntry
 import com.runa.shared.feature.diary.DiaryListViewModel
 import org.koin.compose.koinInject
 
-/**
- * Diary detail (11) — reading a record back. A moon-led header (phase disc, date,
- * phase · weekday) over the body in #C8C6CE 明朝 for calm legibility, with quiet
- * edit/delete affordances. The entry is read from the (singleton) list cache.
- */
+/** Diary detail with edit/delete. The entry is read from the singleton list cache. */
 @Composable
 fun DiaryDetailScreen(
     clientId: String,
@@ -63,7 +59,6 @@ fun DiaryDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 28.dp, end = 28.dp, bottom = 18.dp),
         ) {
-            // The date is the screen title; the moon and weekday sit under it as meta.
             RunaScreenHeader(
                 title = entry?.let { formatDiaryDate(it.createdAtEpochMs) },
                 onBack = onBack,

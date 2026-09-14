@@ -41,27 +41,7 @@ import com.runa.shared.core.state.AppError
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
 
-/**
- * The four shared state screens — the single home for LUNA's 空 / オフライン /
- * ローディング / エラー surfaces (confirmed designs 24–27). Every feature routes its
- * page-level [UiState] through [RunaStateView] instead of re-implementing loading /
- * empty / offline / error, so the world-view (the moon motif, the quiet voice) stays
- * consistent and identical to iOS's `RunaStateViews`.
- *
- * The emblems (`GlowingMoon` / `NewMoonEmblem` / `CloudedMoon` / `StumbleEmblem`) are
- * the fixed cross-theme motif from [com.runa.android.ui.components] (they do not
- * recolor with the theme); the surrounding text and CTAs read the theme tokens.
- * The loading indicator is a quiet moon + three dots (never a spinner) and honors
- * reduced motion ([rememberReducedMotion]).
- */
-
-/**
- * The app-wide "re-authenticate" action, provided once by `RunaApp` (it clears the
- * session so the shared auth state drops to sign-in — the same door sign-out uses).
- * Defaulted here so the [RunaErrorView] auth CTA works without every screen threading
- * a callback; the global `TokenStore.sessionExpired` signal remains the primary
- * re-auth path (DoD #3).
- */
+/** App-wide re-authenticate action, provided once by `RunaApp`; clears the session. */
 val LocalReauthenticate = staticCompositionLocalOf<() -> Unit> { {} }
 
 /** True when the OS animation scale is 0 (reduced motion). Read once per composition. */
@@ -78,13 +58,8 @@ fun rememberReducedMotion(): Boolean {
 }
 
 /**
- * Dispatches a page-level [UiState] to the right shared surface. [empty] is a slot
- * so each feature supplies its own [RunaEmptyView] copy (the empty motif + layout is
- * shared, the words are the feature's). [content] renders the loaded body and is
- * handed the [SyncPhase] so the screen can place a [RunaSyncBanner] over it.
- *
- * [onRetry] backs the offline/error retry; [onReauthenticate] backs the
- * session-expired CTA (which drops the app to sign-in via the shared auth state).
+ * Dispatches a page-level [UiState] to the shared surface. [empty] is a per-feature slot;
+ * [content] receives the [SyncPhase] so the screen can place a [RunaSyncBanner] over it.
  */
 @Composable
 fun <T> RunaStateView(
@@ -107,14 +82,13 @@ fun <T> RunaStateView(
                 onCta = onReauthenticate,
                 modifier = modifier,
             )
-            // Server / unknown share the same quiet 「読み込めませんでした。」 error surface.
             is AppError.Server, is AppError.Unknown -> RunaErrorView(onCta = onRetry, modifier = modifier)
         }
         is UiState.Content -> content(state.data, state.sync)
     }
 }
 
-/** Loading (26): a quiet glowing moon + three dots. Never a spinner; reduced-motion safe. */
+/** Loading: a glowing moon + three dots. Never a spinner; reduced-motion safe. */
 @Composable
 fun RunaLoadingView(
     modifier: Modifier = Modifier,
@@ -134,11 +108,7 @@ fun RunaLoadingView(
     }
 }
 
-/**
- * Empty (24): the new-moon emblem over a quiet invitation. Copy is per-feature —
- * an empty page is an invitation to begin, so callers pass their own [title]/[body]
- * and optional [ctaLabel]/[onCta].
- */
+/** Empty: the new-moon emblem over per-feature copy. */
 @Composable
 fun RunaEmptyView(
     title: String,
@@ -160,8 +130,7 @@ fun RunaEmptyView(
     }
 }
 
-/** Offline (25): the clouded moon; what's cached is still shown behind this — this
- *  surface is only for when there is nothing to show. Quiet retry. */
+/** Offline, full-page: only when there is nothing cached to show (else [RunaSyncBanner]). */
 @Composable
 fun RunaOfflineView(
     onRetry: () -> Unit,
@@ -188,11 +157,7 @@ fun RunaOfflineView(
     }
 }
 
-/**
- * Error (27): the stumble emblem. Does not apologize — says what happened and how to
- * go on, in the world's voice. Defaults to the generic 「読み込めませんでした。」 copy; the auth
- * variant overrides the copy + CTA.
- */
+/** Error: the stumble emblem. Defaults to the generic copy; the auth variant overrides copy + CTA. */
 @Composable
 fun RunaErrorView(
     onCta: () -> Unit,
@@ -212,11 +177,7 @@ fun RunaErrorView(
     }
 }
 
-/**
- * The quiet status line shown over cached content (DoD #2): offline/error only —
- * a running sync is signalled by the screen's own pull indicator, so Idle/Syncing
- * render nothing.
- */
+/** Status line over cached content: offline/error only; Idle/Syncing render nothing. */
 @Composable
 fun RunaSyncBanner(phase: SyncPhase, modifier: Modifier = Modifier) {
     val text = when (phase) {
@@ -236,11 +197,7 @@ fun RunaSyncBanner(phase: SyncPhase, modifier: Modifier = Modifier) {
     )
 }
 
-/**
- * Centered column the state surfaces share. Fills the width; the caller controls the
- * height via [modifier] (`fillMaxSize()` for a full screen, a fixed height inside a
- * scroll). Vertical centering applies when the height is bounded.
- */
+/** Shared centered column; the caller bounds the height via [modifier] for vertical centering. */
 @Composable
 private fun StateScaffold(modifier: Modifier, content: @Composable () -> Unit) {
     Column(
@@ -253,7 +210,7 @@ private fun StateScaffold(modifier: Modifier, content: @Composable () -> Unit) {
     )
 }
 
-/** A bordered pill CTA. [accent] uses the moonlight-pink accent, else a quiet subtle outline. */
+/** Bordered pill CTA. [accent] uses the accent color, else the subtle outline. */
 @Composable
 private fun RunaPillButton(label: String, onClick: () -> Unit, accent: Boolean) {
     val tint = if (accent) RunaColors.Accent else RunaColors.Subtle
@@ -267,7 +224,7 @@ private fun RunaPillButton(label: String, onClick: () -> Unit, accent: Boolean) 
     }
 }
 
-/** Three quiet dots. Animated (staggered fade) unless [animate] is false (reduced motion). */
+/** Three dots, staggered fade unless [animate] is false (reduced motion). */
 @Composable
 private fun ThreeDotProgress(animate: Boolean) {
     val accent = RunaColors.Accent

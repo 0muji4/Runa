@@ -16,9 +16,7 @@ import (
 // notifyTimePattern matches a 24-hour local reminder time "HH:MM".
 var notifyTimePattern = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
-// Devices is the HTTP transport for the device-registration endpoint. Like the
-// other handlers it only translates requests/responses; the logic lives in the
-// service layer.
+// Devices is the HTTP transport for the device-registration endpoint.
 type Devices struct {
 	svc    *service.DeviceService
 	logger *slog.Logger
@@ -46,8 +44,7 @@ type deviceResponse struct {
 	UpdatedAt  string `json:"updated_at"`
 }
 
-// Register handles PUT /api/v1/devices — idempotently registers the caller's push
-// token plus reminder preference (upsert by user + token).
+// Register handles PUT /api/v1/devices (idempotent upsert by user + token).
 func (d *Devices) Register(w http.ResponseWriter, r *http.Request) {
 	userID, ok := d.userID(w, r)
 	if !ok {

@@ -6,8 +6,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// RunDeviceStoreSuite exercises the DeviceStore contract: registration upserts on
-// (user_id, push_token), which is what makes a retried PUT /devices idempotent.
+// RunDeviceStoreSuite exercises the DeviceStore contract.
 func RunDeviceStoreSuite(t *testing.T, newFixture NewFixture) {
 	t.Run("UpsertIsIdempotentPerPushToken", func(t *testing.T) {
 		t.Parallel()
@@ -90,7 +89,6 @@ func RunDeviceStoreSuite(t *testing.T, newFixture NewFixture) {
 		if err != nil {
 			t.Fatalf("UpsertDevice(userA) error = %v, want nil", err)
 		}
-		// The unique key is (user_id, push_token), not the token alone.
 		b, err := f.Devices.UpsertDevice(ctx, repository.UpsertDeviceParams{
 			UserID: userB, PushToken: "shared-token", Platform: "android",
 			NotifyTime: "21:00", Enabled: true,

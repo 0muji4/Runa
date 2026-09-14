@@ -17,9 +17,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 )
 
-// Gallery is the HTTP transport for the gallery endpoints. Like the other
-// handlers it only translates requests/responses and maps service errors to the
-// shared envelope; the logic lives in the service layer.
+// Gallery is the HTTP transport for the gallery endpoints.
 type Gallery struct {
 	svc    *service.GalleryService
 	logger *slog.Logger
@@ -66,8 +64,7 @@ type galleryListResponse struct {
 	NextCursor *string                `json:"next_cursor"`
 }
 
-// UploadURL handles POST /api/v1/gallery/upload-url — issues a presigned PUT URL
-// plus the object_key the client registers after uploading.
+// UploadURL handles POST /api/v1/gallery/upload-url (presigned PUT URL + object_key).
 func (g *Gallery) UploadURL(w http.ResponseWriter, r *http.Request) {
 	userID, ok := g.userID(w, r)
 	if !ok {
@@ -237,8 +234,7 @@ func (g *Gallery) parseCursor(w http.ResponseWriter, r *http.Request) (*reposito
 func (g *Gallery) writeGalleryError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, service.ErrGalleryNotFound), errors.Is(err, service.ErrInvalidObjectKey):
-		// Both collapse to 404: a stranger's id and a key outside the caller's
-		// namespace must be indistinguishable from "does not exist".
+		// Both must collapse to 404: a stranger's id must be indistinguishable from "does not exist".
 		g.notFound(w)
 	case errors.Is(err, service.ErrObjectMissing):
 		writeError(w, http.StatusBadRequest, CodeValidation, "validation failed",
@@ -293,8 +289,7 @@ func validateCreateGallery(req createGalleryRequest) []FieldError {
 	return details
 }
 
-// encodeGalleryCursor packs a keyset boundary into an opaque base64url token of
-// "<createdAt RFC3339Nano>|<id>". Clients treat it as opaque and echo it back.
+// encodeGalleryCursor packs a keyset boundary into an opaque base64url token of "<createdAt RFC3339Nano>|<id>".
 func encodeGalleryCursor(c repository.GalleryCursor) string {
 	raw := c.CreatedAt.UTC().Format(time.RFC3339Nano) + "|" + c.ID
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))

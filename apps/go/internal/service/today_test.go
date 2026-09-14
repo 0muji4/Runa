@@ -20,8 +20,6 @@ func day(s string) time.Time {
 	return d
 }
 
-// seedSong registers a track titled title with the fake Apple and creates the
-// day's song from it, the way the admin endpoint does.
 func seedSong(t *testing.T, svc *service.TodayService, lookup *fakeLookup, ctx context.Context, date, title string) repository.Song {
 	t.Helper()
 	song, err := svc.CreateSong(ctx, day(date), lookup.add(title))
@@ -235,7 +233,6 @@ func TestTodayService_MarkPlayed(t *testing.T) {
 				songID = seedSong(t, svc, lookup, ctx, "2026-07-11", "夜想曲").ID
 			}
 
-			// A zero playedAt exercises the default-to-server-clock branch.
 			err := svc.MarkPlayed(ctx, userA, songID, time.Time{})
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -305,7 +302,6 @@ func TestTodayService_CreateSong(t *testing.T) {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("CreateSong() error = %v, want %v", err, tt.wantErr)
 				}
-				// Nothing is stored for a failed registration.
 				content, err := svc.Today(ctx, day("2026-07-11"))
 				if err != nil {
 					t.Fatalf("Today() error = %v, want nil", err)
@@ -374,7 +370,6 @@ func TestTodayService_RefreshesStaleMetadataOnRead(t *testing.T) {
 			song := seedSong(t, svc, lookup, ctx, d, "夜想曲")
 			registrationLookups := lookup.callCount()
 
-			// Apple now serves a newer preview URL for the same track.
 			lookup.set(song.ITunesTrackID, itunes.Track{
 				TrackID: song.ITunesTrackID, Title: "夜想曲", Artist: "月詠",
 				ArtworkURL: "https://x/夜想曲.jpg", PreviewURL: "https://x/夜想曲-v2.m4a",
@@ -385,8 +380,7 @@ func TestTodayService_RefreshesStaleMetadataOnRead(t *testing.T) {
 			}
 			clock.Advance(tt.advance)
 
-			// The read itself answers with what is stored; the refresh (inline in
-			// tests) lands before the next read.
+			// The read answers with what is stored; the inline refresh lands before the next read.
 			first, err := svc.Today(ctx, day(d))
 			if err != nil {
 				t.Fatalf("Today() error = %v, want nil", err)

@@ -6,9 +6,7 @@ import (
 	"net/http"
 )
 
-// ErrorCode is a stable, machine-readable error identifier shared by every
-// feature endpoint. Clients switch on these codes rather than HTTP status alone,
-// so the set is part of the API contract (see api/openapi.yaml).
+// ErrorCode is a stable, machine-readable error identifier; the set is part of the API contract.
 type ErrorCode string
 
 const (
@@ -33,8 +31,7 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
-// errorEnvelope is the single error shape returned by all endpoints:
-// {"error": {"code": "...", "message": "...", "details": [...]}}.
+// errorEnvelope is the single error shape returned by all endpoints.
 type errorEnvelope struct {
 	Error errorPayload `json:"error"`
 }
@@ -45,8 +42,7 @@ type errorPayload struct {
 	Details []FieldError `json:"details,omitempty"`
 }
 
-// writeJSON writes v as a JSON response with the given status. A nil v writes
-// only the status line (used for 204 No Content).
+// writeJSON writes v as JSON with the given status; a nil v writes only the status line.
 func writeJSON(w http.ResponseWriter, status int, v any, logger *slog.Logger) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

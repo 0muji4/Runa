@@ -1,6 +1,4 @@
--- 0007_itunes_song.down.sql
--- Rows deleted by 0007 cannot be restored; only the columns return to the 0004
--- shape.
+-- Rows deleted by 0007 cannot be restored; only the columns return to the 0004 shape.
 DELETE FROM daily_songs;
 
 ALTER TABLE daily_songs

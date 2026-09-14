@@ -1,7 +1,5 @@
-// Package repository is the data-access layer. It owns the database pool and
-// exposes typed stores to the service layer. Persistence models and the store
-// interfaces live here; concrete pgx implementations sit alongside (e.g.
-// auth_repository.go).
+// Package repository is the data-access layer: persistence models, store
+// interfaces and their pgx implementations.
 package repository
 
 import (
@@ -19,9 +17,7 @@ var (
 	ErrNoDatabase = errors.New("repository: database not available")
 )
 
-// User is the persistence model for the users table (migrations 0001 + 0002).
-// Nullable columns are pointers so an absent value is distinguishable from a
-// zero value.
+// User is the persistence model for the users table.
 type User struct {
 	ID               string
 	Email            *string
@@ -45,8 +41,7 @@ type RefreshToken struct {
 	CreatedAt time.Time
 }
 
-// CreateUserParams carries the fields needed to insert a user. Email/AppleSub/
-// GoogleSub/PasswordHash are optional depending on the auth provider.
+// CreateUserParams carries the fields needed to insert a user.
 type CreateUserParams struct {
 	Email        *string
 	AuthProvider string
@@ -56,16 +51,14 @@ type CreateUserParams struct {
 	PasswordHash *string
 }
 
-// InsertRefreshTokenParams carries the fields needed to persist a refresh token
-// (only its hash is stored).
+// InsertRefreshTokenParams carries the fields needed to persist a refresh token.
 type InsertRefreshTokenParams struct {
 	UserID    string
 	TokenHash string
 	ExpiresAt time.Time
 }
 
-// AuthStore is the data-access boundary for authentication. The service depends
-// on this interface so tests can substitute an in-memory fake.
+// AuthStore is the data-access boundary for authentication.
 type AuthStore interface {
 	CreateUser(ctx context.Context, p CreateUserParams) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
@@ -73,19 +66,14 @@ type AuthStore interface {
 	// GetUserByProviderSub looks a user up by ("apple"|"google", subject).
 	GetUserByProviderSub(ctx context.Context, provider, sub string) (User, error)
 
-	// UpdateDisplayName sets a user's display_name and returns the updated row.
-	// Returns ErrNotFound when the id matches no user.
+	// UpdateDisplayName sets a user's display_name; ErrNotFound when the id matches no user.
 	UpdateDisplayName(ctx context.Context, id, displayName string) (User, error)
-	// DeleteUser permanently removes a user. The users table's ON DELETE CASCADE
-	// (migrations 0002–0005) removes the caller's refresh_tokens, diary_entries,
-	// gallery_images and song_history in the same statement; object-storage
-	// cleanup is NOT cascaded and stays the service's concern. Returns ErrNotFound
-	// when the id matches no user.
+	// DeleteUser permanently removes a user; the DB cascade removes their rows,
+	// object-storage cleanup does NOT cascade. ErrNotFound when the id matches no user.
 	DeleteUser(ctx context.Context, id string) error
 
 	InsertRefreshToken(ctx context.Context, p InsertRefreshTokenParams) error
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
-	// RevokeRefreshToken marks a token revoked. Revoking an unknown token is a
-	// no-op (logout is idempotent).
+	// RevokeRefreshToken marks a token revoked; revoking an unknown token is a no-op.
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 }

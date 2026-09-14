@@ -15,8 +15,7 @@ var (
 	ErrTokenExpired = errors.New("auth: access token expired")
 )
 
-// TokenIssuer mints and verifies short-lived HS256 access tokens. A symmetric
-// secret is sufficient because the same service both signs and verifies.
+// TokenIssuer mints and verifies short-lived HS256 access tokens.
 type TokenIssuer struct {
 	secret []byte
 	ttl    time.Duration
@@ -28,8 +27,7 @@ func NewTokenIssuer(secret string, ttl time.Duration) *TokenIssuer {
 	return &TokenIssuer{secret: []byte(secret), ttl: ttl, now: time.Now}
 }
 
-// accessClaims are the registered claims plus a token-type marker so a refresh
-// or provider token can never be replayed as an access token.
+// accessClaims add a token-type marker so a refresh or provider token can never be replayed as an access token.
 type accessClaims struct {
 	Type string `json:"typ"`
 	jwt.RegisteredClaims
@@ -55,8 +53,6 @@ func (ti *TokenIssuer) Issue(userID string) (token string, expiresIn int, err er
 }
 
 // Verify parses and validates an access token, returning its subject (user id).
-// It reports ErrTokenExpired specifically so the caller can distinguish an
-// expired token (client should refresh) from a malformed one.
 func (ti *TokenIssuer) Verify(tokenString string) (string, error) {
 	var claims accessClaims
 	_, err := jwt.ParseWithClaims(tokenString, &claims,

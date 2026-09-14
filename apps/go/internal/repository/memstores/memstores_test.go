@@ -1,6 +1,4 @@
-// Package memstores_test runs the repository contract suites against the
-// in-memory fakes. They live in separate packages but are only testable together
-// (a diary entry needs a user), so this one wires them into a Fixture.
+// Package memstores_test runs the repository contract suites against the in-memory fakes.
 package memstores_test
 
 import (
@@ -20,7 +18,6 @@ func TestInMemoryStoresMeetTheContract(t *testing.T) {
 	repotest.RunStoreSuites(t, newFixture)
 }
 
-// newFixture builds a fresh set of fakes per test.
 func newFixture(t *testing.T) repotest.Fixture {
 	t.Helper()
 	users := memauth.New()

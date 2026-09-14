@@ -39,9 +39,7 @@ type testEnv struct {
 	apple   *appleFake
 }
 
-// appleFake stands in for the iTunes Search API behind the real itunes.Client:
-// /lookup answers from tracks (ids handed out by add) and the artwork path
-// accepts the 600px HEAD check. down makes every request fail with 503.
+// appleFake stands in for the iTunes Search API; down makes every request fail with 503.
 type appleFake struct {
 	srv    *httptest.Server
 	mu     sync.Mutex
@@ -87,7 +85,6 @@ func newAppleFake(t *testing.T) *appleFake {
 	return f
 }
 
-// add registers a track titled title and returns its id.
 func (f *appleFake) add(title string) int64 {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -200,14 +197,12 @@ func doAdmin(t *testing.T, r http.Handler, method, path, token, body string) *ht
 	return finish(t, req, []byte(body), rec)
 }
 
-// finish turns a recorder into a response and validates the exchange against
-// api/openapi.yaml, which makes every flow test here a contract test too.
+// finish turns a recorder into a response and validates the exchange against api/openapi.yaml.
 func finish(t *testing.T, req *http.Request, reqBody []byte, rec *httptest.ResponseRecorder) *http.Response {
 	t.Helper()
 	res := rec.Result()
 	res.Request = req
 
-	// Read here, handed back as a fresh reader so the caller sees an unread stream.
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("reading the response body of %s %s: %v",
@@ -220,8 +215,6 @@ func finish(t *testing.T, req *http.Request, reqBody []byte, rec *httptest.Respo
 	return res
 }
 
-// checkStatus verifies the response status, reporting the request and body on a
-// mismatch so the failure is diagnosable without re-running.
 func checkStatus(t *testing.T, res *http.Response, want int) {
 	t.Helper()
 	if res.StatusCode == want {
@@ -375,8 +368,6 @@ type todayResp struct {
 	Song  *songResp  `json:"song"`
 }
 
-// errorResp is the shared error envelope (handler.ErrorResponse) as decoded
-// by a flow test.
 type errorResp struct {
 	Error struct {
 		Code    string `json:"code"`

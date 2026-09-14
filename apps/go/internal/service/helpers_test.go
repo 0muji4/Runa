@@ -24,21 +24,16 @@ const (
 	userB = "22222222-2222-4222-8222-222222222222"
 )
 
-// testNow is the frozen clock injected wherever an output timestamp is asserted
-// (presigned-URL expiries, the export timestamp), keeping those assertions
-// deterministic.
 var testNow = time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
 
 func fixedNow() time.Time { return testNow }
 
 func ptr(s string) *string { return &s }
 
-// clientID builds a deterministic, unique, UUID-shaped client id for n.
 func clientID(n int) string {
 	return fmt.Sprintf("aaaaaaaa-aaaa-4aaa-8aaa-%012d", n)
 }
 
-// syncBackground runs deferred work inline so a test can assert its effect.
 func syncBackground(f func()) { f() }
 
 func newDiaryService() *service.DiaryService {
@@ -56,10 +51,7 @@ func newAuthService(store repository.AuthStore, apple, google auth.IDTokenVerifi
 	})
 }
 
-// fakeLookup is an in-memory TrackLookup. Tracks are added by title and get
-// sequential ids; err, when set, fails every Lookup (an Apple outage). calls
-// records the id batches Lookup received, so a test can assert how many
-// requests a read triggered.
+// fakeLookup is an in-memory TrackLookup; calls records the id batches Lookup received.
 type fakeLookup struct {
 	mu     sync.Mutex
 	tracks map[int64]itunes.Track
@@ -126,7 +118,6 @@ func (f *fakeLookup) lastCall() []int64 {
 	return f.calls[len(f.calls)-1]
 }
 
-// todayClock is a settable clock for the refresh-TTL tests.
 type todayClock struct {
 	mu  sync.Mutex
 	now time.Time
@@ -144,8 +135,6 @@ func (c *todayClock) Advance(d time.Duration) {
 	c.now = c.now.Add(d)
 }
 
-// newTodayService wires an in-memory store, a fake Apple, and an inline
-// background runner so a refresh's effect is visible right after the read.
 func newTodayService() (*service.TodayService, *fakeLookup, *todayClock) {
 	lookup := newFakeLookup()
 	clock := &todayClock{now: testNow}

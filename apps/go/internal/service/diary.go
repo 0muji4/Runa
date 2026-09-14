@@ -9,20 +9,16 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// Diary pagination bounds. The handler clamps a client-supplied limit into
-// [1, MaxDiaryLimit] and defaults an absent one to DefaultDiaryLimit.
+// Diary pagination bounds: limit is clamped into [1, MaxDiaryLimit], absent → DefaultDiaryLimit.
 const (
 	DefaultDiaryLimit = 20
 	MaxDiaryLimit     = 50
 )
 
-// ErrDiaryNotFound means the entry does not exist, was deleted, or belongs to
-// another user. All three collapse to one error so the handler answers 404
-// without revealing which case it was.
+// ErrDiaryNotFound means the entry does not exist, was deleted, or belongs to another user.
 var ErrDiaryNotFound = errors.New("service: diary entry not found")
 
-// CreateDiaryInput is the create/upsert payload. ClientID and CreatedAt are
-// client-supplied: the client owns the identity of an offline-authored entry.
+// CreateDiaryInput is the create/upsert payload; ClientID and CreatedAt are client-supplied.
 type CreateDiaryInput struct {
 	ClientID  string
 	BodyText  string
@@ -36,16 +32,13 @@ type DiaryPage struct {
 	NextCursor *repository.DiaryCursor
 }
 
-// DiaryDelta is the response of a sync pull: the entries changed since the
-// requested watermark, plus the server time the client should send as the next
-// `since`.
+// DiaryDelta is a sync pull; ServerTime is what the client sends as the next `since`.
 type DiaryDelta struct {
 	Entries    []repository.DiaryEntry
 	ServerTime time.Time
 }
 
-// DiaryService implements the diary use cases over a DiaryStore. Every method is
-// scoped by userID so a caller can only ever touch their own entries.
+// DiaryService implements the diary use cases over a DiaryStore.
 type DiaryService struct {
 	store repository.DiaryStore
 	now   func() time.Time
@@ -59,8 +52,7 @@ func NewDiaryService(store repository.DiaryStore, now func() time.Time) *DiarySe
 	return &DiaryService{store: store, now: now}
 }
 
-// Create idempotently creates (or updates, on a repeated client_id) an entry.
-// created reports which happened, so the handler answers 201 vs 200.
+// Create idempotently creates (or updates, on a repeated client_id) an entry; the bool reports created.
 func (s *DiaryService) Create(ctx context.Context, userID string, in CreateDiaryInput) (repository.DiaryEntry, bool, error) {
 	createdAt := in.CreatedAt
 	if createdAt.IsZero() {
@@ -75,8 +67,7 @@ func (s *DiaryService) Create(ctx context.Context, userID string, in CreateDiary
 	})
 }
 
-// List returns one page of the user's entries, newest first. It over-fetches by
-// one row to decide whether a next page exists without a second query.
+// List returns one page of the user's entries, newest first.
 func (s *DiaryService) List(ctx context.Context, userID string, limit int, cursor *repository.DiaryCursor) (DiaryPage, error) {
 	limit = clampLimit(limit)
 	entries, err := s.store.ListEntries(ctx, repository.ListDiaryParams{
@@ -97,8 +88,7 @@ func (s *DiaryService) List(ctx context.Context, userID string, limit int, curso
 	return page, nil
 }
 
-// Get returns a single entry, mapping the repository's not-found to
-// ErrDiaryNotFound.
+// Get returns a single entry.
 func (s *DiaryService) Get(ctx context.Context, userID, id string) (repository.DiaryEntry, error) {
 	entry, err := s.store.GetEntry(ctx, userID, id)
 	return entry, mapNotFound(err)
@@ -110,15 +100,14 @@ func (s *DiaryService) Update(ctx context.Context, userID, id, bodyText string, 
 	return entry, mapNotFound(err)
 }
 
-// Delete soft-deletes an entry. It is idempotent for an already-deleted own entry
-// and returns ErrDiaryNotFound only when the id is not the caller's.
+// Delete soft-deletes an entry; idempotent for an already-deleted own entry,
+// ErrDiaryNotFound only when the id is not the caller's.
 func (s *DiaryService) Delete(ctx context.Context, userID, id string) error {
 	return mapNotFound(s.store.SoftDeleteEntry(ctx, userID, id))
 }
 
 // Sync returns the delta since `since`. ServerTime is captured before the query
-// so a concurrent write is never stranded on the wrong side of the watermark;
-// the client stores it as the next `since` (last_synced_at).
+// so a concurrent write is never stranded on the wrong side of the watermark.
 func (s *DiaryService) Sync(ctx context.Context, userID string, since time.Time) (DiaryDelta, error) {
 	serverTime := s.now()
 	entries, err := s.store.ListChangedSince(ctx, userID, since)
@@ -134,10 +123,8 @@ type DiaryCalendarDay struct {
 	Count int
 }
 
-// Calendar returns the per-local-date entry counts for the given month, grouped in
-// loc so it matches the client's local-date grouping. The month window is the
-// half-open instant range [first-of-month 00:00 loc, first-of-next-month 00:00 loc).
-// Only dates with entries are returned, ascending by date.
+// Calendar returns per-local-date entry counts for the month window
+// [first-of-month 00:00 loc, first-of-next-month 00:00 loc), ascending by date.
 func (s *DiaryService) Calendar(ctx context.Context, userID string, year, month int, loc *time.Location) ([]DiaryCalendarDay, error) {
 	lo := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, loc)
 	hi := lo.AddDate(0, 1, 0)

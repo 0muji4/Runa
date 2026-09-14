@@ -10,14 +10,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// clientID builds a UUID-shaped client id; the column is typed UUID.
 func clientID(n int) string {
 	return fmt.Sprintf("aaaaaaaa-aaaa-4aaa-8aaa-%012d", n)
 }
 
 // RunDiaryStoreSuite exercises the DiaryStore contract.
 func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
-	// seed writes n entries one minute apart, oldest first.
 	seed := func(t *testing.T, f Fixture, userID string, n int, base time.Time) []repository.DiaryEntry {
 		t.Helper()
 		out := make([]repository.DiaryEntry, 0, n)
@@ -71,8 +69,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		if second.Mood == nil || *second.Mood != "calm" {
 			t.Errorf("mood = %v, want %q", second.Mood, "calm")
 		}
-		// created_at is the client's authored time: a retried offline create must
-		// not restamp the entry.
 		if !second.CreatedAt.Equal(first.CreatedAt) {
 			t.Errorf("created_at = %s after upsert, want the original %s",
 				second.CreatedAt.UTC(), first.CreatedAt.UTC())
@@ -114,13 +110,11 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		base := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 		seeded := seed(t, f, user, 5, base)
 
-		// Newest first, and the seeds went in oldest first.
 		want := make([]string, 0, len(seeded))
 		for i := len(seeded) - 1; i >= 0; i-- {
 			want = append(want, seeded[i].ID)
 		}
 
-		// Whatever the page size, walking every page must rebuild the same list.
 		tests := []struct {
 			name  string
 			limit int
@@ -212,8 +206,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		user, stranger := f.NewUser(t), f.NewUser(t)
 		entry := seed(t, f, user, 1, time.Now().Add(-time.Hour).UTC())[0]
 
-		// For a non-owner every operation must look like a missing row, so a 404
-		// never reveals that the entry exists for somebody else.
 		tests := []struct {
 			op   string
 			call func(userID string) error
@@ -248,7 +240,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 			})
 		}
 
-		// None of the rejected calls may have changed anything.
 		owned, err := f.Diary.GetEntry(ctx, user, entry.ID)
 		if err != nil {
 			t.Fatalf("GetEntry(owner) error = %v, want nil", err)
@@ -273,7 +264,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 			t.Fatalf("UpsertEntry() error = %v, want nil", err)
 		}
 
-		// Mood == nil clears the column.
 		updated, err := f.Diary.UpdateEntry(ctx, user, entry.ID, repository.UpdateDiaryParams{BodyText: "v2"})
 		if err != nil {
 			t.Fatalf("UpdateEntry() error = %v, want nil", err)
@@ -284,7 +274,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		if updated.Mood != nil {
 			t.Errorf("mood = %q after an update with a nil mood, want nil (cleared)", *updated.Mood)
 		}
-		// Sync is a watermark over updated_at, so it has to move.
 		if !updated.UpdatedAt.After(entry.UpdatedAt) {
 			t.Errorf("updated_at = %s, want it after the insert's %s",
 				updated.UpdatedAt.UTC(), entry.UpdatedAt.UTC())
@@ -319,7 +308,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		user := f.NewUser(t)
 		entries := seed(t, f, user, 2, time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC))
 
-		// A zero watermark returns everything.
 		all, err := f.Diary.ListChangedSince(ctx, user, time.Time{})
 		if err != nil {
 			t.Fatalf("ListChangedSince(epoch) error = %v, want nil", err)
@@ -348,7 +336,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 		if delta[0].ID != entries[0].ID {
 			t.Errorf("delta carries id %q, want the deleted %q", delta[0].ID, entries[0].ID)
 		}
-		// The tombstone is how other devices learn of the deletion.
 		if delta[0].DeletedAt == nil {
 			t.Error("the deleted entry's deleted_at is nil in the delta, want a tombstone timestamp")
 		}
@@ -425,7 +412,6 @@ func RunDiaryStoreSuite(t *testing.T, newFixture NewFixture) {
 	})
 }
 
-// ids extracts entry ids so an ordering assertion reads as one list.
 func ids(entries []repository.DiaryEntry) []string {
 	out := make([]string, 0, len(entries))
 	for _, e := range entries {

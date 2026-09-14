@@ -1,8 +1,4 @@
-// Package memtoday is an in-memory implementation of repository.TodayStore. It
-// backs the today unit/integration tests (and lets the API run without Postgres)
-// so the suite stays green in CI, which has no database. It mirrors the pgx
-// implementation's semantics: exact-date quote/song lookup, keyset archive
-// pagination, an append-only play log, and date-keyed admin upserts.
+// Package memtoday is an in-memory implementation of repository.TodayStore.
 package memtoday
 
 import (
@@ -74,7 +70,6 @@ func (s *Store) ListSongs(_ context.Context, p repository.ListSongsParams) ([]re
 		}
 		out = append(out, song)
 	}
-	// Newest first: date DESC, then id DESC as a stable tiebreak.
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].Date.Equal(out[j].Date) {
 			return out[i].Date.After(out[j].Date)
@@ -119,7 +114,7 @@ func (s *Store) InsertSong(_ context.Context, p repository.InsertSongParams) (re
 		ITunesTrackID: p.ITunesTrackID,
 		SongMetadata:  p.SongMetadata,
 	}
-	// Upsert keyed by day: replace an existing song for that date, keeping its id.
+	// Upsert keyed by day, keeping the existing id.
 	for id, existing := range s.songs {
 		if dayKey(existing.Date) == dayKey(p.Date) {
 			song.ID = id
@@ -144,14 +139,12 @@ func (s *Store) UpdateSongMetadata(_ context.Context, songID string, m repositor
 	return nil
 }
 
-// dayKey normalizes a timestamp to its UTC calendar day, so lookups match the
-// DATE column's day-only semantics regardless of any time component.
+// dayKey normalizes a timestamp to its UTC calendar day, matching the DATE column.
 func dayKey(t time.Time) string {
 	return t.UTC().Format("2006-01-02")
 }
 
-// olderThanCursor reports whether song sorts after the cursor in (date DESC, id
-// DESC) order, i.e. belongs on a later page.
+// olderThanCursor reports whether song sorts after the cursor in (date DESC, id DESC) order.
 func olderThanCursor(song repository.Song, c repository.SongCursor) bool {
 	if dayKey(song.Date) != dayKey(c.Date) {
 		return song.Date.Before(c.Date)
@@ -159,8 +152,7 @@ func olderThanCursor(song repository.Song, c repository.SongCursor) bool {
 	return song.ID < c.ID
 }
 
-// newID returns a random v4-style UUID string without pulling in a dependency
-// (same helper shape as memdiary/memauth).
+// newID returns a random v4-style UUID string.
 func newID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

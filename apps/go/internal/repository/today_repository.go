@@ -18,8 +18,7 @@ const (
 	songColumns  = `id, date, itunes_track_id, title, artist, artwork_url, preview_url, store_url, resolved_at`
 )
 
-// fkViolation is the Postgres SQLSTATE for a FK violation (a play against an
-// unknown song id); mapped to ErrNotFound.
+// fkViolation is the PostgreSQL SQLSTATE for a foreign-key violation.
 const fkViolation = "23503"
 
 // TodayRepository is the pgx-backed implementation of TodayStore.
@@ -27,8 +26,7 @@ type TodayRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewTodayRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
-// every method return ErrNoDatabase instead of panicking, so liveness still serves.
+// NewTodayRepository wraps a pgx pool; a nil pool makes every method return ErrNoDatabase.
 func NewTodayRepository(pool *pgxpool.Pool) *TodayRepository {
 	return &TodayRepository{pool: pool}
 }
@@ -86,8 +84,6 @@ func (r *TodayRepository) ListSongs(ctx context.Context, p ListSongsParams) ([]S
 		return nil, ErrNoDatabase
 	}
 
-	// Keyset ((date, id) < cursor), not OFFSET, so inserts between pages never
-	// skip/dupe rows. The first page has no cursor.
 	var (
 		rows pgx.Rows
 		err  error
@@ -121,7 +117,7 @@ func (r *TodayRepository) RecordPlay(ctx context.Context, userID, songID string,
 	}
 	const q = `INSERT INTO song_history (user_id, song_id, played_at) VALUES ($1, $2, $3)`
 	if _, err := r.pool.Exec(ctx, q, userID, songID, playedAt); err != nil {
-		// An unknown song id fails the daily_songs FK → ErrNotFound (404, not 500).
+		// An unknown song id fails the daily_songs FK → ErrNotFound.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == fkViolation {
 			return ErrNotFound
@@ -135,7 +131,6 @@ func (r *TodayRepository) InsertQuote(ctx context.Context, p InsertQuoteParams) 
 	if r.pool == nil {
 		return Quote{}, ErrNoDatabase
 	}
-	// Upsert on the date unique index so re-seeding a day replaces its copy.
 	const q = `
 		INSERT INTO daily_quotes (date, body_text)
 		VALUES ($1, $2)
@@ -192,8 +187,7 @@ func (r *TodayRepository) UpdateSongMetadata(ctx context.Context, songID string,
 	return nil
 }
 
-// collectSongs returns a non-nil empty slice for zero rows, so JSON encodes "[]"
-// rather than "null".
+// collectSongs returns a non-nil empty slice for zero rows (JSON "[]", not "null").
 func collectSongs(rows pgx.Rows) ([]Song, error) {
 	defer rows.Close()
 	songs := make([]Song, 0)

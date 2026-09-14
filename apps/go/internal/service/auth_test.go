@@ -178,8 +178,7 @@ func TestAuthService_LoginEmail(t *testing.T) {
 func TestAuthService_Refresh(t *testing.T) {
 	t.Parallel()
 
-	// setup signs up, rotates once and returns (first token, rotated token); the
-	// rotation itself is asserted here so every case inherits it.
+	// setup signs up, rotates once and returns (first token, rotated token).
 	setup := func(t *testing.T) (svc *service.AuthService, ctx context.Context, first, rotated string) {
 		t.Helper()
 		svc = newAuthService(memauth.New(), nil, nil)

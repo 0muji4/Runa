@@ -1,8 +1,4 @@
 // Package memgallery is an in-memory implementation of repository.GalleryStore.
-// It backs the gallery unit/integration tests (and lets the API run without
-// Postgres) so the suite stays green in CI, which has no database. It mirrors the
-// pgx implementation's semantics: idempotent upsert by object_key, keyset
-// pagination, ownership scoping and soft delete.
 package memgallery
 
 import (
@@ -17,8 +13,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// allowedThemes mirrors the CHECK on gallery_images.theme (migration 0005), so
-// the fake is never more permissive than Postgres.
+// allowedThemes mirrors the CHECK on gallery_images.theme.
 var allowedThemes = map[string]bool{"monotone": true, "pink": true}
 
 // ErrInvalidTheme is returned when a theme is outside the schema's CHECK.
@@ -51,7 +46,7 @@ func (s *Store) InsertImage(_ context.Context, p repository.InsertGalleryParams)
 	defer s.mu.Unlock()
 
 	if existing, ok := s.findByObjectKey(p.ObjectKey); ok {
-		// Upsert in place, keeping id/created_at and reviving (matches ON CONFLICT).
+		// Upsert in place, keeping id/created_at and reviving.
 		existing.Width = p.Width
 		existing.Height = p.Height
 		existing.Theme = p.Theme
@@ -87,7 +82,6 @@ func (s *Store) ListImages(_ context.Context, p repository.ListGalleryParams) ([
 		}
 		out = append(out, img)
 	}
-	// Newest first: created_at DESC, then id DESC as a stable tiebreak.
 	sort.Slice(out, func(i, j int) bool {
 		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
 			return out[i].CreatedAt.After(out[j].CreatedAt)
@@ -127,7 +121,7 @@ func (s *Store) SoftDeleteImage(_ context.Context, userID, id string) (string, e
 func (s *Store) ListObjectKeys(_ context.Context, userID string) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// Includes soft-deleted rows, mirroring the pgx query used by account deletion.
+	// Includes soft-deleted rows.
 	keys := make([]string, 0)
 	for _, img := range s.images {
 		if img.UserID == userID {
@@ -137,7 +131,7 @@ func (s *Store) ListObjectKeys(_ context.Context, userID string) ([]string, erro
 	return keys, nil
 }
 
-// findByObjectKey locates an image by object_key. Caller holds the lock.
+// findByObjectKey locates an image by object_key; caller holds the lock.
 func (s *Store) findByObjectKey(objectKey string) (repository.GalleryImage, bool) {
 	for _, img := range s.images {
 		if img.ObjectKey == objectKey {
@@ -147,8 +141,7 @@ func (s *Store) findByObjectKey(objectKey string) (repository.GalleryImage, bool
 	return repository.GalleryImage{}, false
 }
 
-// tick returns a strictly increasing timestamp so created_at values never tie,
-// keeping keyset ordering deterministic in fast tests. Caller holds the lock.
+// tick returns a strictly increasing timestamp so created_at values never tie; caller holds the lock.
 func (s *Store) tick() time.Time {
 	t := s.now()
 	if !t.After(s.lastNow) {
@@ -158,8 +151,7 @@ func (s *Store) tick() time.Time {
 	return t
 }
 
-// olderThanCursor reports whether img sorts after the cursor in (created_at DESC,
-// id DESC) order, i.e. belongs on a later page.
+// olderThanCursor reports whether img sorts after the cursor in (created_at DESC, id DESC) order.
 func olderThanCursor(img repository.GalleryImage, c repository.GalleryCursor) bool {
 	if !img.CreatedAt.Equal(c.CreatedAt) {
 		return img.CreatedAt.Before(c.CreatedAt)
@@ -167,8 +159,7 @@ func olderThanCursor(img repository.GalleryImage, c repository.GalleryCursor) bo
 	return img.ID < c.ID
 }
 
-// newID returns a random v4-style UUID string without pulling in a dependency
-// (same helper shape as memdiary/memauth).
+// newID returns a random v4-style UUID string.
 func newID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

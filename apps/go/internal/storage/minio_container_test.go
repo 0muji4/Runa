@@ -20,9 +20,6 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/storage/objecttest"
 )
 
-// The MinIO client against a real S3-compatible server. The in-package tests only
-// inspect the presigned URL strings; these check the URLs actually work.
-
 var (
 	minioEndpoint  string
 	minioAccessKey string
@@ -33,7 +30,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// testing.Short() reads a flag, and TestMain runs before they are parsed.
+	// testing.Short() reads a flag, and TestMain runs before flags are parsed.
 	flag.Parse()
 	if testing.Short() {
 		skipReason = "-short is set; skipping the MinIO-backed tests"
@@ -85,7 +82,6 @@ func requireMinio(t *testing.T) {
 	}
 }
 
-// newStore builds a store over a bucket of its own.
 func newStore(t *testing.T) *storage.MinioObjectStore {
 	t.Helper()
 	cfg := storage.Config{
@@ -109,7 +105,7 @@ func newStore(t *testing.T) *storage.MinioObjectStore {
 	return s
 }
 
-// presignWriter seeds objects the way production does: through a presigned PUT.
+// presignWriter seeds objects through a presigned PUT, as production does.
 type presignWriter struct{ *storage.MinioObjectStore }
 
 func (w *presignWriter) PutForTest(ctx context.Context, key string, body []byte, contentType string) error {
@@ -142,8 +138,6 @@ func TestMinioMeetsTheObjectStoreContract(t *testing.T) {
 	})
 }
 
-// TestPresignedURLRoundTrip uploads and downloads through the presigned URLs,
-// which is the whole point of the design: the API never streams image bytes.
 func TestPresignedURLRoundTrip(t *testing.T) {
 	requireMinio(t)
 	t.Parallel()
@@ -192,8 +186,6 @@ func TestPresignedURLRoundTrip(t *testing.T) {
 	}
 }
 
-// TestPresignedURLExpires pins the TTL: a leaked URL must not grant permanent
-// access to a private image.
 func TestPresignedURLExpires(t *testing.T) {
 	requireMinio(t)
 	t.Parallel()
@@ -206,9 +198,8 @@ func TestPresignedURLExpires(t *testing.T) {
 		t.Fatalf("seeding the object: %v", err)
 	}
 
-	// The one real sleep in the suite: the clock that matters belongs to the MinIO
-	// server validating the signature, so synctest cannot virtualize it. 1s is the
-	// shortest TTL an S3 signature allows.
+	// Real sleep: the MinIO server's clock validates the signature, so synctest cannot
+	// virtualize it. 1s is the shortest TTL an S3 signature allows.
 	getURL, err := s.PresignGet(ctx, key, time.Second)
 	if err != nil {
 		t.Fatalf("PresignGet(%q) error = %v, want nil", key, err)

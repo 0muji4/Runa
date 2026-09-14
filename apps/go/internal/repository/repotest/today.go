@@ -9,13 +9,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// day builds a UTC midnight instant, the shape the date columns store.
 func day(y int, m time.Month, d int) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-// songParams builds an InsertSongParams with metadata derived from a label, so a
-// test can tell rows apart by title/URL without spelling every field out.
 func songParams(date time.Time, trackID int64, label string) repository.InsertSongParams {
 	return repository.InsertSongParams{
 		Date:          date,
@@ -43,7 +40,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 		if err != nil {
 			t.Fatalf("InsertQuote() error = %v, want nil", err)
 		}
-		// One quote per calendar day: re-inserting replaces it.
 		if _, err := f.Today.InsertQuote(ctx, repository.InsertQuoteParams{Date: date, BodyText: "v2"}); err != nil {
 			t.Fatalf("second InsertQuote() error = %v, want nil", err)
 		}
@@ -99,8 +95,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 		if err != nil {
 			t.Fatalf("InsertSong() error = %v, want nil", err)
 		}
-		// A background re-fetch replaces the metadata but keeps the row (id and
-		// track id), so play history stays attached.
 		refreshed := songParams(date, 1001, "夜想曲-v2").SongMetadata
 		refreshed.ResolvedAt = date.Add(48 * time.Hour)
 		if err := f.Today.UpdateSongMetadata(ctx, song.ID, refreshed); err != nil {
@@ -134,7 +128,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 			t.Fatalf("InsertQuote() error = %v, want nil", err)
 		}
 
-		// Only 2026-07-11 has a quote, and no day has a song.
 		tests := []struct {
 			name   string
 			lookup func() error
@@ -175,7 +168,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 		f := newFixture(t)
 		ctx := t.Context()
 
-		// 07-12 is registered ahead of time: with Until = 07-11 it must stay out.
 		dates := []time.Time{day(2026, 7, 9), day(2026, 7, 10), day(2026, 7, 11), day(2026, 7, 12)}
 		for i, d := range dates {
 			if _, err := f.Today.InsertSong(ctx, songParams(d, int64(1000+i), d.Format("2006-01-02"))); err != nil {
@@ -218,7 +210,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 		if err := f.Today.RecordPlay(ctx, user, song.ID, time.Now().UTC()); err != nil {
 			t.Fatalf("RecordPlay() error = %v, want nil", err)
 		}
-		// History accumulates; replaying is not an error.
 		if err := f.Today.RecordPlay(ctx, user, song.ID, time.Now().UTC()); err != nil {
 			t.Errorf("second RecordPlay() error = %v, want nil", err)
 		}
@@ -230,7 +221,6 @@ func RunTodayStoreSuite(t *testing.T, newFixture NewFixture) {
 	})
 }
 
-// songTitles lists a page's titles so an ordering assertion reads as one list.
 func songTitles(songs []repository.Song) []string {
 	out := make([]string, 0, len(songs))
 	for _, s := range songs {

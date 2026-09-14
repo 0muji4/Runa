@@ -1,11 +1,4 @@
-// Package itunes fetches song metadata from Apple's iTunes Search API, the
-// source of today's song (docs/dd/todays-song-itunes-preview.md, Q1). It is the
-// only place that knows Apple's request/response shape, so a change on Apple's
-// side is fixed here alone.
-//
-// Apple's Promo Content terms allow the preview and artwork only to promote the
-// track, streamed and never cached, next to an Apple Music badge that links to
-// StoreURL. This package returns the URLs; the clients honour the terms.
+// Package itunes fetches song metadata from Apple's iTunes Search API.
 package itunes
 
 import (
@@ -20,36 +13,27 @@ import (
 	"sync"
 )
 
-// DefaultBaseURL is Apple's public lookup host. Tests point BaseURL at a local
-// server instead.
+// DefaultBaseURL is Apple's public lookup host.
 const DefaultBaseURL = "https://itunes.apple.com"
 
-// country pins lookups to the Japanese catalog: Runa is Japan-only, and
-// previews/store links differ per storefront.
+// country pins lookups to the Japanese storefront; previews and store links differ per storefront.
 const country = "jp"
 
-// Artwork sizes. Apple's response carries at most artworkUrl100; the same CDN
-// serves larger renditions when the size segment of the path is rewritten,
-// which is common practice but undocumented — so the rewrite is verified with a
-// HEAD request and falls back to the documented 100px URL (DD Q1).
+// Apple returns only artworkUrl100; the 600px path rewrite is undocumented,
+// so it is verified with a HEAD request and falls back to the 100px URL.
 const (
 	artworkSizeReturned = "100x100bb"
 	artworkSizeWanted   = "600x600bb"
 )
 
-// artworkChecks bounds the concurrent HEAD requests of one Lookup: an archive
-// page can carry 50 tracks, and checking them one by one would take a round
-// trip each.
+// artworkChecks bounds the concurrent artwork HEAD requests of one Lookup.
 const artworkChecks = 8
 
-// maxResponseBytes caps what Lookup reads from Apple. A 200-id lookup is well
-// under 1 MiB; anything larger is not a response Runa should try to parse.
+// maxResponseBytes caps what Lookup reads from Apple (a 200-id lookup is well under 1 MiB).
 const maxResponseBytes = 4 << 20
 
 // Track is the metadata Runa keeps from a lookup. PreviewURL is empty when Apple
-// offers no preview for the track; callers decide whether that is an error.
-// Every URL is https — anything else in Apple's response is dropped, since the
-// clients hand StoreURL to the OS to open and stream PreviewURL as-is.
+// offers no preview; every URL is https (anything else is dropped).
 type Track struct {
 	TrackID    int64
 	Title      string
@@ -65,9 +49,7 @@ type Client struct {
 	baseURL string
 }
 
-// NewClient builds a client for baseURL (DefaultBaseURL in production) over
-// client, whose Timeout bounds each request: the lookup and every artwork HEAD
-// check. Tests pass an httptest TLS server's client.
+// NewClient builds a client for baseURL; client.Timeout bounds the lookup and each artwork HEAD.
 func NewClient(baseURL string, client *http.Client) *Client {
 	return &Client{
 		client:  client,
@@ -75,8 +57,7 @@ func NewClient(baseURL string, client *http.Client) *Client {
 	}
 }
 
-// lookupResponse mirrors the fields Runa reads from GET /lookup. Results of other
-// kinds (albums, artists) can appear for an id and are skipped.
+// lookupResponse mirrors the fields Runa reads from GET /lookup.
 type lookupResponse struct {
 	Results []struct {
 		Kind          string `json:"kind"`
@@ -89,9 +70,7 @@ type lookupResponse struct {
 	} `json:"results"`
 }
 
-// Lookup fetches the songs for ids in one request (Apple accepts a
-// comma-separated list). Ids Apple does not know are simply absent from the
-// result; a transport or non-2xx failure is returned as an error.
+// Lookup fetches the songs for ids in one request; unknown ids are simply absent from the result.
 func (c *Client) Lookup(ctx context.Context, ids []int64) ([]Track, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -141,7 +120,6 @@ func (c *Client) Lookup(ctx context.Context, ids []int64) ([]Track, error) {
 	return tracks, nil
 }
 
-// httpsOnly returns raw when it parses as an absolute https URL, else "".
 func httpsOnly(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
@@ -150,9 +128,7 @@ func httpsOnly(raw string) string {
 	return raw
 }
 
-// upgradeArtwork swaps each track's artwork for the 600px rendition when the
-// CDN confirms it exists (at most artworkChecks in flight). A check that fails
-// or runs out of context leaves the URL Apple returned.
+// upgradeArtwork swaps each track's artwork for the 600px rendition when the CDN confirms it.
 func (c *Client) upgradeArtwork(ctx context.Context, tracks []Track) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, artworkChecks)
@@ -168,16 +144,13 @@ func (c *Client) upgradeArtwork(ctx context.Context, tracks []Track) {
 	wg.Wait()
 }
 
-// LargerArtworkURL is the 600px rendition's URL for a 100px artwork URL, or
-// artworkURL itself when it carries no 100px size segment. It does not check
-// that the rendition exists; Lookup does, and a caller re-fetching a track can
-// use it to tell "the check failed this time" from "Apple changed the artwork".
+// LargerArtworkURL is the 600px rendition's URL for a 100px artwork URL (unchanged when
+// there is no 100px segment). It does not check that the rendition exists; Lookup does.
 func LargerArtworkURL(artworkURL string) string {
 	return strings.Replace(artworkURL, artworkSizeReturned, artworkSizeWanted, 1)
 }
 
-// largerArtwork returns the 600px rendition of artworkURL when the CDN confirms
-// it exists, otherwise the URL Apple returned.
+// largerArtwork returns the 600px rendition when the CDN confirms it, else artworkURL.
 func (c *Client) largerArtwork(ctx context.Context, artworkURL string) string {
 	larger := LargerArtworkURL(artworkURL)
 	if larger == artworkURL {

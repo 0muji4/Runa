@@ -1,7 +1,3 @@
--- 0002_auth.down.sql
--- Reverses 0002_auth.up.sql. Drops refresh_tokens and the auth columns/indexes
--- added to users, returning the table to its 0001 shape (id, created_at).
-
 DROP TABLE IF EXISTS refresh_tokens;
 
 DROP INDEX IF EXISTS users_google_sub_key;

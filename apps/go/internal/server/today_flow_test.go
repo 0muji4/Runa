@@ -8,8 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// songDates pulls the dates out of an archive page, so a paging assertion reads
-// as one ordered list rather than an index-by-index comparison.
+// songDates pulls the dates out of an archive page.
 func songDates(page songsResp) []string {
 	dates := make([]string, 0, len(page.Songs))
 	for _, s := range page.Songs {
@@ -18,8 +17,7 @@ func songDates(page songsResp) []string {
 	return dates
 }
 
-// seedSong registers a track titled title with the fake Apple and creates the
-// day's song from it through the admin endpoint.
+// seedSong registers a track with the fake Apple and creates the day's song via the admin endpoint.
 func seedSong(t *testing.T, env *testEnv, date, title string) songResp {
 	t.Helper()
 	id := env.apple.add(title)
@@ -42,8 +40,6 @@ func TestTodayFlow(t *testing.T) {
 	checkStatus(t, res, http.StatusCreated)
 	res.Body.Close()
 	july11 := seedSong(t, env, "2026-07-11", "夜想曲")
-	// The row carries what Apple returned: the 600px artwork (the fake confirms
-	// it), the preview stream, and the store page for the badge.
 	if july11.ArtworkURL != env.apple.srv.URL+"/art/600x600bb.jpg" {
 		t.Errorf("registered song artwork_url = %q, want the 600px rendition", july11.ArtworkURL)
 	}
@@ -70,7 +66,6 @@ func TestTodayFlow(t *testing.T) {
 
 	res = do(t, env.r, http.MethodGet, "/api/v1/today?date=2000-01-01", token, "")
 	decode(t, res, &today)
-	// A day with no curated content answers 200 with both fields null.
 	if today.Quote != nil {
 		t.Errorf("today quote for an unseeded date = %+v, want nil", today.Quote)
 	}
@@ -205,7 +200,6 @@ func TestAdminCreateSongRejectsUnusableTracks(t *testing.T) {
 				t.Errorf("error code = %q, want %q", body.Error.Code, tt.wantCode)
 			}
 
-			// A rejected registration leaves the day empty.
 			res = do(t, env.r, http.MethodGet, "/api/v1/today?date=2026-07-11", token, "")
 			var today todayResp
 			decode(t, res, &today)

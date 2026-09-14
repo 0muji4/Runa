@@ -41,7 +41,6 @@ func TestHashPassword(t *testing.T) {
 				t.Errorf("HashPassword(%q) = %q, want prefix %q", tt.password, first, wantPrefix)
 			}
 
-			// The salt is random per call, so the same password must never hash twice alike.
 			second, err := HashPassword(tt.password, p)
 			if err != nil {
 				t.Fatalf("HashPassword(%q) error = %v, want nil", tt.password, err)

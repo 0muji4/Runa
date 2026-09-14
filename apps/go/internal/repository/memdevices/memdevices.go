@@ -1,7 +1,4 @@
-// Package memdevices is an in-memory implementation of repository.DeviceStore. It
-// backs the devices unit/integration tests (and lets the API run without
-// Postgres) so the suite stays green in CI, which has no database. It mirrors the
-// pgx implementation's semantics: idempotent upsert by (user_id, push_token).
+// Package memdevices is an in-memory implementation of repository.DeviceStore.
 package memdevices
 
 import (
@@ -37,7 +34,7 @@ func (s *Store) UpsertDevice(_ context.Context, p repository.UpsertDeviceParams)
 	defer s.mu.Unlock()
 
 	if existing, ok := s.findByToken(p.UserID, p.PushToken); ok {
-		// Update in place, keeping id/created_at (matches ON CONFLICT DO UPDATE).
+		// Update in place, keeping id/created_at.
 		existing.Platform = p.Platform
 		existing.NotifyTime = p.NotifyTime
 		existing.Enabled = p.Enabled
@@ -61,7 +58,7 @@ func (s *Store) UpsertDevice(_ context.Context, p repository.UpsertDeviceParams)
 	return d, nil
 }
 
-// findByToken locates a device by (userID, pushToken). Caller holds the lock.
+// findByToken locates a device by (userID, pushToken); caller holds the lock.
 func (s *Store) findByToken(userID, pushToken string) (repository.Device, bool) {
 	for _, d := range s.devices {
 		if d.UserID == userID && d.PushToken == pushToken {
@@ -71,8 +68,7 @@ func (s *Store) findByToken(userID, pushToken string) (repository.Device, bool) 
 	return repository.Device{}, false
 }
 
-// tick returns a strictly increasing timestamp so updated_at values never tie in
-// fast tests. Caller holds the lock.
+// tick returns a strictly increasing timestamp so updated_at values never tie; caller holds the lock.
 func (s *Store) tick() time.Time {
 	t := s.now()
 	if !t.After(s.lastNow) {
@@ -82,8 +78,7 @@ func (s *Store) tick() time.Time {
 	return t
 }
 
-// newID returns a random v4-style UUID string without pulling in a dependency
-// (same helper shape as memdiary).
+// newID returns a random v4-style UUID string.
 func newID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

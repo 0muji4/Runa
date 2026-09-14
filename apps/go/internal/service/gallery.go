@@ -12,32 +12,25 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/storage"
 )
 
-// Gallery pagination bounds. The service clamps a client-supplied limit into
-// [1, MaxGalleryLimit] and defaults an absent one to DefaultGalleryLimit.
+// Gallery pagination bounds: limit is clamped into [1, MaxGalleryLimit], absent → DefaultGalleryLimit.
 const (
 	DefaultGalleryLimit = 30
 	MaxGalleryLimit     = 100
 )
 
-// objectRemoveTimeout bounds the background object deletion so a slow store
-// never leaks a goroutine.
+// objectRemoveTimeout bounds the background object deletion.
 const objectRemoveTimeout = 30 * time.Second
 
 var (
-	// ErrGalleryNotFound means the image does not exist, was deleted, or belongs
-	// to another user — all collapse to a 404 that reveals nothing.
+	// ErrGalleryNotFound means the image does not exist, was deleted, or belongs to another user.
 	ErrGalleryNotFound = errors.New("service: gallery image not found")
-	// ErrStorageUnavailable means object storage is not configured/reachable, so
-	// the endpoint cannot issue URLs — a 503.
+	// ErrStorageUnavailable means object storage is not configured/reachable.
 	ErrStorageUnavailable = errors.New("service: object storage unavailable")
-	// ErrObjectMissing means registration was attempted for an object that was
-	// never actually uploaded to the store — a 400.
+	// ErrObjectMissing means the object to register was never uploaded to the store.
 	ErrObjectMissing = errors.New("service: object not uploaded")
-	// ErrInvalidObjectKey means the object_key is not in the caller's namespace —
-	// a 404 (authorization, not revealing whether it exists for someone else).
+	// ErrInvalidObjectKey means the object_key is not in the caller's namespace.
 	ErrInvalidObjectKey = errors.New("service: object key not owned by caller")
-	// ErrContentTypeNotAllowed / ErrUploadTooLarge are the upload-constraint
-	// violations — 400s.
+	// ErrContentTypeNotAllowed / ErrUploadTooLarge are the upload-constraint violations.
 	ErrContentTypeNotAllowed = errors.New("service: content type not allowed")
 	ErrUploadTooLarge        = errors.New("service: upload exceeds size limit")
 )
@@ -72,10 +65,7 @@ type GalleryPage struct {
 	NextCursor *repository.GalleryCursor
 }
 
-// GalleryService implements the gallery use cases over a GalleryStore and an
-// ObjectStore. Every method is scoped by userID. The ObjectStore may be nil when
-// storage is unconfigured; the read/write URL methods then return
-// ErrStorageUnavailable while Delete still soft-deletes the row.
+// GalleryService implements the gallery use cases; with a nil ObjectStore the URL methods return ErrStorageUnavailable.
 type GalleryService struct {
 	store      repository.GalleryStore
 	objects    storage.ObjectStore
@@ -85,8 +75,7 @@ type GalleryService struct {
 	background func(func())
 }
 
-// GalleryOption customizes a GalleryService (used by tests to run object removal
-// synchronously and to make object keys deterministic).
+// GalleryOption customizes a GalleryService.
 type GalleryOption func(*GalleryService)
 
 // WithBackgroundRunner overrides how deferred work (object removal) is run.
@@ -99,8 +88,7 @@ func WithObjectKeyFunc(fn func(userID string) string) GalleryOption {
 	return func(s *GalleryService) { s.newKey = fn }
 }
 
-// NewGalleryService constructs the service, defaulting now to time.Now, keys to
-// "gallery/{user}/{uuid}", and background work to a goroutine.
+// NewGalleryService constructs the service, defaulting now to time.Now.
 func NewGalleryService(store repository.GalleryStore, objects storage.ObjectStore, cfg GalleryConfig, now func() time.Time, opts ...GalleryOption) *GalleryService {
 	if now == nil {
 		now = time.Now
@@ -119,8 +107,7 @@ func NewGalleryService(store repository.GalleryStore, objects storage.ObjectStor
 	return s
 }
 
-// CreateUploadURL validates the requested upload and issues a presigned PUT URL
-// plus the server-generated object_key the client registers after uploading.
+// CreateUploadURL validates the requested upload and issues a presigned PUT URL plus its object_key.
 func (s *GalleryService) CreateUploadURL(ctx context.Context, userID, contentType string, size int64) (UploadTarget, error) {
 	if s.objects == nil {
 		return UploadTarget{}, ErrStorageUnavailable
@@ -146,10 +133,7 @@ func (s *GalleryService) CreateUploadURL(ctx context.Context, userID, contentTyp
 	}, nil
 }
 
-// RegisterImage records metadata after the client has uploaded. It authorizes the
-// object_key (must be in the caller's namespace), re-verifies the real object
-// (existence, size, content-type — the presigned PUT enforces none of these),
-// upserts the row and returns a view URL.
+// RegisterImage records metadata after upload, re-verifying the real object (the presigned PUT enforces nothing).
 func (s *GalleryService) RegisterImage(ctx context.Context, userID, objectKey string, width, height int, theme string) (ImageView, error) {
 	if s.objects == nil {
 		return ImageView{}, ErrStorageUnavailable
@@ -187,8 +171,7 @@ func (s *GalleryService) RegisterImage(ctx context.Context, userID, objectKey st
 	return s.withViewURL(ctx, img)
 }
 
-// List returns one keyset page of the user's images, newest first, each with a
-// view URL. It over-fetches by one row to detect a next page.
+// List returns one keyset page of the user's images, newest first, each with a view URL.
 func (s *GalleryService) List(ctx context.Context, userID string, limit int, cursor *repository.GalleryCursor) (GalleryPage, error) {
 	if s.objects == nil {
 		return GalleryPage{}, ErrStorageUnavailable
@@ -221,7 +204,7 @@ func (s *GalleryService) List(ctx context.Context, userID string, limit int, cur
 	return page, nil
 }
 
-// Get returns a single image view, mapping not-found to ErrGalleryNotFound.
+// Get returns a single image view.
 func (s *GalleryService) Get(ctx context.Context, userID, id string) (ImageView, error) {
 	if s.objects == nil {
 		return ImageView{}, ErrStorageUnavailable
@@ -233,9 +216,7 @@ func (s *GalleryService) Get(ctx context.Context, userID, id string) (ImageView,
 	return s.withViewURL(ctx, img)
 }
 
-// Delete soft-deletes an image and removes the stored object in the background
-// (spec: object cleanup may be async). It works even when storage is unconfigured
-// — the row is the source of truth; object cleanup is best-effort.
+// Delete soft-deletes an image and removes the stored object in the background.
 func (s *GalleryService) Delete(ctx context.Context, userID, id string) error {
 	objectKey, err := s.store.SoftDeleteImage(ctx, userID, id)
 	if err != nil {
@@ -247,7 +228,6 @@ func (s *GalleryService) Delete(ctx context.Context, userID, id string) error {
 	return nil
 }
 
-// withViewURL attaches a fresh presigned GET URL to an image.
 func (s *GalleryService) withViewURL(ctx context.Context, img repository.GalleryImage) (ImageView, error) {
 	url, err := s.objects.PresignGet(ctx, img.ObjectKey, s.cfg.ViewURLTTL)
 	if err != nil {
@@ -256,8 +236,6 @@ func (s *GalleryService) withViewURL(ctx context.Context, img repository.Gallery
 	return ImageView{Image: img, ViewURL: url, ExpiresAt: s.now().Add(s.cfg.ViewURLTTL)}, nil
 }
 
-// removeQuietly deletes an object with a bounded context, ignoring errors (a
-// failed cleanup only leaks a byte blob, not correctness).
 func (s *GalleryService) removeQuietly(objectKey string) {
 	if s.objects == nil {
 		return
@@ -276,10 +254,8 @@ func (s *GalleryService) contentTypeAllowed(ct string) bool {
 	return false
 }
 
-// contentTypeRejected reports whether a stored object's content-type is a
-// definitively disallowed type. An empty or generic octet-stream type (the store
-// default when the client sent no header) is not rejected here — size is still
-// enforced and the client sends the right header in practice.
+// contentTypeRejected reports whether a stored object's content-type is
+// definitively disallowed; empty / octet-stream (no header sent) is not rejected.
 func (s *GalleryService) contentTypeRejected(ct string) bool {
 	if ct == "" || strings.EqualFold(ct, "application/octet-stream") {
 		return false
@@ -287,7 +263,6 @@ func (s *GalleryService) contentTypeRejected(ct string) bool {
 	return !s.contentTypeAllowed(ct)
 }
 
-// ownsKey reports whether objectKey is in the caller's namespace.
 func (s *GalleryService) ownsKey(userID, objectKey string) bool {
 	return strings.HasPrefix(objectKey, "gallery/"+userID+"/")
 }
@@ -314,13 +289,11 @@ func mapGalleryNotFound(err error) error {
 	return err
 }
 
-// defaultObjectKey builds "gallery/{userID}/{uuid}" — the caller's namespace plus
-// a random object id, so a key is unguessable and prefix-authorizable.
 func defaultObjectKey(userID string) string {
 	return "gallery/" + userID + "/" + newObjectID()
 }
 
-// newObjectID returns a random v4-style UUID string without a dependency.
+// newObjectID returns a random v4-style UUID string.
 func newObjectID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

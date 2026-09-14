@@ -9,10 +9,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 )
 
-// Insights is the HTTP transport for the (auxiliary) server-side insight
-// aggregation. The client renders insights from its own local DB; this endpoint is
-// the cross-device count of record, offered for a future server summary / analytics
-// path. Like the other handlers it only translates requests/responses.
+// Insights is the HTTP transport for the server-side insight aggregation.
 type Insights struct {
 	svc    *service.InsightsService
 	logger *slog.Logger
@@ -37,9 +34,7 @@ type insightMoodResponse struct {
 	Count int    `json:"count"`
 }
 
-// Insights handles GET /api/v1/insights?period=weekly|monthly&start=&tz= — the
-// per-period aggregation grouped in the requested IANA time zone (default UTC) so
-// it matches the client's local grouping.
+// Insights handles GET /api/v1/insights?period=weekly|monthly&start=&tz= (grouped in tz, default UTC).
 func (h *Insights) Insights(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.userID(w, r)
 	if !ok {

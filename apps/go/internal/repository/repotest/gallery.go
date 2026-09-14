@@ -124,7 +124,6 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 		user := f.NewUser(t)
 		img := insert(t, f, user, 1)[0]
 
-		// The returned key is what the service hands to object storage.
 		key, err := f.Gallery.SoftDeleteImage(ctx, user, img.ID)
 		if err != nil {
 			t.Fatalf("SoftDeleteImage() error = %v, want nil", err)
@@ -151,8 +150,6 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 			t.Fatalf("SoftDeleteImage() error = %v, want nil", err)
 		}
 
-		// Account deletion purges from this list, so it must include the rows a
-		// soft delete already hid.
 		keys, err := f.Gallery.ListObjectKeys(ctx, user)
 		if err != nil {
 			t.Fatalf("ListObjectKeys() error = %v, want nil", err)
@@ -171,8 +168,6 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 		ctx := t.Context()
 		user := f.NewUser(t)
 
-		// The handler validates theme too, but the store must not be the more
-		// permissive of the two.
 		tests := []struct {
 			name    string
 			theme   string
@@ -253,7 +248,6 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 	})
 }
 
-// uniq returns the distinct values of in.
 func uniq(in []string) []string {
 	seen := make(map[string]bool, len(in))
 	out := make([]string, 0, len(in))

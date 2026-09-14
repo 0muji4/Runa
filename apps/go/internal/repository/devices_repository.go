@@ -16,8 +16,7 @@ type DeviceRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewDeviceRepository wraps a pgx pool. A nil pool (DB unreachable at boot) makes
-// every method return ErrNoDatabase instead of panicking, so liveness still serves.
+// NewDeviceRepository wraps a pgx pool; a nil pool makes every method return ErrNoDatabase.
 func NewDeviceRepository(pool *pgxpool.Pool) *DeviceRepository {
 	return &DeviceRepository{pool: pool}
 }
@@ -29,8 +28,7 @@ func (r *DeviceRepository) UpsertDevice(ctx context.Context, p UpsertDeviceParam
 		return Device{}, ErrNoDatabase
 	}
 
-	// ON CONFLICT on the (user_id, push_token) unique index makes a re-registration
-	// idempotent (keeps id/created_at, takes the latest platform/notify_time/enabled).
+	// ON CONFLICT on (user_id, push_token) makes a re-registration idempotent, keeping id/created_at.
 	const q = `
 		INSERT INTO devices (user_id, push_token, platform, notify_time, enabled)
 		VALUES ($1, $2, $3, $4, $5)

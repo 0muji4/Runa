@@ -1,5 +1,4 @@
-// Package handler contains the HTTP transport layer: it translates between
-// HTTP requests/responses and the service layer. No business logic lives here.
+// Package handler is the HTTP transport layer between requests/responses and the service layer.
 package handler
 
 import (
@@ -11,9 +10,6 @@ import (
 )
 
 // healthzResponse is the JSON body of GET /api/v1/healthz.
-//
-// It mirrors the shared/UI contract HealthzResponse(status: String) so the
-// Kotlin/Swift client can deserialize it directly.
 type healthzResponse struct {
 	Status string `json:"status"`
 }
@@ -37,7 +33,7 @@ func (h *Health) Healthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(healthzResponse{Status: status.Status}); err != nil {
-		// Response is already committed; we can only log the encode failure.
+		// Response is already committed; only logging remains.
 		h.logger.ErrorContext(r.Context(), "failed to encode healthz response", slog.Any("error", err))
 	}
 }

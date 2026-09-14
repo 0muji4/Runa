@@ -8,8 +8,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// InsightPeriodType is the aggregation window kind. It mirrors the shared client's
-// InsightPeriodType so the two agree on semantics.
+// InsightPeriodType is the aggregation window kind; it mirrors the shared client's InsightPeriodType.
 type InsightPeriodType string
 
 const (
@@ -17,13 +16,10 @@ const (
 	InsightMonthly InsightPeriodType = "monthly"
 )
 
-// ErrInvalidPeriod is returned for an unrecognised period (the handler validates
-// first, so this is a defensive fallback).
+// ErrInvalidPeriod is returned for an unrecognised period.
 var ErrInvalidPeriod = errors.New("service: invalid insight period")
 
-// insightMoods is the canonical mood order — it MUST match the shared
-// com.runa.shared.feature.diary.DiaryMood so the server's distribution lines up
-// with the client's local aggregation.
+// insightMoods is the canonical mood order; it MUST match the shared DiaryMood.
 var insightMoods = []string{"calm", "gentle", "tired", "hopeful", "heavy"}
 
 // InsightMoodCount is one mood and its count within the period.
@@ -32,10 +28,7 @@ type InsightMoodCount struct {
 	Count int
 }
 
-// InsightSummary is the server-side aggregation of a period. It is deliberately a
-// subset of what the client computes locally (no streak/moon overlap — the moon
-// stays client-only): this endpoint is the auxiliary cross-device count of record,
-// never the render path.
+// InsightSummary is the server-side aggregation of a period.
 type InsightSummary struct {
 	Period           InsightPeriodType
 	Start            string // local start date "YYYY-MM-DD"
@@ -45,15 +38,12 @@ type InsightSummary struct {
 	MoodDistribution []InsightMoodCount
 }
 
-// InsightsStore is the narrow data access the insights aggregation needs: the
-// user's entries in an instant range. Both the pgx DiaryRepository and memdiary
-// satisfy it, so no change to DiaryStore (and its fakes) is required.
+// InsightsStore is the narrow data access the insights aggregation needs.
 type InsightsStore interface {
 	EntriesInRange(ctx context.Context, userID string, lo, hi time.Time) ([]repository.DiaryEntry, error)
 }
 
-// InsightsService aggregates a user's diary entries for a period, grouped in the
-// requested time zone so day counts match the client's local-date grouping.
+// InsightsService aggregates a user's diary entries for a period in the requested time zone.
 type InsightsService struct {
 	store InsightsStore
 }
@@ -63,10 +53,8 @@ func NewInsightsService(store InsightsStore) *InsightsService {
 	return &InsightsService{store: store}
 }
 
-// Insight aggregates the entries in the half-open window that starts at [start]
-// 00:00 in [loc] and spans one week or one month. Days are distinct local dates;
-// mood distribution counts the canonical moods (unknown/absent moods fall into
-// UnmoodedCount, matching the client's "未選択" handling).
+// Insight aggregates the entries in the half-open window from start 00:00 in loc
+// spanning one week or month; unknown/absent moods fall into UnmoodedCount.
 func (s *InsightsService) Insight(ctx context.Context, userID string, period InsightPeriodType, start time.Time, loc *time.Location) (InsightSummary, error) {
 	lo := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, loc)
 	var hi time.Time

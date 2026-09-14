@@ -39,8 +39,7 @@ func decodeError(t *testing.T, res *http.Response) errorEnvelope {
 	return decodeJSON[errorEnvelope](t, res)
 }
 
-// checkErrorEnvelope verifies the API error envelope in res. wantCode "" skips the
-// code check; wantDetails < 0 skips the details-length check.
+// checkErrorEnvelope verifies the error envelope; wantCode "" and wantDetails < 0 skip those checks.
 func checkErrorEnvelope(t *testing.T, res *http.Response, wantCode ErrorCode, wantDetails int) {
 	t.Helper()
 	if wantCode == "" && wantDetails < 0 {
@@ -74,8 +73,7 @@ func postJSON(t *testing.T, h http.HandlerFunc, body string) *http.Response {
 	return rec.Result()
 }
 
-// stubAccessVerifier resolves every Bearer token to a fixed user id, so the diary
-// handlers run behind the real middleware without minting JWTs.
+// stubAccessVerifier resolves every Bearer token to a fixed user id.
 type stubAccessVerifier struct{ userID string }
 
 func (s stubAccessVerifier) Verify(string) (string, error) { return s.userID, nil }
@@ -126,8 +124,7 @@ func createDiaryEntry(t *testing.T, r http.Handler, clientID, bodyText string) d
 	return decodeJSON[diaryEntryResponse](t, res)
 }
 
-// checkTokensResponse verifies the token envelope returned by signup and login:
-// both tokens present, the fixed token type, and the echoed user email.
+// checkTokensResponse verifies the token envelope returned by signup and login.
 func checkTokensResponse(t *testing.T, res *http.Response, wantEmail string) {
 	t.Helper()
 	got := decodeJSON[authTokensResponse](t, res)

@@ -10,9 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// fakeApple serves /lookup with the body in *lookupBody (filled in after the
-// server exists, since the body embeds the server's own artwork URL) and answers
-// HEAD on the 600px artwork path according to has600.
+// fakeApple serves /lookup from *lookupBody and answers HEAD on the 600px artwork path per has600.
 func fakeApple(t *testing.T, lookupBody *string, has600 bool) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()

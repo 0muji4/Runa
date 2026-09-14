@@ -11,15 +11,11 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/storage"
 )
 
-// MaxDisplayNameLength bounds a user-chosen display name (in runes, so a name of
-// CJK characters is measured by character count, not byte length).
+// MaxDisplayNameLength bounds a user-chosen display name in runes, not bytes.
 const MaxDisplayNameLength = 50
 
-// exportImagePageSize is how many gallery rows Export pages through at a time.
 const exportImagePageSize = 100
 
-// accountObjectRemoveTimeout bounds the background object purge on account
-// deletion so a slow store never leaks a goroutine.
 const accountObjectRemoveTimeout = 30 * time.Second
 
 var (
@@ -29,9 +25,8 @@ var (
 	ErrDisplayNameTooLong = errors.New("service: display name too long")
 )
 
-// ExportedImage is one image's metadata plus an optional presigned GET URL. URL
-// is empty when object storage is unconfigured or a URL could not be signed; the
-// metadata still exports so a storage outage never blocks the diary export.
+// ExportedImage is one image's metadata plus an optional presigned GET URL; URL
+// is empty when object storage is unconfigured or the presign failed.
 type ExportedImage struct {
 	Image     repository.GalleryImage
 	URL       string
@@ -51,14 +46,7 @@ type AccountConfig struct {
 	ExportURLTTL time.Duration
 }
 
-// AccountService implements the account-data use cases: display-name update,
-// self-service export and permanent account deletion.
-//
-// Why it composes four stores: "the account" is not a single bounded context —
-// it spans the user record (auth), the diary, the gallery and object storage.
-// Export must aggregate them and deletion must purge them, so this service is the
-// one place that legitimately depends on all four. Feature services stay scoped
-// to their own store; only the cross-cutting account concern reaches across.
+// AccountService implements display-name update, self-service export and account deletion.
 type AccountService struct {
 	users      repository.AuthStore
 	diaries    repository.DiaryStore
@@ -69,8 +57,7 @@ type AccountService struct {
 	background func(func())
 }
 
-// AccountOption customizes an AccountService (tests run the object purge
-// synchronously so deletion assertions are deterministic).
+// AccountOption customizes an AccountService.
 type AccountOption func(*AccountService)
 
 // WithAccountBackgroundRunner overrides how the deferred object purge is run.
@@ -78,8 +65,7 @@ func WithAccountBackgroundRunner(run func(func())) AccountOption {
 	return func(s *AccountService) { s.background = run }
 }
 
-// NewAccountService constructs the service, defaulting now to time.Now and the
-// background runner to a goroutine.
+// NewAccountService constructs the service, defaulting now to time.Now.
 func NewAccountService(users repository.AuthStore, diaries repository.DiaryStore, gallery repository.GalleryStore, objects storage.ObjectStore, cfg AccountConfig, now func() time.Time, opts ...AccountOption) *AccountService {
 	if now == nil {
 		now = time.Now
@@ -100,8 +86,7 @@ func NewAccountService(users repository.AuthStore, diaries repository.DiaryStore
 }
 
 // UpdateDisplayName validates and persists a new display name, returning the
-// updated user. A missing user maps to ErrUserNotFound (the account was deleted
-// under a still-valid access token).
+// updated user; a missing user maps to ErrUserNotFound.
 func (s *AccountService) UpdateDisplayName(ctx context.Context, userID, displayName string) (repository.User, error) {
 	name := strings.TrimSpace(displayName)
 	if name == "" {
@@ -120,9 +105,8 @@ func (s *AccountService) UpdateDisplayName(ctx context.Context, userID, displayN
 	return user, nil
 }
 
-// Export aggregates the caller's profile, diary entries (tombstones excluded —
-// export is live data) and gallery images (metadata plus a presigned GET URL when
-// storage is available).
+// Export aggregates the caller's profile, live diary entries (tombstones
+// excluded) and gallery images.
 func (s *AccountService) Export(ctx context.Context, userID string) (AccountExport, error) {
 	user, err := s.users.GetUserByID(ctx, userID)
 	if err != nil {
@@ -132,8 +116,7 @@ func (s *AccountService) Export(ctx context.Context, userID string) (AccountExpo
 		return AccountExport{}, err
 	}
 
-	// ListChangedSince(epoch) returns every entry including tombstones in one call;
-	// keep only the live ones for the export.
+	// ListChangedSince(epoch) includes tombstones; keep only the live ones.
 	changed, err := s.diaries.ListChangedSince(ctx, userID, time.Time{})
 	if err != nil {
 		return AccountExport{}, err
@@ -158,9 +141,7 @@ func (s *AccountService) Export(ctx context.Context, userID string) (AccountExpo
 	}, nil
 }
 
-// exportImages pages through the user's visible images, attaching a presigned GET
-// URL when storage is available. A presign failure degrades to metadata-only for
-// that image rather than failing the whole export.
+// exportImages pages through the user's images; a presign failure degrades that image to metadata-only.
 func (s *AccountService) exportImages(ctx context.Context, userID string) ([]ExportedImage, error) {
 	out := make([]ExportedImage, 0)
 	var cursor *repository.GalleryCursor
@@ -191,14 +172,9 @@ func (s *AccountService) exportImages(ctx context.Context, userID string) ([]Exp
 	}
 }
 
-// DeleteAccount permanently removes the user and every row that cascades from it
-// (refresh tokens, diary entries, gallery rows, song history), then purges the
-// user's stored objects in the background (the spec allows async storage cleanup).
-//
-// Token invalidation is structural, not a separate revocation step: the refresh
-// tokens vanish with the cascade, and the now-missing user row makes any
-// still-valid access token fail its next user lookup (401). The residual window is
-// bounded by the short access-token TTL.
+// DeleteAccount permanently removes the user and every row that cascades from
+// it, then purges the user's stored objects in the background. Refresh tokens go
+// with the cascade; a still-valid access token fails its next user lookup.
 func (s *AccountService) DeleteAccount(ctx context.Context, userID string) error {
 	// Read the object keys BEFORE the delete cascades the gallery rows away.
 	keys, err := s.objectKeysToPurge(ctx, userID)
@@ -219,8 +195,6 @@ func (s *AccountService) DeleteAccount(ctx context.Context, userID string) error
 	return nil
 }
 
-// objectKeysToPurge lists every object key to remove on deletion. Without a
-// configured store there is nothing to purge, so it skips the query entirely.
 func (s *AccountService) objectKeysToPurge(ctx context.Context, userID string) ([]string, error) {
 	if s.objects == nil {
 		return nil, nil
@@ -228,10 +202,7 @@ func (s *AccountService) objectKeysToPurge(ctx context.Context, userID string) (
 	return s.gallery.ListObjectKeys(ctx, userID)
 }
 
-// purgeObjects removes stored objects best-effort with a bounded context. A failed
-// removal only leaks a byte blob (the row is already gone and view URLs expire),
-// so errors are logged nowhere and ignored — orphan cleanup is not a correctness
-// or security concern here.
+// purgeObjects removes stored objects best-effort; a failed removal only leaves an orphan blob.
 func (s *AccountService) purgeObjects(keys []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), accountObjectRemoveTimeout)
 	defer cancel()

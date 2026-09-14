@@ -18,13 +18,10 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 )
 
-// dateLayout is the YYYY-MM-DD form the today endpoints accept and emit. It
-// matches the DATE columns' day-only semantics and the client's local date.
+// dateLayout is the YYYY-MM-DD form the today endpoints accept and emit.
 const dateLayout = "2006-01-02"
 
-// Today is the HTTP transport for the today feature (daily quote + song, the
-// song archive, play history, and the admin seed endpoints). Like the other
-// handlers it only translates requests/responses; the logic lives in the service.
+// Today is the HTTP transport for the today feature (daily quote + song, archive, plays, admin seed).
 type Today struct {
 	svc    *service.TodayService
 	logger *slog.Logger
@@ -41,9 +38,7 @@ type quoteResponse struct {
 	BodyText string `json:"body_text"`
 }
 
-// songResponse is the song as the clients see it: display fields, the 30-second
-// preview stream, and the Apple Music page the badge links to. The Apple track
-// id and the fetch time stay server-side.
+// songResponse is the song as the clients see it; the Apple track id and fetch time stay server-side.
 type songResponse struct {
 	ID         string `json:"id"`
 	Date       string `json:"date"`
@@ -79,8 +74,7 @@ type createSongRequest struct {
 	ITunesTrackID int64  `json:"itunes_track_id"`
 }
 
-// Today handles GET /api/v1/today?date=YYYY-MM-DD. An absent date uses the
-// server's current UTC day. Missing quote/song come back as null (not an error).
+// Today handles GET /api/v1/today?date=YYYY-MM-DD (default: server UTC day); missing quote/song are null.
 func (t *Today) Today(w http.ResponseWriter, r *http.Request) {
 	if _, ok := t.userID(w, r); !ok {
 		return
@@ -109,9 +103,7 @@ func (t *Today) Today(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp, t.logger)
 }
 
-// Songs handles GET /api/v1/songs?until=&limit=&cursor= (archive, newest
-// first). until is the client's local day; days after it — songs registered
-// ahead of time — are not part of the archive. Absent, the server's UTC day.
+// Songs handles GET /api/v1/songs?until=&limit=&cursor= (newest first; songs dated after until are excluded).
 func (t *Today) Songs(w http.ResponseWriter, r *http.Request) {
 	if _, ok := t.userID(w, r); !ok {
 		return
@@ -144,8 +136,7 @@ func (t *Today) Songs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp, t.logger)
 }
 
-// Played handles POST /api/v1/songs/{id}/played (records a play). An unknown
-// song id answers 404.
+// Played handles POST /api/v1/songs/{id}/played (records a play).
 func (t *Today) Played(w http.ResponseWriter, r *http.Request) {
 	userID, ok := t.userID(w, r)
 	if !ok {
@@ -157,7 +148,6 @@ func (t *Today) Played(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Body is optional: a bare POST records a play at the server clock.
 	var req playedRequest
 	if r.ContentLength != 0 && r.Body != nil {
 		if !t.decodeAllowEmpty(w, r, &req) {
@@ -258,8 +248,7 @@ func (t *Today) decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
-// decodeAllowEmpty decodes a body that is permitted to be empty (io.EOF is not an
-// error); any other malformed JSON is rejected.
+// decodeAllowEmpty decodes a body that is permitted to be empty (io.EOF is not an error).
 func (t *Today) decodeAllowEmpty(w http.ResponseWriter, r *http.Request, dst any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -274,8 +263,7 @@ func (t *Today) parseDateQuery(w http.ResponseWriter, r *http.Request) (time.Tim
 	return t.parseDateParam(w, r, "date")
 }
 
-// parseDateParam reads a YYYY-MM-DD query parameter, defaulting an absent one to
-// the server's current UTC calendar day.
+// parseDateParam reads a YYYY-MM-DD query parameter, defaulting to the server's current UTC day.
 func (t *Today) parseDateParam(w http.ResponseWriter, r *http.Request, name string) (time.Time, bool) {
 	raw := r.URL.Query().Get(name)
 	if raw == "" {
@@ -344,8 +332,7 @@ func (t *Today) songNotFound(w http.ResponseWriter) {
 	writeError(w, http.StatusNotFound, CodeNotFound, "song not found", nil, t.logger)
 }
 
-// Forbidden writes the 403 body when the admin token check fails (satisfies
-// auth.ErrorResponder for the RequireAdmin middleware).
+// Forbidden writes the 403 body for RequireAdmin (satisfies auth.ErrorResponder).
 func (t *Today) Forbidden(w http.ResponseWriter, _ *http.Request, _ error) {
 	writeError(w, http.StatusForbidden, CodeForbidden, "admin access forbidden", nil, t.logger)
 }
@@ -355,8 +342,7 @@ func (t *Today) internal(w http.ResponseWriter, r *http.Request, err error) {
 	writeError(w, http.StatusInternalServerError, CodeInternal, "an unexpected error occurred", nil, t.logger)
 }
 
-// encodeSongCursor packs an archive keyset boundary into an opaque base64url
-// token of "<date YYYY-MM-DD>|<id>". Clients treat it as opaque and echo it back.
+// encodeSongCursor packs a keyset boundary into an opaque base64url token of "<date YYYY-MM-DD>|<id>".
 func encodeSongCursor(c repository.SongCursor) string {
 	raw := c.Date.UTC().Format(dateLayout) + "|" + c.ID
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))

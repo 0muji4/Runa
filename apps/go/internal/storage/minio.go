@@ -11,10 +11,8 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// Config holds the S3-compatible object-storage settings. Endpoint is the host
-// the server reaches the store on (e.g. "minio:9000" inside docker); PublicEndpoint
-// is the host the CLIENT can reach and is used only to build presigned URLs. When
-// they differ (the common docker case) the two must resolve to the same store.
+// Config holds the S3-compatible settings. Endpoint is the host the SERVER reaches; PublicEndpoint
+// is the host the CLIENT reaches (presigned URLs only). Both must resolve to the same store.
 type Config struct {
 	Endpoint       string
 	PublicEndpoint string
@@ -25,11 +23,8 @@ type Config struct {
 	UseSSL         bool
 }
 
-// MinioObjectStore implements ObjectStore against MinIO/S3. It holds two clients:
-//   - internal: real requests (Stat/Remove/EnsureBucket) against Endpoint.
-//   - presign:  URL signing against PublicEndpoint. Presigning is pure HMAC with
-//     no network call, so it is safe that the server itself may not be able to
-//     reach PublicEndpoint — only the client needs to.
+// MinioObjectStore implements ObjectStore against MinIO/S3 with two clients: internal for real
+// requests against Endpoint, presign for URL signing against PublicEndpoint (no network call).
 type MinioObjectStore struct {
 	internal *minio.Client
 	presign  *minio.Client
@@ -38,10 +33,7 @@ type MinioObjectStore struct {
 
 var _ ObjectStore = (*MinioObjectStore)(nil)
 
-// NewMinioObjectStore builds the store from config. It returns (nil, nil) when
-// Endpoint is empty so the caller can boot with gallery storage disabled (the
-// gallery endpoints then answer 503) without failing liveness — mirroring the
-// nil-pool tolerance of the repositories.
+// NewMinioObjectStore builds the store from config; it returns (nil, nil) when Endpoint is empty.
 func NewMinioObjectStore(cfg Config) (*MinioObjectStore, error) {
 	if cfg.Endpoint == "" {
 		return nil, nil
@@ -115,8 +107,7 @@ func (s *MinioObjectStore) Remove(ctx context.Context, key string) error {
 	return nil
 }
 
-// isNotFound reports whether a minio error is a 404/NoSuchKey, which the store
-// surfaces as ErrObjectNotFound.
+// isNotFound reports whether a minio error is a 404/NoSuchKey.
 func isNotFound(err error) bool {
 	if errors.Is(err, ErrObjectNotFound) {
 		return true

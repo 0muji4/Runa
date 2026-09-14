@@ -1,5 +1,3 @@
--- 0001_init.down.sql
--- Reverses 0001_init.up.sql. The pgcrypto extension is left in place because it
--- may be shared by other objects; only the table this migration created is dropped.
+-- pgcrypto is left in place: it may be shared by other objects.
 
 DROP TABLE IF EXISTS users;

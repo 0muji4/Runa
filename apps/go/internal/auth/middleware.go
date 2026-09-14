@@ -6,25 +6,20 @@ import (
 	"strings"
 )
 
-// contextKey is unexported so only this package can set/read the value.
 type contextKey string
 
 const userIDKey contextKey = "auth.userID"
 
 // AccessVerifier verifies an access token and returns its subject (user id).
-// *TokenIssuer implements it.
 type AccessVerifier interface {
 	Verify(tokenString string) (string, error)
 }
 
-// ErrorResponder writes an error HTTP response. The handler layer supplies one
-// that emits the shared JSON error envelope, keeping response formatting out of
-// this package.
+// ErrorResponder writes an error HTTP response; the handler layer supplies the JSON envelope.
 type ErrorResponder func(w http.ResponseWriter, r *http.Request, err error)
 
-// RequireAuth returns middleware that verifies the Bearer access token and, on
-// success, stores the user id in the request context for downstream handlers.
-// On failure it delegates to onUnauthorized (which chooses status/body).
+// RequireAuth returns middleware that verifies the Bearer access token and
+// stores the user id in the request context; failures go to onUnauthorized.
 func RequireAuth(verifier AccessVerifier, onUnauthorized ErrorResponder) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,14 +39,12 @@ func RequireAuth(verifier AccessVerifier, onUnauthorized ErrorResponder) func(ht
 	}
 }
 
-// UserIDFromContext returns the authenticated user id previously set by
-// RequireAuth, and whether it was present.
+// UserIDFromContext returns the user id set by RequireAuth, and whether it was present.
 func UserIDFromContext(ctx context.Context) (string, bool) {
 	id, ok := ctx.Value(userIDKey).(string)
 	return id, ok && id != ""
 }
 
-// bearerToken extracts the token from an "Authorization: Bearer <token>" header.
 func bearerToken(r *http.Request) (string, bool) {
 	const prefix = "Bearer "
 	h := r.Header.Get("Authorization")

@@ -1,6 +1,4 @@
-// Package repository_test runs the repository contract suites against a real
-// Postgres in a throwaway container. Without Docker, or under -short, they skip
-// with a reason rather than failing.
+// Package repository_test runs the repository contract suites against a real Postgres container.
 package repository_test
 
 import (
@@ -25,9 +23,7 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository/repotest"
 )
 
-// templateDB holds the migrated schema; each test copies it with CREATE DATABASE
-// ... TEMPLATE. Per-test databases, not just per-test rows, because the curated
-// content tables are keyed by date globally rather than per user.
+// templateDB holds the migrated schema; each test copies it with CREATE DATABASE ... TEMPLATE.
 const templateDB = "runa_template"
 
 var (
@@ -62,7 +58,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// startPostgres boots the container and migrates the template database.
 func startPostgres(ctx context.Context) (func(), error) {
 	// Same major version as docker-compose.yml.
 	container, err := tcpostgres.Run(ctx, "postgres:16-alpine",
@@ -89,7 +84,6 @@ func startPostgres(ctx context.Context) (func(), error) {
 	return terminate, nil
 }
 
-// migrateTemplate creates the template database and migrates it.
 func migrateTemplate(ctx context.Context) error {
 	admin, err := pgxpool.New(ctx, adminURL)
 	if err != nil {
@@ -115,7 +109,6 @@ func migrateTemplate(ctx context.Context) error {
 	return nil
 }
 
-// databaseURL rewrites the admin URL to point at the named database.
 func databaseURL(name string) string {
 	u, err := url.Parse(adminURL)
 	if err != nil {
@@ -133,7 +126,6 @@ func TestPostgresStoresMeetTheContract(t *testing.T) {
 	repotest.RunStoreSuites(t, newFixture)
 }
 
-// newFixture gives one test its own database, copied from the template.
 func newFixture(t *testing.T) repotest.Fixture {
 	t.Helper()
 

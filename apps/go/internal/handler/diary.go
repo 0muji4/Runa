@@ -18,14 +18,10 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/service"
 )
 
-// uuidPattern loosely validates the client-supplied client_id and path ids. A
-// malformed id is rejected before it reaches Postgres (which would 500 on a bad
-// UUID cast); for path ids it collapses to a 404, matching "not your entry".
+// uuidPattern rejects malformed ids before Postgres would 500 on the UUID cast.
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
-// Diary is the HTTP transport for the diary endpoints. Like Auth it only
-// translates requests/responses and maps service errors to the shared envelope;
-// the logic lives in the service layer.
+// Diary is the HTTP transport for the diary endpoints.
 type Diary struct {
 	svc    *service.DiaryService
 	logger *slog.Logger
@@ -109,8 +105,7 @@ func (d *Diary) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp, d.logger)
 }
 
-// Create handles POST /api/v1/diary. Idempotent by client_id: a repeated
-// client_id upserts the same row and returns 200 instead of 201.
+// Create handles POST /api/v1/diary; idempotent by client_id (a repeat returns 200 instead of 201).
 func (d *Diary) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := d.userID(w, r)
 	if !ok {
@@ -252,10 +247,7 @@ func (d *Diary) Sync(w http.ResponseWriter, r *http.Request) {
 	}, d.logger)
 }
 
-// Calendar handles GET /api/v1/diary/calendar?year=&month=&tz= — the per-local-date
-// entry counts for a month. Grouping uses the requested IANA time zone (default
-// UTC) so it matches the client's local-date grouping. The client renders the
-// calendar from its own local DB; this is the server-side count of record.
+// Calendar handles GET /api/v1/diary/calendar?year=&month=&tz= (per-local-date counts, grouped in tz, default UTC).
 func (d *Diary) Calendar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := d.userID(w, r)
 	if !ok {
@@ -409,8 +401,7 @@ func validateCreateDiary(req createDiaryRequest) []FieldError {
 	return details
 }
 
-// encodeCursor packs a keyset boundary into an opaque base64url token of
-// "<createdAt RFC3339Nano>|<id>". Clients treat it as opaque and echo it back.
+// encodeCursor packs a keyset boundary into an opaque base64url token of "<createdAt RFC3339Nano>|<id>".
 func encodeCursor(c repository.DiaryCursor) string {
 	raw := c.CreatedAt.UTC().Format(time.RFC3339Nano) + "|" + c.ID
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))

@@ -5,18 +5,15 @@ import (
 	"time"
 )
 
-// Quote is the persistence model for the daily_quotes table (migration 0004):
-// one curated poetic line per calendar day. Date is the day it is shown on.
+// Quote is the persistence model for the daily_quotes table: one line per calendar day.
 type Quote struct {
 	ID       string
 	Date     time.Time
 	BodyText string
 }
 
-// Song is the persistence model for the daily_songs table (migrations 0004 +
-// 0007): one curated song per calendar day. ITunesTrackID identifies the track in
-// Apple's catalog and is the source of truth; the SongMetadata was fetched from
-// the iTunes Search API at ResolvedAt and is re-fetched once it goes stale.
+// Song is the persistence model for the daily_songs table: one song per calendar
+// day; SongMetadata was fetched from Apple at ResolvedAt.
 type Song struct {
 	ID            string
 	Date          time.Time
@@ -24,8 +21,7 @@ type Song struct {
 	SongMetadata
 }
 
-// SongMetadata is what Runa keeps from an iTunes lookup: the display fields, the
-// 30-second preview stream, and the Apple Music page the store badge links to.
+// SongMetadata is what Runa keeps from an iTunes lookup.
 type SongMetadata struct {
 	Title      string
 	Artist     string
@@ -35,8 +31,7 @@ type SongMetadata struct {
 	ResolvedAt time.Time
 }
 
-// InsertQuoteParams / InsertSongParams carry the fields for an admin upsert keyed
-// by Date (one entry per day). A repeated Date replaces that day's entry.
+// InsertQuoteParams / InsertSongParams carry the fields for an admin upsert keyed by Date.
 type InsertQuoteParams struct {
 	Date     time.Time
 	BodyText string
@@ -48,26 +43,22 @@ type InsertSongParams struct {
 	SongMetadata
 }
 
-// ListSongsParams is a keyset page request for the song archive: songs dated
-// Until or earlier and strictly older than the (Date, ID) cursor, newest first,
-// capped at Limit. A nil Cursor starts at the newest song. Until keeps days
-// registered ahead of time out of "これまでの一曲".
+// ListSongsParams is a keyset page request: songs dated Until or earlier and
+// strictly older than the cursor, newest first, capped at Limit; a nil Cursor starts at the newest.
 type ListSongsParams struct {
 	Until  time.Time
 	Limit  int
 	Cursor *SongCursor
 }
 
-// SongCursor is the opaque archive page boundary: the (date, id) of the last row
-// of the previous page. The handler encodes/decodes it to a string.
+// SongCursor is the (date, id) of the last row of the previous page.
 type SongCursor struct {
 	Date time.Time
 	ID   string
 }
 
-// TodayStore is the data-access boundary for the today feature. The service
-// depends on this interface so tests can substitute an in-memory fake. Quotes
-// and songs are global (curated content); only play history is scoped by user.
+// TodayStore is the data-access boundary for the today feature; quotes and
+// songs are global, only play history is scoped by user.
 type TodayStore interface {
 	// GetQuoteForDate returns the quote curated for the exact day, or ErrNotFound.
 	GetQuoteForDate(ctx context.Context, date time.Time) (Quote, error)
@@ -77,16 +68,13 @@ type TodayStore interface {
 	// ListSongs returns one keyset page of the song archive, newest first.
 	ListSongs(ctx context.Context, p ListSongsParams) ([]Song, error)
 
-	// RecordPlay appends a play-history row for (userID, songID). It returns
-	// ErrNotFound when songID is not a known song (the FK insert would fail).
+	// RecordPlay appends a play-history row; ErrNotFound when songID is not a known song.
 	RecordPlay(ctx context.Context, userID, songID string, playedAt time.Time) error
 
-	// InsertQuote / InsertSong upsert a day's curated entry (admin). A repeated
-	// Date replaces the existing row for that day.
+	// InsertQuote / InsertSong upsert a day's curated entry; a repeated Date replaces the row.
 	InsertQuote(ctx context.Context, p InsertQuoteParams) (Quote, error)
 	InsertSong(ctx context.Context, p InsertSongParams) (Song, error)
 
-	// UpdateSongMetadata replaces a song's fetched metadata (a background
-	// re-fetch). It returns ErrNotFound when songID is not a known song.
+	// UpdateSongMetadata replaces a song's fetched metadata; ErrNotFound when songID is unknown.
 	UpdateSongMetadata(ctx context.Context, songID string, m SongMetadata) error
 }

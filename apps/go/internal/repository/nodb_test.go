@@ -8,9 +8,6 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
 
-// TestNilPoolReportsErrNoDatabase covers the degraded-boot path: with Postgres
-// unreachable the server serves liveness on a nil pool, so every store method has
-// to answer ErrNoDatabase rather than dereference it.
 func TestNilPoolReportsErrNoDatabase(t *testing.T) {
 	t.Parallel()
 

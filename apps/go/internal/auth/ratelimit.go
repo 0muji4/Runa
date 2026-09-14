@@ -6,10 +6,7 @@ import (
 	"time"
 )
 
-// RateLimiter is a naive in-memory fixed-window limiter keyed by client IP. It
-// is per-process (state resets on restart and is not shared across instances) —
-// enough to blunt credential stuffing on a single-instance backend. A shared
-// store (e.g. Redis) would be needed for a horizontally scaled deployment.
+// RateLimiter is an in-memory, per-process fixed-window limiter keyed by client IP.
 type RateLimiter struct {
 	max    int
 	window time.Duration
@@ -52,8 +49,7 @@ func (rl *RateLimiter) Allow(key string) bool {
 	return true
 }
 
-// Middleware limits requests by client IP, delegating to onLimited (which sends
-// the 429 body) when the window is exceeded.
+// Middleware limits requests by client IP, delegating to onLimited when the window is exceeded.
 func (rl *RateLimiter) Middleware(onLimited ErrorResponder) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,8 +62,7 @@ func (rl *RateLimiter) Middleware(onLimited ErrorResponder) func(http.Handler) h
 	}
 }
 
-// clientKey identifies the caller. The RealIP middleware upstream has already
-// normalized RemoteAddr from X-Forwarded-For/X-Real-IP where trusted.
+// clientKey relies on the upstream RealIP middleware having normalized RemoteAddr.
 func clientKey(r *http.Request) string {
 	return r.RemoteAddr
 }

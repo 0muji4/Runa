@@ -1,6 +1,4 @@
-// Package memauth is an in-memory implementation of repository.AuthStore. It is
-// used by the auth unit/integration tests (and is handy for running the API
-// without Postgres) so the test suite stays green in CI, which has no database.
+// Package memauth is an in-memory implementation of repository.AuthStore.
 package memauth
 
 import (
@@ -115,8 +113,7 @@ func (s *Store) DeleteUser(_ context.Context, id string) error {
 		return repository.ErrNotFound
 	}
 	delete(s.users, id)
-	// Mirror the DB's ON DELETE CASCADE for refresh tokens so tests see a deleted user
-	// can't refresh. Diary/gallery cascades are DB-level, exercised only against Postgres.
+	// Mirror the DB's ON DELETE CASCADE for refresh tokens.
 	for hash, t := range s.refresh {
 		if t.UserID == id {
 			delete(s.refresh, hash)
@@ -157,7 +154,7 @@ func (s *Store) RevokeRefreshToken(_ context.Context, tokenHash string) error {
 	return nil
 }
 
-// newID returns a random v4-style UUID string without pulling in a dependency.
+// newID returns a random v4-style UUID string.
 func newID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

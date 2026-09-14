@@ -26,15 +26,9 @@ import com.runa.shared.feature.lock.AppLockUiState
 import com.runa.shared.feature.lock.AppLockViewModel
 
 /**
- * Privacy-lock gate — a layer SEPARATE from the auth gate. While the lock is
- * engaged the real [content] is NOT composed (so nothing private can flash behind
- * the lock); a quiet moon-motif lock screen with an unlock affordance is shown
- * instead. When the lock is off (or authentication succeeds, or no device security
- * exists) the content renders normally.
- *
- * The [AppLockViewModel] is the app-lifetime single also driven by MainActivity's
- * lifecycle (foreground/background); this gate only reflects its state and offers
- * the retry/unlock action.
+ * Privacy-lock gate, separate from the auth gate. While locked the real [content] is
+ * NOT composed, so nothing private can flash behind the lock. [AppLockViewModel] is the
+ * app-lifetime single driven by MainActivity's lifecycle; this only reflects its state.
  */
 @Composable
 fun AppLockGate(

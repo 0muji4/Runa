@@ -50,13 +50,7 @@ import com.runa.shared.feature.insight.MoodCount
 import com.runa.shared.feature.insight.MoonPhaseBucket
 import org.koin.compose.koinInject
 
-/**
- * 16 インサイト — "あなたへの、手紙". A quiet retrospective letter: the period label,
- * a 明朝 heading, the rule-based summary, then the moon-phase overlap histogram (the
- * hero, a lone pink peak) and a soft mood-dot line, closed by a still footnote card.
- * A minimal 週/月 toggle and ‹ › period nav sit above. Everything renders from the
- * local diary — no network. The empty period keeps the moon motif.
- */
+/** インサイト「あなたへの、手紙」: period nav, summary, moon histogram, mood dots. Local only. */
 @Composable
 fun InsightScreen(
     onBack: () -> Unit,
@@ -72,15 +66,12 @@ fun InsightScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
     ) {
-        // The letter title is the screen title, so it shows over every state — not
-        // just when a letter has been composed.
+        // The letter title is the screen title, so it shows over every state.
         RunaScreenHeader(
             title = stringResource(R.string.insight_letter_title),
             onBack = onBack,
         )
 
-        // The period chrome always shows (over content and empty alike); the shared
-        // state surfaces drive the letter body below it.
         PeriodBar(header.periodLabel, header.periodType, viewModel)
         when (val current = state) {
             is UiState.Content -> {
@@ -104,7 +95,6 @@ fun InsightScreen(
 
 @Composable
 private fun PeriodBar(periodLabel: String, periodType: InsightPeriodType, viewModel: InsightViewModel) {
-    // Quiet 週 | 月 toggle.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,7 +109,6 @@ private fun PeriodBar(periodLabel: String, periodType: InsightPeriodType, viewMo
             viewModel.setPeriodType(InsightPeriodType.Monthly)
         }
     }
-    // ‹ period label › — the label taps back to the current period.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,11 +155,7 @@ private fun LetterContent(insight: Insight) {
     }
 }
 
-/**
- * The hero histogram: entries bucketed across the lunar cycle (新月 → 満月 → 新月).
- * The busiest phase glows moonlight-pink; the rest stay muted — a thing to gaze at,
- * not read.
- */
+/** Entries bucketed across the lunar cycle (新月 → 満月 → 新月); the busiest phase glows. */
 @Composable
 private fun MoonOverlapChart(buckets: List<MoonPhaseBucket>) {
     val maxCount = buckets.maxOfOrNull { it.count } ?: 0

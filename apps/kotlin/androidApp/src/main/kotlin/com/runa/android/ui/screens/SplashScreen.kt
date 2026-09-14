@@ -20,11 +20,7 @@ import com.runa.android.R
 import com.runa.android.ui.components.GlowingMoon
 import com.runa.android.ui.theme.RunaColors
 
-/**
- * Quiet startup splash shown while [com.runa.shared.feature.auth.AuthState.Restoring]
- * — the app is checking the stored session. The glowing moon over the LUNA
- * wordmark, minimal decoration, in keeping with the design system.
- */
+/** Startup splash shown while [com.runa.shared.feature.auth.AuthState.Restoring]. */
 @Composable
 fun SplashScreen() {
     Surface(color = RunaColors.Background) {

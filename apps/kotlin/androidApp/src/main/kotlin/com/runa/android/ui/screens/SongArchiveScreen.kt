@@ -45,12 +45,9 @@ import com.runa.shared.network.dto.SongDto
 import org.koin.compose.koinInject
 
 /**
- * 08 これまでの一曲. The song archive (newest first) plus the local play history.
- * Tapping a song plays its preview through the shared [SongPlayerViewModel] and
- * returns to 07, recording the play. Every row shows Apple's badge and the list
- * carries the iTunes attribution, as Apple's Promo Content terms require for
- * artwork/previews (docs/dd/todays-song-itunes-preview.md, Q4); the play history
- * is text only, so it needs neither.
+ * これまでの一曲: song archive (newest first) plus local play history. Apple's Promo
+ * Content terms require the badge per row and the iTunes line for artwork/previews;
+ * the text-only history needs neither.
  */
 @Composable
 fun SongArchiveScreen(
@@ -73,9 +70,7 @@ fun SongArchiveScreen(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Empty / initial-loading / load-failure all route through the shared
-            // state surfaces (as a tall item so the local play history can still show
-            // below). The list itself is offline-tolerant once a page has landed.
+            // State views sit in a tall item so the local play history can still show below.
             if (state.songs.isEmpty()) {
                 item {
                     val stateModifier = Modifier.fillMaxWidth().height(360.dp)
@@ -87,8 +82,7 @@ fun SongArchiveScreen(
                             onRetry = { viewModel.loadNextPage(reset = true) },
                             modifier = stateModifier,
                         )
-                        // Session expired → re-authenticate (retrying would just re-401);
-                        // matches RunaStateView's own Failure→Auth branch and iOS.
+                        // Session expired → re-authenticate (retrying would just re-401).
                         error is AppError.Auth -> RunaErrorView(
                             title = stringResource(R.string.state_auth_title),
                             body = stringResource(R.string.state_auth_body),
@@ -127,7 +121,6 @@ fun SongArchiveScreen(
                 }
             }
 
-            // Recent plays (local history).
             if (state.history.isNotEmpty()) {
                 item {
                     Text(

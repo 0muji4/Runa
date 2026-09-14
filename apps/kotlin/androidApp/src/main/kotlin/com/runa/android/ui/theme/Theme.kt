@@ -12,12 +12,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.runa.shared.feature.settings.AppTheme
 
-/**
- * Runa theme. Applies one of the three [AppTheme] palettes app-wide: it provides
- * [LocalRunaColors] (the tokens every screen reads) and derives the Material3
- * [ColorScheme] from the same tokens so the few Material components stay in step.
- * A [SideEffect] keeps the status-bar icons legible per theme.
- */
+/** Provides [LocalRunaColors] for [theme] and derives the Material3 [ColorScheme] from it. */
 @Composable
 fun RunaTheme(
     theme: AppTheme = AppTheme.DARK,
@@ -43,9 +38,7 @@ fun RunaTheme(
     }
 }
 
-/** Derives the Material3 scheme from the Runa tokens. Light uses [lightColorScheme]
- *  so Material's own light defaults fill any role we don't map; dark and pink share
- *  the dark base. */
+/** Light uses [lightColorScheme] so unmapped roles get light defaults; dark and pink share dark. */
 private fun materialSchemeFor(theme: AppTheme, c: RunaColorScheme): ColorScheme =
     if (theme == AppTheme.LIGHT) {
         lightColorScheme(

@@ -51,13 +51,8 @@ private val EmailModeSaver = Saver<EmailMode, String>(
 )
 
 /**
- * Sign-in screen (05). The quiet three-choice design: a glowing moon over the LUNA
- * wordmark and a poetic line, then Apple / Google / メール.
- * "メールでつづける" opens a second, still email step rather than crowding the hero.
- *
- * The design's 「いまはスキップ」 is intentionally absent: no guest session exists, so
- * the only way past the auth gate is signing in. Showing a skip that merely loops
- * back to onboarding ① would promise an exit that does not exist.
+ * Sign-in: Apple / Google / メール, with email as a second step. 「いまはスキップ」 is
+ * intentionally absent: no guest session exists, so signing in is the only way past the gate.
  */
 @Composable
 fun SignInScreen(
@@ -238,7 +233,6 @@ private fun EmailStep(
     }
 }
 
-/** A near-white filled pill (used for the Apple choice and the email submit). */
 @Composable
 private fun FilledPillButton(text: String, onClick: () -> Unit, enabled: Boolean) {
     Box(
@@ -260,7 +254,6 @@ private fun FilledPillButton(text: String, onClick: () -> Unit, enabled: Boolean
     }
 }
 
-/** A quiet dark-surface pill with a hairline border (Google / メール). */
 @Composable
 private fun SurfacePillButton(text: String, onClick: () -> Unit, enabled: Boolean) {
     Box(

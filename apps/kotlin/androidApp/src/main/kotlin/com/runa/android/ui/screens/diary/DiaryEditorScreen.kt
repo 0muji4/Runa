@@ -42,20 +42,12 @@ import com.runa.shared.feature.diary.SaveStatus
 import org.koin.compose.getKoin
 import org.koin.core.parameter.parametersOf
 
-/**
- * Diary editor (10) — "書く". A whitespace-first 明朝 canvas: the day's date, a
- * quiet prompt, then the writing surface. The character count is never shown and
- * autosave is durable (the entry persists from the first line) with a whisper of
- * an indicator. 「閉じる」 flushes and leaves. A quiet mood chip row sits under the
- * prompt — one gentle word for the night, feeding the insight read-back; leaving
- * it unset is natural (older entries stay "未選択").
- */
+/** Diary editor 「書く」: date header, prompt, mood chips, autosaving body. 「閉じる」 flushes. */
 @Composable
 fun DiaryEditorScreen(
     clientId: String?,
     onDone: () -> Unit,
-    // When set (calendar "write on this day"), a new entry is backdated to this
-    // ISO yyyy-MM-dd day and the header shows it instead of today.
+    // Calendar "write on this day": a new entry is backdated to this ISO yyyy-MM-dd day.
     backdateIsoDate: String? = null,
 ) {
     val koin = getKoin()
@@ -64,7 +56,6 @@ fun DiaryEditorScreen(
         koin.get<DiaryEditorViewModel> { parametersOf(clientId, createdAtEpochMs) }
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    // No created-at in the editor state; the header shows the day being written.
     // キー無しの remember だと回転で now を取り直し、ヘッダーの日付が変わり得た。
     val dayMs = rememberSaveable { createdAtEpochMs ?: System.currentTimeMillis() }
 
@@ -150,11 +141,6 @@ private fun SaveStatus.autosaveLabelRes(): Int = when (this) {
     SaveStatus.Error -> R.string.diary_editor_error
 }
 
-/**
- * The quiet mood row: one gentle word for the night. Tapping the selected chip
- * again clears it (未選択). Labels and values come from the shared [DiaryMood], so
- * what's written here is exactly what the insight aggregation reads.
- */
 @Composable
 private fun MoodChipRow(
     selected: String?,

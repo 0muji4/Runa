@@ -39,12 +39,8 @@ import com.runa.shared.feature.today.moon.moonPhaseNameJa
 import org.koin.compose.koinInject
 
 /**
- * 06 Home. The quiet face of the app: a large 明朝 daily quote centered in
- * generous whitespace, with the day's drawn moon phase + date pinned to the top and
- * a soft glow behind it. No Material app bar — like the other tabs, the header is
- * the page, so all four tabs start their content at [RunaHeader.TopTab]. The settings
- * gear sits as a quiet top-end overlay. The quote and moon still render offline (the
- * moon is always computed on-device).
+ * Home: the daily quote with the day's moon + date at the top. No app bar — like every
+ * tab, content starts at [RunaHeader.TopTab]. Quote and moon still render offline.
  */
 @Composable
 fun HomeScreen(
@@ -58,7 +54,6 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // A whisper of warm moonlight behind the moon, matching the design's glow.
             .drawBehind {
                 val glowCenter = Offset(size.width / 2f, size.height * 0.16f)
                 val glowRadius = size.width * 0.62f
@@ -89,7 +84,6 @@ fun HomeScreen(
             }
         }
 
-        // Settings gear — a quiet top-end overlay, aligned with the header row.
         IconButton(
             onClick = onSettingsClick,
             modifier = Modifier
@@ -115,7 +109,6 @@ private fun HomeContent(today: Today, offline: Boolean, onOpenTodaysMoon: () -> 
     ) {
         Spacer(Modifier.height(RunaHeader.TopTab))
 
-        // Drawn moon phase + date + phase name, at the top (tap → 今日の月).
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable(onClick = onOpenTodaysMoon),
@@ -141,7 +134,6 @@ private fun HomeContent(today: Today, offline: Boolean, onOpenTodaysMoon: () -> 
 
         Spacer(Modifier.weight(1f))
 
-        // The daily quote — the emotional center of the screen.
         Text(
             text = today.quote?.bodyText ?: stringResource(R.string.home_no_quote),
             style = MaterialTheme.typography.headlineMedium,

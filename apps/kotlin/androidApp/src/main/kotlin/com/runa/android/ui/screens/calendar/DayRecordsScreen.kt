@@ -37,7 +37,7 @@ import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ShipporiMincho
 import com.runa.shared.feature.calendar.DayRecordsViewModel
 import com.runa.shared.feature.diary.DiaryEntry
-import org.koin.compose.getKoin
+import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
@@ -53,8 +53,7 @@ fun DayRecordsScreen(
     onWrite: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val koin = getKoin()
-    val viewModel = remember(isoDate) { koin.get<DayRecordsViewModel> { parametersOf(isoDate) } }
+    val viewModel: DayRecordsViewModel = koinViewModel { parametersOf(isoDate) }
     val entries by viewModel.state.collectAsStateWithLifecycle()
 
     Column(

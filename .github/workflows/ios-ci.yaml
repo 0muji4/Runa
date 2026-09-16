@@ -43,8 +43,12 @@ jobs:
           restore-keys: konan-${{ runner.os }}-
       # :shared は com.android.library を適用しているため、XCFramework だけを作る場合でも
       # Gradle の設定フェーズで Android SDK が要る。macOS ランナーには同梱されていない。
+      # 既定の packages は "tools platform-tools" だが、旧 tools パッケージはリポジトリから
+      # 消えており sdkmanager が exit 1 になる。platform-tools だけを明示する。
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install XcodeGen
         run: brew install xcodegen
       # SharedKit/Package.swift が XCFramework を binaryTarget で相対参照するため、

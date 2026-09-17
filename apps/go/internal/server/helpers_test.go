@@ -328,7 +328,6 @@ type galleryImage struct {
 	URLExpiresAt string `json:"url_expires_at"`
 	Width        int    `json:"width"`
 	Height       int    `json:"height"`
-	Theme        string `json:"theme"`
 	CreatedAt    string `json:"created_at"`
 }
 

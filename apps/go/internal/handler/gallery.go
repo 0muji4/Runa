@@ -46,7 +46,6 @@ type createGalleryRequest struct {
 	ObjectKey string `json:"object_key"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
-	Theme     string `json:"theme"`
 }
 
 type galleryImageResponse struct {
@@ -55,7 +54,6 @@ type galleryImageResponse struct {
 	URLExpiresAt string `json:"url_expires_at"`
 	Width        int    `json:"width"`
 	Height       int    `json:"height"`
-	Theme        string `json:"theme"`
 	CreatedAt    string `json:"created_at"`
 }
 
@@ -109,7 +107,7 @@ func (g *Gallery) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view, err := g.svc.RegisterImage(r.Context(), userID, req.ObjectKey, req.Width, req.Height, req.Theme)
+	view, err := g.svc.RegisterImage(r.Context(), userID, req.ObjectKey, req.Width, req.Height)
 	if err != nil {
 		g.writeGalleryError(w, r, err)
 		return
@@ -283,9 +281,6 @@ func validateCreateGallery(req createGalleryRequest) []FieldError {
 	if req.Height <= 0 {
 		details = append(details, FieldError{Field: "height", Message: "must be a positive integer"})
 	}
-	if req.Theme != "monotone" && req.Theme != "pink" {
-		details = append(details, FieldError{Field: "theme", Message: "must be one of monotone|pink"})
-	}
 	return details
 }
 
@@ -326,7 +321,6 @@ func toGalleryImageResponse(v service.ImageView) galleryImageResponse {
 		URLExpiresAt: v.ExpiresAt.UTC().Format(time.RFC3339Nano),
 		Width:        v.Image.Width,
 		Height:       v.Image.Height,
-		Theme:        v.Image.Theme,
 		CreatedAt:    v.Image.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }

@@ -19,7 +19,7 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 			img, err := f.Gallery.InsertImage(t.Context(), repository.InsertGalleryParams{
 				UserID:    userID,
 				ObjectKey: fmt.Sprintf("gallery/%s/k%d", userID, i),
-				Width:     100 + i, Height: 200 + i, Theme: "pink",
+				Width:     100 + i, Height: 200 + i,
 			})
 			if err != nil {
 				t.Fatalf("seeding image %d: InsertImage() error = %v, want nil", i, err)
@@ -37,13 +37,13 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 		key := "gallery/" + user + "/retried"
 
 		first, err := f.Gallery.InsertImage(ctx, repository.InsertGalleryParams{
-			UserID: user, ObjectKey: key, Width: 800, Height: 600, Theme: "pink",
+			UserID: user, ObjectKey: key, Width: 800, Height: 600,
 		})
 		if err != nil {
 			t.Fatalf("first InsertImage() error = %v, want nil", err)
 		}
 		second, err := f.Gallery.InsertImage(ctx, repository.InsertGalleryParams{
-			UserID: user, ObjectKey: key, Width: 1024, Height: 768, Theme: "monotone",
+			UserID: user, ObjectKey: key, Width: 1024, Height: 768,
 		})
 		if err != nil {
 			t.Fatalf("second InsertImage() error = %v, want nil", err)
@@ -162,55 +162,6 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 		}
 	})
 
-	t.Run("UnknownThemeIsRejected", func(t *testing.T) {
-		t.Parallel()
-		f := newFixture(t)
-		ctx := t.Context()
-		user := f.NewUser(t)
-
-		tests := []struct {
-			name    string
-			theme   string
-			wantErr bool
-		}{
-			{
-				name:    "monotoneは受け入れる",
-				theme:   "monotone",
-				wantErr: false,
-			},
-			{
-				name:    "pinkは受け入れる",
-				theme:   "pink",
-				wantErr: false,
-			},
-			{
-				name:    "未知の色は拒否する",
-				theme:   "blue",
-				wantErr: true,
-			},
-			{
-				name:    "空文字は拒否する",
-				theme:   "",
-				wantErr: true,
-			},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				_, err := f.Gallery.InsertImage(ctx, repository.InsertGalleryParams{
-					UserID:    user,
-					ObjectKey: fmt.Sprintf("gallery/%s/theme-%s", user, tt.name),
-					Width:     10, Height: 10, Theme: tt.theme,
-				})
-				if tt.wantErr && err == nil {
-					t.Errorf("InsertImage(theme=%q) error = nil, want a rejection", tt.theme)
-				}
-				if !tt.wantErr && err != nil {
-					t.Errorf("InsertImage(theme=%q) error = %v, want nil", tt.theme, err)
-				}
-			})
-		}
-	})
-
 	t.Run("ImageCarriesItsMetadata", func(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
@@ -219,7 +170,7 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 
 		key := "gallery/" + user + "/meta"
 		created, err := f.Gallery.InsertImage(ctx, repository.InsertGalleryParams{
-			UserID: user, ObjectKey: key, Width: 1280, Height: 960, Theme: "monotone",
+			UserID: user, ObjectKey: key, Width: 1280, Height: 960,
 		})
 		if err != nil {
 			t.Fatalf("InsertImage() error = %v, want nil", err)
@@ -238,10 +189,9 @@ func RunGalleryStoreSuite(t *testing.T, newFixture NewFixture) {
 		type meta struct {
 			Key           string
 			Width, Height int
-			Theme         string
 		}
-		want := meta{key, 1280, 960, "monotone"}
-		gotMeta := meta{got.ObjectKey, got.Width, got.Height, got.Theme}
+		want := meta{key, 1280, 960}
+		gotMeta := meta{got.ObjectKey, got.Width, got.Height}
 		if gotMeta != want {
 			t.Errorf("GetImage() metadata = %+v, want %+v", gotMeta, want)
 		}

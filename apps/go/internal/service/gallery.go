@@ -134,7 +134,7 @@ func (s *GalleryService) CreateUploadURL(ctx context.Context, userID, contentTyp
 }
 
 // RegisterImage records metadata after upload, re-verifying the real object (the presigned PUT enforces nothing).
-func (s *GalleryService) RegisterImage(ctx context.Context, userID, objectKey string, width, height int, theme string) (ImageView, error) {
+func (s *GalleryService) RegisterImage(ctx context.Context, userID, objectKey string, width, height int) (ImageView, error) {
 	if s.objects == nil {
 		return ImageView{}, ErrStorageUnavailable
 	}
@@ -163,7 +163,6 @@ func (s *GalleryService) RegisterImage(ctx context.Context, userID, objectKey st
 		ObjectKey: objectKey,
 		Width:     width,
 		Height:    height,
-		Theme:     theme,
 	})
 	if err != nil {
 		return ImageView{}, err

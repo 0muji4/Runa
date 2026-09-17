@@ -4,7 +4,6 @@ package memgallery
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -12,12 +11,6 @@ import (
 
 	"github.com/0muji4/Runa/apps/go/internal/repository"
 )
-
-// allowedThemes mirrors the CHECK on gallery_images.theme.
-var allowedThemes = map[string]bool{"monotone": true, "pink": true}
-
-// ErrInvalidTheme is returned when a theme is outside the schema's CHECK.
-var ErrInvalidTheme = errors.New("memgallery: theme must be one of monotone|pink")
 
 // Store is a goroutine-safe, in-memory GalleryStore.
 type Store struct {
@@ -38,10 +31,6 @@ func New() *Store {
 var _ repository.GalleryStore = (*Store)(nil)
 
 func (s *Store) InsertImage(_ context.Context, p repository.InsertGalleryParams) (repository.GalleryImage, error) {
-	if !allowedThemes[p.Theme] {
-		return repository.GalleryImage{}, fmt.Errorf("%w: got %q", ErrInvalidTheme, p.Theme)
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -49,7 +38,6 @@ func (s *Store) InsertImage(_ context.Context, p repository.InsertGalleryParams)
 		// Upsert in place, keeping id/created_at and reviving.
 		existing.Width = p.Width
 		existing.Height = p.Height
-		existing.Theme = p.Theme
 		existing.DeletedAt = nil
 		s.images[existing.ID] = existing
 		return existing, nil
@@ -61,7 +49,6 @@ func (s *Store) InsertImage(_ context.Context, p repository.InsertGalleryParams)
 		ObjectKey: p.ObjectKey,
 		Width:     p.Width,
 		Height:    p.Height,
-		Theme:     p.Theme,
 		CreatedAt: s.tick(),
 	}
 	s.images[img.ID] = img

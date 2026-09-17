@@ -30,7 +30,7 @@ func TestGalleryDeletePurgesObjectInBackground(t *testing.T) {
 		key := "gallery/" + userA + "/purge-me"
 		objects.Put(key, storedObject())
 
-		img, err := svc.RegisterImage(ctx, userA, key, 800, 600, "pink")
+		img, err := svc.RegisterImage(ctx, userA, key, 800, 600)
 		if err != nil {
 			t.Fatalf("RegisterImage() error = %v, want nil", err)
 		}
@@ -63,7 +63,7 @@ func TestDeleteAccountPurgesObjectsInBackground(t *testing.T) {
 		}
 		key := "gallery/" + user.ID + "/k1"
 		if _, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
-			UserID: user.ID, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
+			UserID: user.ID, ObjectKey: key, Width: 1, Height: 1,
 		}); err != nil {
 			t.Fatalf("InsertImage() error = %v, want nil", err)
 		}

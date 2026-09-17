@@ -132,7 +132,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 		key         string
 		put         bool
 		putInfo     storage.ObjectInfo
-		theme       string
 		wantErr     error
 		wantRemoved bool
 	}{
@@ -142,7 +141,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userA + "/k1",
 			put:         true,
 			putInfo:     storage.ObjectInfo{Size: 500, ContentType: "image/jpeg"},
-			theme:       "pink",
 			wantErr:     nil,
 			wantRemoved: false,
 		},
@@ -152,7 +150,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userA + "/missing",
 			put:         false,
 			putInfo:     storage.ObjectInfo{},
-			theme:       "pink",
 			wantErr:     service.ErrObjectMissing,
 			wantRemoved: false,
 		},
@@ -162,7 +159,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userB + "/k1",
 			put:         false,
 			putInfo:     storage.ObjectInfo{},
-			theme:       "pink",
 			wantErr:     service.ErrInvalidObjectKey,
 			wantRemoved: false,
 		},
@@ -172,7 +168,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userA + "/big",
 			put:         true,
 			putInfo:     storage.ObjectInfo{Size: cfg.MaxUploadBytes + 1, ContentType: "image/jpeg"},
-			theme:       "pink",
 			wantErr:     service.ErrUploadTooLarge,
 			wantRemoved: true,
 		},
@@ -182,7 +177,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userA + "/gif",
 			put:         true,
 			putInfo:     storage.ObjectInfo{Size: 100, ContentType: "image/gif"},
-			theme:       "pink",
 			wantErr:     service.ErrContentTypeNotAllowed,
 			wantRemoved: true,
 		},
@@ -192,7 +186,6 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 			key:         "gallery/" + userA + "/k1",
 			put:         false,
 			putInfo:     storage.ObjectInfo{},
-			theme:       "pink",
 			wantErr:     service.ErrStorageUnavailable,
 			wantRemoved: false,
 		},
@@ -214,24 +207,23 @@ func TestGalleryService_RegisterImage(t *testing.T) {
 				objects.Put(tt.key, tt.putInfo)
 			}
 
-			view, err := svc.RegisterImage(ctx, userA, tt.key, 800, 600, tt.theme)
+			view, err := svc.RegisterImage(ctx, userA, tt.key, 800, 600)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
-					t.Fatalf("RegisterImage(%q, %q) error = %v, want %v",
-						tt.key, tt.theme, err, tt.wantErr)
+					t.Fatalf("RegisterImage(%q) error = %v, want %v", tt.key, err, tt.wantErr)
 				}
 			} else {
 				if err != nil {
-					t.Fatalf("RegisterImage(%q, %q) error = %v, want nil", tt.key, tt.theme, err)
+					t.Fatalf("RegisterImage(%q) error = %v, want nil", tt.key, err)
 				}
 				want := struct {
-					key, theme string
-					w, h       int
-				}{tt.key, tt.theme, 800, 600}
+					key  string
+					w, h int
+				}{tt.key, 800, 600}
 				got := struct {
-					key, theme string
-					w, h       int
-				}{view.Image.ObjectKey, view.Image.Theme, view.Image.Width, view.Image.Height}
+					key  string
+					w, h int
+				}{view.Image.ObjectKey, view.Image.Width, view.Image.Height}
 				if got != want {
 					t.Errorf("RegisterImage() image = %+v, want %+v", got, want)
 				}
@@ -305,7 +297,7 @@ func TestGalleryService_List(t *testing.T) {
 			ctx := context.Background()
 			for i := 1; i <= tt.seed; i++ {
 				_, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
-					UserID: userA, ObjectKey: fmt.Sprintf("gallery/%s/k%d", userA, i), Width: 1, Height: 1, Theme: "pink",
+					UserID: userA, ObjectKey: fmt.Sprintf("gallery/%s/k%d", userA, i), Width: 1, Height: 1,
 				})
 				if err != nil {
 					t.Fatalf("seeding image %d: InsertImage() error = %v, want nil", i, err)
@@ -417,7 +409,7 @@ func TestGalleryService_Get(t *testing.T) {
 			svc, gstore := newGalleryService(store, galleryConfig())
 			ctx := context.Background()
 			img, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
-				UserID: userA, ObjectKey: key, Width: 2, Height: 3, Theme: "pink",
+				UserID: userA, ObjectKey: key, Width: 2, Height: 3,
 			})
 			if err != nil {
 				t.Fatalf("InsertImage(%q) error = %v, want nil", key, err)
@@ -529,7 +521,7 @@ func TestGalleryService_Delete(t *testing.T) {
 			svc, gstore := newGalleryService(store, galleryConfig())
 			ctx := context.Background()
 			img, err := gstore.InsertImage(ctx, repository.InsertGalleryParams{
-				UserID: userA, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
+				UserID: userA, ObjectKey: key, Width: 1, Height: 1,
 			})
 			if err != nil {
 				t.Fatalf("InsertImage(%q) error = %v, want nil", key, err)

@@ -184,7 +184,7 @@ func TestDeleteUserCascades(t *testing.T) {
 	}
 	if _, err := f.Gallery.InsertImage(ctx, repository.InsertGalleryParams{
 		UserID: user, ObjectKey: "gallery/" + user + "/k1",
-		Width: 1, Height: 1, Theme: "pink",
+		Width: 1, Height: 1,
 	}); err != nil {
 		t.Fatalf("seeding a gallery image error = %v, want nil", err)
 	}

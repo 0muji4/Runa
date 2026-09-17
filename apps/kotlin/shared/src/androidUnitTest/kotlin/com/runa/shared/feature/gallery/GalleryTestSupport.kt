@@ -46,7 +46,6 @@ class FakeGalleryServer {
         val objectKey: String,
         val width: Int,
         val height: Int,
-        val theme: String,
         val createdAt: String,
         var deleted: Boolean = false,
     )
@@ -86,7 +85,7 @@ class FakeGalleryServer {
             throw ApiException(400, "validation_error", "object not uploaded")
         }
         val existing = images.values.firstOrNull { it.objectKey == req.objectKey && !it.deleted }
-        val img = existing ?: Img("srv-${++idSeq}", req.objectKey, req.width, req.height, req.theme, nextIso())
+        val img = existing ?: Img("srv-${++idSeq}", req.objectKey, req.width, req.height, nextIso())
             .also { images[it.id] = it }
         return img.toDto()
     }
@@ -129,7 +128,6 @@ class FakeGalleryServer {
         urlExpiresAt = future().toString(),
         width = width,
         height = height,
-        theme = theme,
         createdAt = createdAt,
     )
 

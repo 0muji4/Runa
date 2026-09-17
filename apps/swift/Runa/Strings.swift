@@ -18,8 +18,6 @@ enum L {
     static let actionBack = "戻る"
     static let actionClose = "閉じる"
     static let galleryTitle = "ギャラリー"
-    static let galleryThemeMonotone = "モノトーン"
-    static let galleryThemePink = "ピンク"
     static let galleryEmptyLine = "まだ、写真のない夜。"
     static let galleryEmptyBody = "最初のひかりを、\nそっと残してみませんか。"
     static let galleryDelete = "削除"

@@ -73,14 +73,13 @@ class DefaultGalleryRepository(
         ) { rows, progress -> rows.map { toDomain(it, progress[it.client_id]) } }
 
     @OptIn(ExperimentalUuidApi::class)
-    override suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String, theme: GalleryTheme) {
+    override suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String) {
         withContext(dispatcher) {
             val now = clock.now().toString()
             queries.insertPendingUpload(
                 Uuid.random().toString(), // client_id
                 width.toLong(),
                 height.toLong(),
-                theme.wire,
                 bytes, // pending_bytes
                 mimeType, // content_type
                 now, // created_at
@@ -104,13 +103,6 @@ class DefaultGalleryRepository(
     }
 
     override suspend fun refresh(): Result<Unit> = sync()
-
-    override suspend fun loadDisplayTheme(): String? =
-        withContext(dispatcher) { queries.getMeta(KEY_DISPLAY_THEME).executeAsOneOrNull() }
-
-    override suspend fun saveDisplayTheme(value: String) {
-        withContext(dispatcher) { queries.setMeta(KEY_DISPLAY_THEME, value) }
-    }
 
     private suspend fun sync(): Result<Unit> {
         if (!syncMutex.tryLock()) return Result.success(Unit)
@@ -155,7 +147,7 @@ class DefaultGalleryRepository(
         storageClient.putBytes(target.uploadUrl, bytes, contentType) { p -> setProgress(row.client_id, p) }
         // 3. Register the metadata; the response carries the presigned view URL.
         val dto = apiClient.createGallery(
-            CreateGalleryRequest(target.objectKey, row.width.toInt(), row.height.toInt(), row.theme),
+            CreateGalleryRequest(target.objectKey, row.width.toInt(), row.height.toInt()),
         )
         val expiresMs = Instant.parse(dto.urlExpiresAt).toEpochMilliseconds()
         withContext(dispatcher) {
@@ -210,7 +202,6 @@ class DefaultGalleryRepository(
             existing?.object_key,
             dto.width.toLong(),
             dto.height.toLong(),
-            dto.theme,
             dto.url, // view_url
             expiresMs, // view_url_expires_at
             dto.createdAt, // created_at
@@ -242,7 +233,6 @@ class DefaultGalleryRepository(
         serverId = row.server_id,
         width = row.width.toInt(),
         height = row.height.toInt(),
-        theme = GalleryTheme.fromWire(row.theme),
         viewUrl = row.view_url,
         localBytes = row.pending_bytes,
         createdAtEpochMs = Instant.parse(row.created_at).toEpochMilliseconds(),
@@ -256,7 +246,6 @@ class DefaultGalleryRepository(
     }
 
     private companion object {
-        const val KEY_DISPLAY_THEME = "display_theme"
         const val STATE_SYNCED = "synced"
         const val STATE_PENDING_UPLOAD = "pending_upload"
         const val STATE_PENDING_DELETE = "pending_delete"

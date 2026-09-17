@@ -21,9 +21,8 @@ class LocalDataCleanerTest {
         )
         database.diaryQueries.setMeta("last_synced_at", "2026-01-01T00:00:00Z")
         database.galleryQueries.insertPendingUpload(
-            "g1", 100L, 200L, "pink", null, "image/png", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z",
+            "g1", 100L, 200L, null, "image/png", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z",
         )
-        database.galleryQueries.setMeta("display_theme", "pink")
         database.todayQueries.upsertQuote("2026-01-01", "q1", "quote")
         database.todayQueries.upsertSong("2026-01-01", "s1", "title", "artist", "art", "preview", "store")
         database.todayQueries.insertPlay("p1", "s1", "title", "artist", 0L)
@@ -39,6 +38,5 @@ class LocalDataCleanerTest {
         assertNull(database.todayQueries.selectQuote("2026-01-01").executeAsOneOrNull())
         assertNull(database.todayQueries.selectSong("2026-01-01").executeAsOneOrNull())
         assertNull(database.diaryQueries.getMeta("last_synced_at").executeAsOneOrNull())
-        assertNull(database.galleryQueries.getMeta("display_theme").executeAsOneOrNull())
     }
 }

@@ -13,11 +13,9 @@ enum GalleryUi {
 @MainActor
 final class GalleryObservable: ObservableObject {
     @Published private(set) var ui: GalleryUi = .loading
-    @Published private(set) var displayTheme: GalleryDisplayTheme = .pink
 
     private let viewModel: GalleryViewModel
     private var collectTask: Task<Void, Never>?
-    private var themeTask: Task<Void, Never>?
 
     init(viewModel: GalleryViewModel = resolveGalleryViewModel()) {
         self.viewModel = viewModel
@@ -32,17 +30,6 @@ final class GalleryObservable: ObservableObject {
                 }
             }
         }
-        themeTask = Task { [weak self] in
-            guard let self else { return }
-            for await value in self.viewModel.displayTheme {
-                self.displayTheme = value
-            }
-        }
-    }
-
-    /// Gallery-scoped display treatment (monotone ⇔ pink); NOT the app-wide theme.
-    func setDisplayTheme(_ theme: GalleryDisplayTheme) {
-        viewModel.setDisplayTheme(theme: theme)
     }
 
     /// Add a picked image; `base64` is the normalized JPEG, decoded to `ByteArray` in Kotlin.
@@ -59,8 +46,5 @@ final class GalleryObservable: ObservableObject {
         viewModel.refresh()
     }
 
-    deinit {
-        collectTask?.cancel()
-        themeTask?.cancel()
-    }
+    deinit { collectTask?.cancel() }
 }

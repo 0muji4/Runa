@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +23,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,9 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,7 +51,6 @@ import com.runa.android.ui.theme.RunaColors
 import com.runa.android.ui.theme.ZenKakuGothicNew
 import com.runa.shared.core.state.SyncPhase
 import com.runa.shared.core.state.UiState
-import com.runa.shared.feature.gallery.GalleryDisplayTheme
 import com.runa.shared.feature.gallery.GalleryImage
 import com.runa.shared.feature.gallery.GalleryViewModel
 import com.runa.shared.feature.gallery.UploadState
@@ -69,13 +63,12 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * ギャラリー: masonry grid with a gallery-scoped display theme (monotone ⇔ pink) — NOT the
- * app-wide theme. Renders from the local DB; adds queue offline and flush on reconnect.
+ * ギャラリー: masonry grid of the user's photos as they are. Renders from the local DB;
+ * adds queue offline and flush on reconnect.
  */
 @Composable
 fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val displayTheme by viewModel.displayTheme.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var lightboxIndex by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -95,7 +88,6 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
     Box(Modifier.fillMaxSize().background(RunaColors.Background)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             GalleryHeader(onAdd = launchPicker)
-            ThemeToggle(displayTheme, viewModel::setDisplayTheme)
             val sync = (state as? UiState.Content<List<GalleryImage>>)?.sync ?: SyncPhase.Idle
             RunaSyncBanner(sync)
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -111,7 +103,7 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
                     },
                     modifier = Modifier.fillMaxSize(),
                 ) { images, _ ->
-                    GalleryGrid(images, displayTheme, onOpen = { index -> lightboxIndex = index })
+                    GalleryGrid(images, onOpen = { index -> lightboxIndex = index })
                 }
             }
         }
@@ -124,7 +116,6 @@ fun GalleryScreen(viewModel: GalleryViewModel = koinInject()) {
                 Lightbox(
                     images = images,
                     startIndex = index,
-                    displayTheme = displayTheme,
                     onClose = { lightboxIndex = null },
                     onDelete = { clientId ->
                         viewModel.deleteImage(clientId)
@@ -154,47 +145,8 @@ private fun GalleryHeader(onAdd: () -> Unit) {
 }
 
 @Composable
-private fun ThemeToggle(selected: GalleryDisplayTheme, onSelect: (GalleryDisplayTheme) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Surface(color = RunaColors.Surface, shape = RoundedCornerShape(24.dp)) {
-            Row(Modifier.padding(4.dp)) {
-                ThemeSegment(
-                    label = stringResource(R.string.gallery_theme_monotone),
-                    selected = selected == GalleryDisplayTheme.MONOTONE,
-                ) { onSelect(GalleryDisplayTheme.MONOTONE) }
-                ThemeSegment(
-                    label = stringResource(R.string.gallery_theme_pink),
-                    selected = selected == GalleryDisplayTheme.PINK,
-                ) { onSelect(GalleryDisplayTheme.PINK) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeSegment(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) RunaColors.Accent else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = label,
-            style = TextStyle(fontFamily = ZenKakuGothicNew, fontSize = 15.sp),
-            color = if (selected) RunaColors.Background else RunaColors.Subtle,
-        )
-    }
-}
-
-@Composable
 private fun GalleryGrid(
     images: List<GalleryImage>,
-    displayTheme: GalleryDisplayTheme,
     onOpen: (Int) -> Unit,
 ) {
     LazyVerticalStaggeredGrid(
@@ -205,13 +157,13 @@ private fun GalleryGrid(
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         itemsIndexed(images, key = { _, image -> image.clientId }) { index, image ->
-            GalleryCell(image, displayTheme) { onOpen(index) }
+            GalleryCell(image) { onOpen(index) }
         }
     }
 }
 
 @Composable
-private fun GalleryCell(image: GalleryImage, displayTheme: GalleryDisplayTheme, onClick: () -> Unit) {
+private fun GalleryCell(image: GalleryImage, onClick: () -> Unit) {
     val aspect = if (image.height > 0) image.width.toFloat() / image.height else 1f
     Box(
         Modifier
@@ -225,7 +177,6 @@ private fun GalleryCell(image: GalleryImage, displayTheme: GalleryDisplayTheme, 
             model = image.viewUrl ?: image.localBytes,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            colorFilter = displayTheme.colorFilter(),
             modifier = Modifier.fillMaxSize(),
         )
         if (image.uploadState == UploadState.Uploading || image.uploadState == UploadState.Queued) {
@@ -247,7 +198,6 @@ private fun GalleryCell(image: GalleryImage, displayTheme: GalleryDisplayTheme, 
 private fun Lightbox(
     images: List<GalleryImage>,
     startIndex: Int,
-    displayTheme: GalleryDisplayTheme,
     onClose: () -> Unit,
     onDelete: (String) -> Unit,
 ) {
@@ -264,7 +214,6 @@ private fun Lightbox(
                     model = image.viewUrl ?: image.localBytes,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    colorFilter = displayTheme.colorFilter(),
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)),
                 )
                 Spacer(Modifier.height(28.dp))
@@ -301,22 +250,6 @@ private fun Lightbox(
         )
     }
 }
-
-/** Monotone = full desaturation; pink = a black→#F4A9C0 duotone. Applied to grid + lightbox. */
-private fun GalleryDisplayTheme.colorFilter(): ColorFilter = when (this) {
-    GalleryDisplayTheme.MONOTONE -> ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-    GalleryDisplayTheme.PINK -> ColorFilter.colorMatrix(PinkDuotone)
-}
-
-// Black→pink duotone: map luminance onto #F4A9C0 (0.957, 0.663, 0.753).
-private val PinkDuotone = ColorMatrix(
-    floatArrayOf(
-        0.286f, 0.562f, 0.109f, 0f, 0f,
-        0.198f, 0.389f, 0.076f, 0f, 0f,
-        0.225f, 0.442f, 0.086f, 0f, 0f,
-        0f, 0f, 0f, 1f, 0f,
-    ),
-)
 
 private fun formatDateTime(epochMs: Long): String =
     SimpleDateFormat("M月d日  HH:mm", Locale.JAPAN).format(Date(epochMs))

@@ -16,7 +16,7 @@ class GalleryRepositoryTest {
         val h = GalleryHarness(testScheduler, online = true)
         advanceUntilIdle()
 
-        h.repo.addImage(byteArrayOf(1, 2, 3), width = 800, height = 600, mimeType = "image/jpeg", theme = GalleryTheme.PINK)
+        h.repo.addImage(byteArrayOf(1, 2, 3), width = 800, height = 600, mimeType = "image/jpeg")
         advanceUntilIdle()
 
         val row = h.onlyRow()
@@ -25,7 +25,6 @@ class GalleryRepositoryTest {
         assertNotNull(row.view_url)
         assertNull(row.pending_bytes)
         assertEquals(800L, row.width)
-        assertEquals("pink", row.theme)
         assertEquals(1, h.server.liveCount())
 
         val steps = h.server.events.filter { it == "upload-url" || it == "put" || it == "register" }
@@ -38,7 +37,7 @@ class GalleryRepositoryTest {
         h.server.offline = true
         advanceUntilIdle()
 
-        h.repo.addImage(byteArrayOf(9, 9), width = 10, height = 20, mimeType = "image/png", theme = GalleryTheme.MONOTONE)
+        h.repo.addImage(byteArrayOf(9, 9), width = 10, height = 20, mimeType = "image/png")
         advanceUntilIdle()
 
         val pending = h.onlyRow()
@@ -65,7 +64,7 @@ class GalleryRepositoryTest {
         val b = GalleryHarness(testScheduler, server = server, online = true)
         advanceUntilIdle()
 
-        a.repo.addImage(byteArrayOf(1), width = 5, height = 5, mimeType = "image/jpeg", theme = GalleryTheme.PINK)
+        a.repo.addImage(byteArrayOf(1), width = 5, height = 5, mimeType = "image/jpeg")
         advanceUntilIdle()
 
         b.repo.refresh()
@@ -87,7 +86,7 @@ class GalleryRepositoryTest {
         val h = GalleryHarness(testScheduler, online = true)
         advanceUntilIdle()
 
-        h.repo.addImage(byteArrayOf(7), width = 100, height = 100, mimeType = "image/webp", theme = GalleryTheme.PINK)
+        h.repo.addImage(byteArrayOf(7), width = 100, height = 100, mimeType = "image/webp")
         advanceUntilIdle()
         val url1 = h.onlyRow().view_url
         assertNotNull(url1)

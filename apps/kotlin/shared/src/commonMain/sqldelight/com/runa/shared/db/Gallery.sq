@@ -9,7 +9,6 @@ CREATE TABLE gallery_images (
     object_key          TEXT,
     width               INTEGER NOT NULL,
     height              INTEGER NOT NULL,
-    theme               TEXT NOT NULL,
     view_url            TEXT,
     view_url_expires_at INTEGER,
     pending_bytes       BLOB,
@@ -21,12 +20,6 @@ CREATE TABLE gallery_images (
 );
 
 CREATE INDEX gallery_images_created_idx ON gallery_images(created_at);
-
--- Gallery bookkeeping (the persisted display-theme toggle).
-CREATE TABLE gallery_sync_meta (
-    key   TEXT NOT NULL PRIMARY KEY,
-    value TEXT NOT NULL
-);
 
 -- ---- reads ----
 
@@ -66,8 +59,8 @@ FROM gallery_images;
 -- ---- local mutations ----
 
 insertPendingUpload:
-INSERT INTO gallery_images(client_id, server_id, object_key, width, height, theme, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
-VALUES (?, NULL, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, NULL, 'pending_upload');
+INSERT INTO gallery_images(client_id, server_id, object_key, width, height, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, NULL, NULL, ?, ?, NULL, NULL, ?, ?, ?, ?, NULL, 'pending_upload');
 
 markUploaded:
 UPDATE gallery_images
@@ -91,20 +84,9 @@ WHERE client_id = ?;
 deleteAllImages:
 DELETE FROM gallery_images;
 
-deleteAllSyncMeta:
-DELETE FROM gallery_sync_meta;
-
 -- ---- sync application ----
 
 -- Pull: server wins. client_id is reused for a known row, freshly generated for one first seen from the server.
 applyServerRow:
-INSERT OR REPLACE INTO gallery_images(client_id, server_id, object_key, width, height, theme, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, 'synced');
-
--- ---- meta ----
-
-getMeta:
-SELECT value FROM gallery_sync_meta WHERE key = ?;
-
-setMeta:
-INSERT OR REPLACE INTO gallery_sync_meta(key, value) VALUES (?, ?);
+INSERT OR REPLACE INTO gallery_images(client_id, server_id, object_key, width, height, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, NULL, 'synced');

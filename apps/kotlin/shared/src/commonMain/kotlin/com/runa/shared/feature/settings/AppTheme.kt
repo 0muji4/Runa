@@ -1,6 +1,6 @@
 package com.runa.shared.feature.settings
 
-/** The app-wide appearance theme, distinct from the gallery's [com.runa.shared.feature.gallery.GalleryTheme].
+/** The app-wide appearance theme.
  *  The shared module owns only the SELECTION (colors live in each client's `RunaColors`);
  *  [id] is persisted in settings and must never change. */
 enum class AppTheme(val id: String) {

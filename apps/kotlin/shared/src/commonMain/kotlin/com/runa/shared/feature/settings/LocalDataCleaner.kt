@@ -21,7 +21,6 @@ class DefaultLocalDataCleaner(
             database.diaryQueries.deleteAllEntries()
             database.diaryQueries.deleteAllSyncMeta()
             database.galleryQueries.deleteAllImages()
-            database.galleryQueries.deleteAllSyncMeta()
             database.todayQueries.deleteAllQuotes()
             database.todayQueries.deleteAllSongs()
             database.todayQueries.deleteAllHistory()

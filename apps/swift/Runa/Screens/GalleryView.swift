@@ -23,7 +23,7 @@ struct GalleryView: View {
         }
     }
 
-    // MARK: header + toggle
+    // MARK: header
 
     private var header: some View {
         RunaScreenHeader(title: L.galleryTitle) {
@@ -35,11 +35,10 @@ struct GalleryView: View {
     }
 
     @ViewBuilder private var content: some View {
-        themeToggle(model.displayTheme)
         switch model.ui {
         case .content(let images, let sync):
             RunaSyncBanner(phase: sync)
-            grid(images: images, theme: model.displayTheme)
+            grid(images: images)
         case .empty:
             RunaEmptyView(
                 title: L.galleryEmptyLine,
@@ -52,42 +51,14 @@ struct GalleryView: View {
         }
     }
 
-    private func themeToggle(_ selected: GalleryDisplayTheme) -> some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 4) {
-                themeSegment(L.galleryThemeMonotone, selected: isMonotone(selected)) { model.setDisplayTheme(.monotone) }
-                themeSegment(L.galleryThemePink, selected: !isMonotone(selected)) { model.setDisplayTheme(.pink) }
-            }
-            .padding(4)
-            .background(runaTheme.surface)
-            .clipShape(Capsule())
-            Spacer()
-        }
-        .padding(.top, 8)
-    }
-
-    private func themeSegment(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(RunaFonts.body(15))
-                .foregroundStyle(selected ? runaTheme.background : runaTheme.subtle)
-                .padding(.horizontal, 26)
-                .padding(.vertical, 8)
-                .background(selected ? runaTheme.accent : Color.clear)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: grid (two-column masonry)
 
-    private func grid(images: [GalleryImage], theme: GalleryDisplayTheme) -> some View {
+    private func grid(images: [GalleryImage]) -> some View {
         let split = masonry(images)
         return ScrollView {
             HStack(alignment: .top, spacing: 16) {
-                column(split.0, allImages: images, theme: theme)
-                column(split.1, allImages: images, theme: theme)
+                column(split.0, allImages: images)
+                column(split.1, allImages: images)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -96,41 +67,34 @@ struct GalleryView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func column(_ images: [GalleryImage], allImages: [GalleryImage], theme: GalleryDisplayTheme) -> some View {
+    private func column(_ images: [GalleryImage], allImages: [GalleryImage]) -> some View {
         VStack(spacing: 16) {
             ForEach(images, id: \.clientId) { image in
-                cell(image, allImages: allImages, theme: theme)
+                cell(image, allImages: allImages)
             }
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func cell(_ image: GalleryImage, allImages: [GalleryImage], theme: GalleryDisplayTheme) -> some View {
+    private func cell(_ image: GalleryImage, allImages: [GalleryImage]) -> some View {
         let ratio = image.height > 0 ? CGFloat(image.width) / CGFloat(image.height) : 1
         // Fixed-ratio box with the image filling and clipped — the masonry-cell idiom.
         return RoundedRectangle(cornerRadius: 20)
             .fill(runaTheme.surface)
             .aspectRatio(min(max(ratio, 0.6), 1.6), contentMode: .fit)
             .overlay {
-                GalleryImageView(image: image, theme: theme, contentMode: .fill)
+                GalleryImageView(image: image, contentMode: .fill)
             }
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .contentShape(Rectangle())
             .onTapGesture {
                 if let idx = allImages.firstIndex(where: { $0.clientId == image.clientId }) {
-                    lightbox = LightboxContext(images: allImages, startIndex: idx, displayTheme: theme)
+                    lightbox = LightboxContext(images: allImages, startIndex: idx)
                 }
             }
     }
 
     // MARK: helpers
-
-    private func isMonotone(_ theme: GalleryDisplayTheme) -> Bool {
-        switch theme {
-        case .monotone: return true
-        default: return false
-        }
-    }
 
     /// Split images into two columns, balancing by cumulative (clamped) height.
     private func masonry(_ images: [GalleryImage]) -> ([GalleryImage], [GalleryImage]) {
@@ -166,13 +130,12 @@ struct GalleryView: View {
 struct GalleryImageView: View {
     @Environment(\.runaTheme) private var runaTheme
     let image: GalleryImage
-    let theme: GalleryDisplayTheme
     let contentMode: ContentMode
 
     var body: some View {
         if let urlString = image.viewUrl, let url = URL(string: urlString) {
             AsyncImage(url: url) { img in
-                img.resizable().aspectRatio(contentMode: contentMode).galleryTheme(theme)
+                img.resizable().aspectRatio(contentMode: contentMode)
             } placeholder: {
                 runaTheme.surface
             }
@@ -201,7 +164,6 @@ private struct LightboxContext: Identifiable {
     let id = UUID()
     let images: [GalleryImage]
     let startIndex: Int
-    let displayTheme: GalleryDisplayTheme
 }
 
 private struct LightboxView: View {
@@ -225,7 +187,7 @@ private struct LightboxView: View {
                 ForEach(Array(context.images.enumerated()), id: \.element.clientId) { index, image in
                     VStack {
                         Spacer()
-                        GalleryImageView(image: image, theme: context.displayTheme, contentMode: .fit)
+                        GalleryImageView(image: image, contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                             .padding(.horizontal, 24)
                         Spacer().frame(height: 28)
@@ -256,21 +218,6 @@ private struct LightboxView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-        }
-    }
-}
-
-/// Monotone = full desaturation; pink = a desaturate-then-tint duotone.
-private extension View {
-    @ViewBuilder func galleryTheme(_ theme: GalleryDisplayTheme) -> some View {
-        switch theme {
-        case .monotone:
-            self.saturation(0)
-        case .pink:
-            // Gallery-scoped, NOT the app theme: the fixed brand pink, not runaTheme.accent.
-            self.saturation(0).colorMultiply(Color(hex: 0xF4A9C0))
-        default:
-            self
         }
     }
 }

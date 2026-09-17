@@ -53,15 +53,15 @@ Android と iOS が共有する Kotlin Multiplatform モジュール。**ロジ�
 
 | シンボル | 役割 |
 | --- | --- |
-| `interface GalleryRepository` | `observeImages(): Flow<List<GalleryImage>>`（ローカル購読・即描画）／`addImage(bytes,width,height,mimeType,theme)`（`pending_upload` でキュー）／`deleteImage(clientId)`／`refresh()`／`syncStatus: StateFlow<SyncPhase>`（共通 `core/state`）／`load/saveDisplayTheme` |
+| `interface GalleryRepository` | `observeImages(): Flow<List<GalleryImage>>`（ローカル購読・即描画）／`addImage(bytes,width,height,mimeType)`（`pending_upload` でキュー）／`deleteImage(clientId)`／`refresh()`／`syncStatus: StateFlow<SyncPhase>`（共通 `core/state`） |
 | `interface StorageClient` | 署名付きURLへの**生バイト PUT 専用**（`putBytes(url,bytes,contentType,onProgress)`）。非認証・任意ホスト。`HttpClientFactory.createStorage`（ContentNegotiation なし・auth interceptor なし）で生成し、Koin `STORAGE_CLIENT` で束ねる。**認証クライアントは絶対に使わない**（署名URLホストに Runa Bearer を付けてしまうため） |
-| `class GalleryViewModel { val state: StateFlow<UiState<List<GalleryImage>>>; val displayTheme: StateFlow<GalleryDisplayTheme>; fun setDisplayTheme; fun addImage; fun deleteImage; fun refresh }` | グリッド。共通 `UiState`（`Loading / Content(images, sync) / Empty / Failure`）。表示テーマは Content/Empty 双方に出すクロームなので別 flow で公開 |
+| `class GalleryViewModel { val state: StateFlow<UiState<List<GalleryImage>>>; fun addImage; fun deleteImage; fun refresh }` | グリッド。共通 `UiState`（`Loading / Content(images, sync) / Empty / Failure`） |
 | `class ImageDetailViewModel { val state: StateFlow<ImageDetailUiState>; fun focus; fun delete }` | ライトボックス。`ImageDetailUiState = Loading / Viewing(images, index) / Dismissed`。同じローカル画像 Flow を購読し、フォーカス中の画像が消えたら `Dismissed` |
 | `fun resolveGalleryViewModel()` / `fun resolveImageDetailViewModel(startClientId)` | iOS（SKIE）向け解決入口。Android は `koinInject` |
 
 **アップロード契約（3 ステップ／サーバ契約は [../../go/README.md](../../go/README.md)）**: `addImage` はまずローカル DB に `pending_upload`（バイトは `pending_bytes` BLOB）として書き即描画 → push で ①`POST /gallery/upload-url`（署名PUT URL＋object_key）→ ②`StorageClient` が**ストレージへ直 PUT** → ③`POST /gallery`（メタ登録、レスポンスに署名GET URL）→ `markUploaded`（`synced`・バイト破棄）。オフライン時はキューされ、復帰エッジで自動フラッシュ。
 
-**表示テーマ（`GalleryDisplayTheme`）はギャラリー内に閉じたクライアント表示効果**（モノトーン⇔ピンクでグリッド全体を色調変換）で、アプリ全体テーマ設定とも、画像ごとの保存テーマ（`GalleryTheme`）とも**別物**。ローカル（`gallery_sync_meta`）に永続し、初期値は確定デザイン準拠の PINK。
+**写真は撮ったままの色で表示する**。確定デザイン 13（ギャラリー）のモノトーン⇔ピンクの色調切替（と画像ごとの `theme`）は廃止し、スキーマ 2→3（`2.sqm`）で `gallery_images.theme` 列と `gallery_sync_meta` を落とした。
 
 **署名URL・キャッシュ方針**: 署名URLは期限付き。URL は `view_url` + `view_url_expires_at`（epoch ms）としてローカルに保持し、`refresh()`（＝全件 list ＋差分反映＋リモート削除の照合）で**期限切れを再取得**する。**画像本体は OS の画像キャッシュに委譲**（Android=Coil のディスクキャッシュ、iOS=`URLCache.shared` にディスク容量を設定）。ギャラリーAPIに差分/tombstone エンドポイントは無いため、pull は「全件 list ＋ローカル `synced` 行の照合削除」で他端末の削除を反映する。
 

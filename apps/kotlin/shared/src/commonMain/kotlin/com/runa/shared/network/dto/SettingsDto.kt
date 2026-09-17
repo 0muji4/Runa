@@ -27,7 +27,6 @@ data class ExportImageDto(
     @SerialName("object_key") val objectKey: String,
     val width: Int,
     val height: Int,
-    val theme: String,
     @SerialName("created_at") val createdAt: String,
     val url: String? = null,
     @SerialName("url_expires_at") val urlExpiresAt: String? = null,

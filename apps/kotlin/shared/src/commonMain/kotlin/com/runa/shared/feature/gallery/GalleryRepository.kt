@@ -12,7 +12,7 @@ interface GalleryRepository {
     fun observeImages(): Flow<List<GalleryImage>>
 
     /** Queue a picked image: persist its bytes locally and return; the upload follows in the background. */
-    suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String, theme: GalleryTheme)
+    suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String)
 
     /** Drop the image locally if never uploaded, else mark pending-delete and push. */
     suspend fun deleteImage(clientId: String)
@@ -22,9 +22,4 @@ interface GalleryRepository {
 
     /** Coarse phase of the last/ongoing sync, for the grid banner. */
     val syncStatus: StateFlow<SyncPhase>
-
-    /** The persisted, client-only gallery display-theme toggle (enum name), or null if unset. */
-    suspend fun loadDisplayTheme(): String?
-
-    suspend fun saveDisplayTheme(value: String)
 }

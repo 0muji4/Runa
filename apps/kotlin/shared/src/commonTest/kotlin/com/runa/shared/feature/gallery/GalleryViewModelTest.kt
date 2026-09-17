@@ -17,19 +17,14 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-private class FakeGalleryRepository(private val savedTheme: String? = null) : GalleryRepository {
+private class FakeGalleryRepository : GalleryRepository {
     val images = MutableStateFlow<List<GalleryImage>>(emptyList())
-    var persistedTheme: String? = null
 
     override fun observeImages(): Flow<List<GalleryImage>> = images
     override val syncStatus: StateFlow<SyncPhase> = MutableStateFlow(SyncPhase.Idle)
-    override suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String, theme: GalleryTheme) = Unit
+    override suspend fun addImage(bytes: ByteArray, width: Int, height: Int, mimeType: String) = Unit
     override suspend fun deleteImage(clientId: String) = Unit
     override suspend fun refresh(): Result<Unit> = Result.success(Unit)
-    override suspend fun loadDisplayTheme(): String? = savedTheme
-    override suspend fun saveDisplayTheme(value: String) {
-        persistedTheme = value
-    }
 }
 
 class GalleryViewModelTest {
@@ -48,34 +43,5 @@ class GalleryViewModelTest {
 
         assertEquals(UiState.Empty, vm.state.value)
         job.cancel()
-    }
-
-    @Test
-    fun persistedDisplayThemeIsRestoredOnOpen() = runTest {
-        val vm = GalleryViewModel(FakeGalleryRepository(savedTheme = "MONOTONE"))
-        advanceUntilIdle()
-
-        assertEquals(GalleryDisplayTheme.MONOTONE, vm.displayTheme.value)
-    }
-
-    @Test
-    fun unknownPersistedThemeFallsBackToTheDefault() = runTest {
-        val vm = GalleryViewModel(FakeGalleryRepository(savedTheme = "SEPIA"))
-        advanceUntilIdle()
-
-        assertEquals(GalleryDisplayTheme.PINK, vm.displayTheme.value, "壊れた値でも既定に落ちるだけで落ちない")
-    }
-
-    @Test
-    fun switchingDisplayThemePersistsIt() = runTest {
-        val repo = FakeGalleryRepository()
-        val vm = GalleryViewModel(repo)
-        advanceUntilIdle()
-
-        vm.setDisplayTheme(GalleryDisplayTheme.MONOTONE)
-        advanceUntilIdle()
-
-        assertEquals(GalleryDisplayTheme.MONOTONE, vm.displayTheme.value)
-        assertEquals("MONOTONE", repo.persistedTheme)
     }
 }

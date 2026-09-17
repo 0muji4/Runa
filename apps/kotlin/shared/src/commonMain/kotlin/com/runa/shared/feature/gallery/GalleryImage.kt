@@ -1,13 +1,11 @@
 package com.runa.shared.feature.gallery
 
-/** A gallery image as the UI sees it; [serverId] is null until the upload completes.
- *  [theme] is the per-image saved mood — NOT the gallery-wide display-theme toggle. */
+/** A gallery image as the UI sees it; [serverId] is null until the upload completes. */
 data class GalleryImage(
     val clientId: String,
     val serverId: String?,
     val width: Int,
     val height: Int,
-    val theme: GalleryTheme,
     val viewUrl: String?,
     val localBytes: ByteArray?,
     val createdAtEpochMs: Long,
@@ -22,7 +20,6 @@ data class GalleryImage(
             serverId == other.serverId &&
             width == other.width &&
             height == other.height &&
-            theme == other.theme &&
             viewUrl == other.viewUrl &&
             createdAtEpochMs == other.createdAtEpochMs &&
             uploadState == other.uploadState &&
@@ -35,7 +32,6 @@ data class GalleryImage(
         result = 31 * result + (serverId?.hashCode() ?: 0)
         result = 31 * result + width
         result = 31 * result + height
-        result = 31 * result + theme.hashCode()
         result = 31 * result + (viewUrl?.hashCode() ?: 0)
         result = 31 * result + createdAtEpochMs.hashCode()
         result = 31 * result + uploadState.hashCode()
@@ -47,19 +43,6 @@ data class GalleryImage(
 
 private fun ByteArray?.contentEqualsOrNull(other: ByteArray?): Boolean =
     if (this == null || other == null) this === other else this.contentEquals(other)
-
-/** The per-image saved color mood; distinct from the gallery's client-side display theme. */
-enum class GalleryTheme {
-    MONOTONE,
-    PINK;
-
-    /** The snake-case value the API/DB uses. */
-    val wire: String get() = if (this == MONOTONE) "monotone" else "pink"
-
-    companion object {
-        fun fromWire(value: String): GalleryTheme = if (value == "monotone") MONOTONE else PINK
-    }
-}
 
 /** Where an image is in its upload lifecycle (derived from sync_state + progress). */
 enum class UploadState {

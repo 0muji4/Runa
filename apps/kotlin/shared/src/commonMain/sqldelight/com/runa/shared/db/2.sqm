@@ -1,0 +1,28 @@
+-- Schema 2 → 3: the gallery no longer grades photos, so the per-image theme column and the
+-- table that held the monotone/pink toggle go. gallery_images is rebuilt without the column
+-- (older Android SQLite cannot drop one in place); every row, queued uploads included, is copied.
+CREATE TABLE gallery_images_v3 (
+    client_id           TEXT NOT NULL PRIMARY KEY,
+    server_id           TEXT,
+    object_key          TEXT,
+    width               INTEGER NOT NULL,
+    height              INTEGER NOT NULL,
+    view_url            TEXT,
+    view_url_expires_at INTEGER,
+    pending_bytes       BLOB,
+    content_type        TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL,
+    deleted_at          TEXT,
+    sync_state          TEXT NOT NULL
+);
+
+INSERT INTO gallery_images_v3(client_id, server_id, object_key, width, height, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state)
+SELECT client_id, server_id, object_key, width, height, view_url, view_url_expires_at, pending_bytes, content_type, created_at, updated_at, deleted_at, sync_state
+FROM gallery_images;
+
+DROP TABLE gallery_images;
+ALTER TABLE gallery_images_v3 RENAME TO gallery_images;
+CREATE INDEX gallery_images_created_idx ON gallery_images(created_at);
+
+DROP TABLE IF EXISTS gallery_sync_meta;

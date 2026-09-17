@@ -178,7 +178,7 @@ curl http://localhost:8080/api/v1/healthz
   - `Empty` … まだ何も無い＝行動への招待。
   - `Failure(error: AppError)` … 本文を出せない致命状態（`error` で オフライン画面 か エラー画面 を出し分け）。
   - **2層オフライン（DoD#2）**: キャッシュ/月相など見せられるものがある時は `Content(sync = Offline)`（本文＋静かな帯）、見せるものが何も無い時だけ `Failure(AppError.Offline)`（全画面 25）。ローカルファースト機能（ダイアリー/カレンダー/インサイト/ギャラリー/ホーム）は前者が基本で、`Failure` は実質発生しない。
-  - コンテンツ系 VM（Home/Diary/Calendar/Insight/Gallery/TodayMoon）は `UiState<T>` を返す。チーム/フォーム/アクション状態しか持たない VM（テーマ・通知・プレイヤー・保存状態・アカウント操作）は現状維持。ギャラリーの表示テーマ、インサイトの期間見出しは Content/Empty 双方に出す「クローム」なので `UiState` とは別の flow（`displayTheme` / `header`）で公開する。
+  - コンテンツ系 VM（Home/Diary/Calendar/Insight/Gallery/TodayMoon）は `UiState<T>` を返す。チーム/フォーム/アクション状態しか持たない VM（テーマ・通知・プレイヤー・保存状態・アカウント操作）は現状維持。インサイトの期間見出しは Content/Empty 双方に出す「クローム」なので `UiState` とは別の flow（`header`）で公開する。
 - **`SyncPhase`（同期フェーズ・帯）**: `Idle / Syncing / Offline / Error`。従来の重複 enum（diary `SyncStatus`・`GallerySyncStatus`・`SyncBanner`・`CalendarBanner`・`InsightBanner`・`GalleryBanner`）を 1 型に集約。repository の `syncStatus` もこの型を公開。帯（`RunaSyncBanner`）は Offline/Error のみ表示し、Syncing は各画面の更新表示に委ねる。
 - **`AppError`（エラー分類）**: `Offline`（到達不可）/ `Auth`（認証切れ→再認証）/ `Server`（4xx・5xx）/ `Unknown`。分類器 `Throwable.toAppError()` は既存の一行規則（`if (e is ApiException) Error else Offline`）を精緻化し、`ApiException` の **401 → `Auth`**、その他 `ApiException` → `Server`、非 `ApiException`（ネットワーク未応答）→ `Offline`。
 - **認証切れ → 再認証（DoD#3）**: 401 はまず HTTP 層で透過 refresh され、refresh も失敗した時だけ `TokenStore.sessionExpired` が発火し**アプリ全体が自動でサインインに戻る**（既存の主導線）。加えて `AppError.Auth` のエラー画面は CTA「サインインし直す」で共通の再認証アクション（= セッションクリア）を呼ぶ。ナビゲーション route ではなく、Android は `LocalReauthenticate`、iOS は `\.runaReauthenticate` の環境値で app 全体に注入（サインアウトと同じ仕組み）。

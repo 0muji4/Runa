@@ -27,7 +27,6 @@ data class CreateGalleryRequest(
     @SerialName("object_key") val objectKey: String,
     val width: Int,
     val height: Int,
-    val theme: String,
 )
 
 /** One gallery image with a short-lived presigned GET URL ([url]). */
@@ -38,7 +37,6 @@ data class GalleryImageDto(
     @SerialName("url_expires_at") val urlExpiresAt: String,
     val width: Int,
     val height: Int,
-    val theme: String,
     @SerialName("created_at") val createdAt: String,
 )
 

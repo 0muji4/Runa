@@ -18,11 +18,8 @@
     <string name="action_back">戻る</string>
     <string name="action_close">閉じる</string>
 
-    <!-- Gallery (13 ギャラリー / 14 画像詳細). The display-theme toggle re-grades the
-         whole grid (monotone ⇔ pink) and is gallery-scoped — NOT the app theme. -->
+    <!-- Gallery (13 ギャラリー / 14 画像詳細). -->
     <string name="gallery_title">ギャラリー</string>
-    <string name="gallery_theme_monotone">モノトーン</string>
-    <string name="gallery_theme_pink">ピンク</string>
     <string name="gallery_empty_line">まだ、写真のない夜。</string>
     <string name="gallery_empty_body">最初のひかりを、\nそっと残してみませんか。</string>
     <string name="gallery_delete">削除</string>

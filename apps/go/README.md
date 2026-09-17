@@ -179,7 +179,7 @@ seam and the three-step contract below.
 - **Three-step upload.** (1) `POST /gallery/upload-url` with `{content_type,size}`
   returns a short-lived presigned **PUT** URL and a server-generated `object_key`
   (`gallery/{user_id}/{uuid}`). (2) The client PUTs the raw bytes straight to that
-  URL. (3) `POST /gallery` with `{object_key,width,height,theme}` registers the
+  URL. (3) `POST /gallery` with `{object_key,width,height}` registers the
   metadata. The server **re-verifies the real object** at step 3 (existence → 400
   if never uploaded; size and content-type re-checked, the object deleted if it
   violates), because a presigned PUT enforces none of those.
@@ -325,11 +325,15 @@ the `refresh_tokens` table. `0003_diary` adds `diary_entries` (body/mood/client_
 index for idempotent upsert and indexes for keyset paging and delta sync.
 `0004_today` adds `daily_quotes` and `daily_songs` (one curated row per `date`,
 `UNIQUE`) plus an append-only `song_history` play log. `0005_gallery` adds
-`gallery_images` (object_key/width/height/theme + soft-delete), with a unique
+`gallery_images` (object_key/width/height + soft-delete), with a unique
 `object_key` index (the registration idempotency key) and a partial keyset index
 for paging live rows. `0006_devices` adds `devices` (push_token/platform/
 notify_time/enabled + timestamps) with a unique `(user_id, push_token)` index for
 the idempotent `PUT /devices` upsert and a `platform IN ('ios','android')` check.
+`0008_gallery_drop_theme` drops the per-image `theme` column now that the
+gallery no longer grades photos. Both sides decode strictly, so the server
+ships first and installed dev builds must update (an old client's `POST
+/gallery` is rejected as an unknown field until it does).
 
 ## Tests
 

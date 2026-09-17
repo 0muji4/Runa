@@ -46,7 +46,7 @@ func TestGalleryFlow(t *testing.T) {
 	env.objects.Put(up.ObjectKey, storage.ObjectInfo{Size: 1000, ContentType: "image/jpeg"})
 
 	res := do(t, env.r, http.MethodPost, "/api/v1/gallery", token,
-		`{"object_key":"`+up.ObjectKey+`","width":800,"height":600,"theme":"pink"}`)
+		`{"object_key":"`+up.ObjectKey+`","width":800,"height":600}`)
 	checkStatus(t, res, http.StatusCreated)
 	var created galleryImage
 	decode(t, res, &created)
@@ -55,9 +55,6 @@ func TestGalleryFlow(t *testing.T) {
 	}
 	if created.URL == "" {
 		t.Error("registered image url is empty, want a presigned URL")
-	}
-	if got, want := created.Theme, "pink"; got != want {
-		t.Errorf("registered image theme = %q, want %q", got, want)
 	}
 	if created.Width != 800 {
 		t.Errorf("registered image width = %d, want 800", created.Width)
@@ -151,20 +148,20 @@ func TestGalleryRegisterAuthorization(t *testing.T) {
 
 	// 他人のobject_keyを登録しようとすると名前空間不一致で404。
 	res := do(t, env.r, http.MethodPost, "/api/v1/gallery", tokenB,
-		`{"object_key":"`+upA.ObjectKey+`","width":10,"height":10,"theme":"pink"}`)
+		`{"object_key":"`+upA.ObjectKey+`","width":10,"height":10}`)
 	checkStatus(t, res, http.StatusNotFound)
 	res.Body.Close()
 
 	// 自分のキーでもオブジェクト未アップロードなら400。
 	upB := requestUploadURL(t, env.r, tokenB, "image/jpeg", 1000)
 	res = do(t, env.r, http.MethodPost, "/api/v1/gallery", tokenB,
-		`{"object_key":"`+upB.ObjectKey+`","width":10,"height":10,"theme":"pink"}`)
+		`{"object_key":"`+upB.ObjectKey+`","width":10,"height":10}`)
 	checkStatus(t, res, http.StatusBadRequest)
 	res.Body.Close()
 
-	// 不正なthemeは400。
+	// 廃止したthemeを送ると未知フィールドとして400。
 	res = do(t, env.r, http.MethodPost, "/api/v1/gallery", tokenA,
-		`{"object_key":"`+upA.ObjectKey+`","width":10,"height":10,"theme":"rainbow"}`)
+		`{"object_key":"`+upA.ObjectKey+`","width":10,"height":10,"theme":"pink"}`)
 	checkStatus(t, res, http.StatusBadRequest)
 	res.Body.Close()
 }
@@ -179,7 +176,7 @@ func TestGalleryIsScoped(t *testing.T) {
 	up := requestUploadURL(t, env.r, tokenA, "image/png", 500)
 	env.objects.Put(up.ObjectKey, storage.ObjectInfo{Size: 500, ContentType: "image/png"})
 	res := do(t, env.r, http.MethodPost, "/api/v1/gallery", tokenA,
-		`{"object_key":"`+up.ObjectKey+`","width":100,"height":200,"theme":"monotone"}`)
+		`{"object_key":"`+up.ObjectKey+`","width":100,"height":200}`)
 	checkStatus(t, res, http.StatusCreated)
 	var created galleryImage
 	decode(t, res, &created)

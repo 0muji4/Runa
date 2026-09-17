@@ -10,7 +10,7 @@ import (
 )
 
 // galleryColumns is the shared SELECT list; keep its order in sync with scanGalleryImage.
-const galleryColumns = `id, user_id, object_key, width, height, theme, created_at, deleted_at`
+const galleryColumns = `id, user_id, object_key, width, height, created_at, deleted_at`
 
 // GalleryRepository is the pgx-backed implementation of GalleryStore.
 type GalleryRepository struct {
@@ -28,7 +28,7 @@ func scanGalleryImage(r row) (GalleryImage, error) {
 	var img GalleryImage
 	if err := r.Scan(
 		&img.ID, &img.UserID, &img.ObjectKey, &img.Width, &img.Height,
-		&img.Theme, &img.CreatedAt, &img.DeletedAt,
+		&img.CreatedAt, &img.DeletedAt,
 	); err != nil {
 		return GalleryImage{}, err
 	}
@@ -41,16 +41,15 @@ func (r *GalleryRepository) InsertImage(ctx context.Context, p InsertGalleryPara
 	}
 	// ON CONFLICT on object_key makes a retried registration idempotent and revives deleted_at → NULL.
 	const q = `
-		INSERT INTO gallery_images (user_id, object_key, width, height, theme)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO gallery_images (user_id, object_key, width, height)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (object_key) DO UPDATE
 			SET width      = EXCLUDED.width,
 			    height     = EXCLUDED.height,
-			    theme      = EXCLUDED.theme,
 			    deleted_at = NULL
 		RETURNING ` + galleryColumns
 
-	img, err := scanGalleryImage(r.pool.QueryRow(ctx, q, p.UserID, p.ObjectKey, p.Width, p.Height, p.Theme))
+	img, err := scanGalleryImage(r.pool.QueryRow(ctx, q, p.UserID, p.ObjectKey, p.Width, p.Height))
 	if err != nil {
 		return GalleryImage{}, fmt.Errorf("insert gallery image: %w", err)
 	}

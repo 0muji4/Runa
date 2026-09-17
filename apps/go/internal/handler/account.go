@@ -12,7 +12,7 @@ import (
 )
 
 // exportSchemaVersion must be bumped on any breaking change to the export shape.
-const exportSchemaVersion = 1
+const exportSchemaVersion = 2 // 2: images[] no longer carry theme
 
 // Account is the HTTP transport for display-name update, data export and account deletion.
 type Account struct {
@@ -51,7 +51,6 @@ type exportImage struct {
 	ObjectKey    string  `json:"object_key"`
 	Width        int     `json:"width"`
 	Height       int     `json:"height"`
-	Theme        string  `json:"theme"`
 	CreatedAt    string  `json:"created_at"`
 	URL          *string `json:"url,omitempty"`
 	URLExpiresAt *string `json:"url_expires_at,omitempty"`
@@ -168,7 +167,6 @@ func toExportResponse(e service.AccountExport) exportResponse {
 			ObjectKey: img.Image.ObjectKey,
 			Width:     img.Image.Width,
 			Height:    img.Image.Height,
-			Theme:     img.Image.Theme,
 			CreatedAt: img.Image.CreatedAt.UTC().Format(time.RFC3339),
 		}
 		if img.URL != "" {

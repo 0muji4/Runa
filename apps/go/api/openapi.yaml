@@ -6,7 +6,7 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
@@ -1219,7 +1219,6 @@ components:
         - object_key
         - width
         - height
-        - theme
         - created_at
       properties:
         id:
@@ -1231,9 +1230,6 @@ components:
           type: integer
         height:
           type: integer
-        theme:
-          type: string
-          enum: [monotone, pink]
         created_at:
           type: string
           format: date-time
@@ -1628,7 +1624,6 @@ components:
         - object_key
         - width
         - height
-        - theme
       properties:
         object_key:
           type: string
@@ -1639,13 +1634,6 @@ components:
         height:
           type: integer
           minimum: 1
-        theme:
-          type: string
-          enum: [monotone, pink]
-          description: |
-            The image's saved color mood at upload time. Distinct from the
-            client-side gallery display-theme toggle, which only re-grades the
-            whole grid and is never persisted.
 
     GalleryImage:
       type: object
@@ -1655,7 +1643,6 @@ components:
         - url_expires_at
         - width
         - height
-        - theme
         - created_at
       properties:
         id:
@@ -1672,9 +1659,6 @@ components:
           type: integer
         height:
           type: integer
-        theme:
-          type: string
-          enum: [monotone, pink]
         created_at:
           type: string
           format: date-time

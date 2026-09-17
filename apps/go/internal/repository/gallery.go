@@ -13,7 +13,6 @@ type GalleryImage struct {
 	ObjectKey string
 	Width     int
 	Height    int
-	Theme     string
 	CreatedAt time.Time
 	DeletedAt *time.Time
 }
@@ -24,7 +23,6 @@ type InsertGalleryParams struct {
 	ObjectKey string
 	Width     int
 	Height    int
-	Theme     string
 }
 
 // ListGalleryParams is a keyset page request: images strictly older than the

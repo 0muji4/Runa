@@ -136,7 +136,7 @@ func TestAccountService_Export(t *testing.T) {
 					t.Fatalf("SoftDeleteEntry(%q) error = %v, want nil", dead.ID, err)
 				}
 				_, err = gallery.InsertImage(ctx, repository.InsertGalleryParams{
-					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1, Theme: "pink",
+					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1,
 				})
 				if err != nil {
 					t.Fatalf("InsertImage() error = %v, want nil", err)
@@ -155,7 +155,7 @@ func TestAccountService_Export(t *testing.T) {
 			seed: func(t *testing.T, ctx context.Context, users *memauth.Store, diaries *memdiary.Store, gallery *memgallery.Store) string {
 				u := createTestUser(t, users)
 				_, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
-					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1, Theme: "pink",
+					UserID: u.ID, ObjectKey: "gallery/" + u.ID + "/k1", Width: 1, Height: 1,
 				})
 				if err != nil {
 					t.Fatalf("InsertImage() error = %v, want nil", err)
@@ -259,7 +259,7 @@ func TestAccountService_DeleteAccount(t *testing.T) {
 			if tt.withStorage {
 				key = "gallery/" + u.ID + "/k1"
 				_, err := gallery.InsertImage(ctx, repository.InsertGalleryParams{
-					UserID: u.ID, ObjectKey: key, Width: 1, Height: 1, Theme: "pink",
+					UserID: u.ID, ObjectKey: key, Width: 1, Height: 1,
 				})
 				if err != nil {
 					t.Fatalf("InsertImage(%q) error = %v, want nil", key, err)

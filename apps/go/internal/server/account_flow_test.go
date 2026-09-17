@@ -31,7 +31,7 @@ func TestAccountFlow(t *testing.T) {
 	}
 	objectKey := "gallery/" + userID + "/img-1"
 	_, err = env.gallery.InsertImage(ctx, repository.InsertGalleryParams{
-		UserID: userID, ObjectKey: objectKey, Width: 100, Height: 200, Theme: "pink",
+		UserID: userID, ObjectKey: objectKey, Width: 100, Height: 200,
 	})
 	if err != nil {
 		t.Fatalf("seeding a gallery image: InsertImage() error = %v, want nil", err)
@@ -77,8 +77,8 @@ func TestAccountFlow(t *testing.T) {
 		} `json:"images"`
 	}
 	decode(t, res, &export)
-	if export.SchemaVersion != 1 {
-		t.Errorf("export schema_version = %d, want 1", export.SchemaVersion)
+	if export.SchemaVersion != 2 {
+		t.Errorf("export schema_version = %d, want 2", export.SchemaVersion)
 	}
 	if got, want := export.User.DisplayName, "新しい名前"; got != want {
 		t.Errorf("export user.display_name = %q, want %q", got, want)

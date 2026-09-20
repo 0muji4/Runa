@@ -17,6 +17,7 @@ import com.runa.android.ui.components.RunaIcons
 import com.runa.android.ui.theme.RunaColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -52,6 +53,8 @@ import com.runa.android.ui.screens.TodaysSongScreen
 import com.runa.android.ui.screens.auth.AuthFlow
 import com.runa.shared.feature.auth.AuthState
 import com.runa.shared.feature.auth.AuthViewModel
+import com.runa.shared.feature.push.PendingRoute
+import com.runa.shared.feature.push.PendingRouteKind
 import org.koin.compose.koinInject
 
 /** App routes. Tab routes live inside the tab shell; everything else is pushed. */
@@ -89,10 +92,18 @@ fun diaryWriteOnRoute(isoDate: String): String = "diary/write-on/$isoDate"
 
 /** Root auth gate: splash while restoring, tab body when authenticated, else the sign-in flow. */
 @Composable
-fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
+fun RunaApp(
+    authViewModel: AuthViewModel = koinInject(),
+    pendingRoute: PendingRoute = koinInject(),
+) {
     val state by authViewModel.state.collectAsStateWithLifecycle()
     // Stable identity: a new lambda per recomposition would recompose the whole tab tree.
     val reauthenticate = remember(authViewModel) { { authViewModel.logout() } }
+
+    // A notification tap must not fire after a later sign-in.
+    LaunchedEffect(state) {
+        if (state is AuthState.Unauthenticated) pendingRoute.consume()
+    }
 
     when (val current = state) {
         is AuthState.Restoring -> SplashScreen()
@@ -112,6 +123,7 @@ fun RunaApp(authViewModel: AuthViewModel = koinInject()) {
 fun RunaAuthenticatedApp(
     displayName: String,
     onSignOut: () -> Unit,
+    pendingRoute: PendingRoute = koinInject(),
 ) {
     val rootNav = rememberNavController()
 
@@ -223,6 +235,15 @@ fun RunaAuthenticatedApp(
                     onSignOut = onSignOut,
                 )
             }
+        }
+    }
+
+    // After NavHost so the graph is set before the first navigate.
+    val pending by pendingRoute.route.collectAsStateWithLifecycle()
+    LaunchedEffect(pending) {
+        if (pending == PendingRouteKind.DIARY_EDITOR_NEW) {
+            rootNav.navigate(Routes.DIARY_EDITOR_NEW) { launchSingleTop = true }
+            pendingRoute.consume()
         }
     }
 }

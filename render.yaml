@@ -14,8 +14,11 @@
 #    AWS S3 なら S3_REGION を ap-northeast-1 等に、endpoint は空 or s3.<region>.amazonaws.com。
 #  - マイグレーションはサーバ起動時に自動適用される（cmd/api が file://migrations を
 #    m.Up() する）。よって preDeployCommand も別 migrate ジョブも不要。
-#  - サーバ push 通知は無く（通知は端末ローカル）、日次バッチも無いため cron サービスは不要。
-#    web 1 サービスで完結する。
+#  - 夜のリマインド（サーバ push）の起動役は Google Cloud Tasks で、端末ごとに予約した
+#    HTTP タスクが配信時刻に PUSH_CALLBACK_BASE_URL の /api/v1/hooks/push/reminder を叩く。
+#    cron / worker サービスは不要で、web は配信時刻にだけ起こされる（無料プランのスリープと
+#    Neon の自動停止に対して、常時起動のポーリングより軽い）。Cloud Tasks はコールドスタートを
+#    再試行で吸収する（queue の retry 設定は docs/runbook/push-notification-setup.md）。
 #
 # 注意: Render の Blueprint 仕様は変わりうる。デプロイ時に最新仕様で要検証。
 
@@ -73,3 +76,31 @@ services:
       # 日次コンテンツ（引用/曲）を seed するときだけ設定する。空なら admin 系は全 403。
       - key: ADMIN_API_TOKEN
         sync: false
+
+      # --- 夜のリマインド（サーバ push）---
+      # 値の作り方と貼り先は docs/runbook/push-notification-setup.md。どれかが空なら
+      # その部分だけ無効になる（APNs 無し = iOS に届かない、GCP 無し = Android と予約が止まる）。
+      - key: PUSH_ENABLED # キルスイッチ。false で予約もコールバックも no-op。
+        value: "true"
+      - key: PUSH_CALLBACK_BASE_URL # このサービスの公開 URL（末尾スラッシュ無し）。Cloud Tasks がここへ叩く。
+        sync: false
+      - key: PUSH_CALLBACK_TOKEN # コールバックの共有秘密。Render に生成させ、Cloud Tasks のタスクにも焼かれる。
+        generateValue: true
+      - key: APNS_TEAM_ID
+        sync: false
+      - key: APNS_KEY_ID
+        sync: false
+      - key: APNS_PRIVATE_KEY # AuthKey_XXXXXXXXXX.p8 を base64 にしたもの。
+        sync: false
+      - key: APNS_BUNDLE_ID
+        value: com.runa
+      - key: APNS_ENVIRONMENT # 開発ビルドは sandbox、TestFlight/App Store は production。
+        value: sandbox
+      - key: GCP_PROJECT_ID # Firebase と Cloud Tasks を置く GCP プロジェクト。
+        sync: false
+      - key: GCP_SERVICE_ACCOUNT_JSON # サービスアカウント鍵 JSON を base64 にしたもの（FCM と Cloud Tasks で共用）。
+        sync: false
+      - key: CLOUD_TASKS_LOCATION
+        value: asia-northeast1
+      - key: CLOUD_TASKS_QUEUE
+        value: runa-reminders

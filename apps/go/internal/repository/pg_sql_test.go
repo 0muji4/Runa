@@ -189,8 +189,8 @@ func TestDeleteUserCascades(t *testing.T) {
 		t.Fatalf("seeding a gallery image error = %v, want nil", err)
 	}
 	if _, err := f.Devices.UpsertDevice(ctx, repository.UpsertDeviceParams{
-		UserID: user, PushToken: "token", Platform: "ios",
-		NotifyTime: "22:00", Enabled: true,
+		UserID: user, InstallID: "11111111-1111-4111-8111-000000000001", PushToken: "token", Platform: "ios",
+		NotifyTime: "22:00", TimeZone: "Asia/Tokyo", Enabled: true,
 	}); err != nil {
 		t.Fatalf("seeding a device error = %v, want nil", err)
 	}

@@ -45,6 +45,25 @@ type Config struct {
 	GalleryViewURLTTL          time.Duration
 	GalleryMaxUploadBytes      int64
 	GalleryAllowedContentTypes []string
+
+	// PushEnabled false is the kill switch: registrations schedule nothing and callbacks no-op.
+	PushEnabled bool
+	// PushCallbackBaseURL is this server's public origin the scheduler calls back into;
+	// empty disables scheduling. PushCallbackToken authenticates those callbacks.
+	PushCallbackBaseURL string
+	PushCallbackToken   string
+	// APNS* configure the Apple sender; an empty key disables iOS delivery.
+	APNSTeamID      string
+	APNSKeyID       string
+	APNSPrivateKey  string // base64 of the .p8 PEM
+	APNSBundleID    string
+	APNSEnvironment string // sandbox | production
+	// GCP* are shared by the FCM sender and the Cloud Tasks scheduler; an empty
+	// service-account key disables both.
+	GCPProjectID          string
+	GCPServiceAccountJSON string // base64 of the key file
+	CloudTasksLocation    string
+	CloudTasksQueue       string
 }
 
 // Load reads configuration from the environment with local development defaults.
@@ -75,6 +94,19 @@ func Load() Config {
 		GalleryViewURLTTL:          getduration("GALLERY_VIEW_URL_TTL", 60*time.Minute),
 		GalleryMaxUploadBytes:      getint64("GALLERY_MAX_UPLOAD_BYTES", 10*1024*1024), // 10 MiB
 		GalleryAllowedContentTypes: splitListDefault("GALLERY_ALLOWED_CONTENT_TYPES", []string{"image/jpeg", "image/png", "image/webp", "image/heic"}),
+
+		PushEnabled:           getbool("PUSH_ENABLED", true),
+		PushCallbackBaseURL:   getenv("PUSH_CALLBACK_BASE_URL", ""),
+		PushCallbackToken:     getenv("PUSH_CALLBACK_TOKEN", ""),
+		APNSTeamID:            getenv("APNS_TEAM_ID", ""),
+		APNSKeyID:             getenv("APNS_KEY_ID", ""),
+		APNSPrivateKey:        getenv("APNS_PRIVATE_KEY", ""),
+		APNSBundleID:          getenv("APNS_BUNDLE_ID", "com.runa"),
+		APNSEnvironment:       getenv("APNS_ENVIRONMENT", "sandbox"),
+		GCPProjectID:          getenv("GCP_PROJECT_ID", ""),
+		GCPServiceAccountJSON: getenv("GCP_SERVICE_ACCOUNT_JSON", ""),
+		CloudTasksLocation:    getenv("CLOUD_TASKS_LOCATION", "asia-northeast1"),
+		CloudTasksQueue:       getenv("CLOUD_TASKS_QUEUE", "runa-reminders"),
 	}
 }
 

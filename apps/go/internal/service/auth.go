@@ -49,6 +49,8 @@ type AuthConfig struct {
 	PasswordParams auth.Argon2Params
 	RefreshTTL     time.Duration
 	Now            func() time.Time
+	// Devices, when set, lets Logout drop the signing-out install's push registration.
+	Devices *DeviceService
 }
 
 // AuthService implements the authentication use cases.
@@ -186,9 +188,27 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Tokens,
 	return s.issueTokens(ctx, stored.UserID)
 }
 
-// Logout revokes the presented refresh token; revoking an unknown token is not an error.
-func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
-	return s.cfg.Store.RevokeRefreshToken(ctx, auth.HashRefreshToken(refreshToken))
+// Logout revokes the presented refresh token; revoking an unknown token is not
+// an error. With installID, the device registered under that install is removed
+// too — but only when the token still identifies its user, since this endpoint
+// is unauthenticated and the token is the only proof of ownership.
+func (s *AuthService) Logout(ctx context.Context, refreshToken, installID string) error {
+	hash := auth.HashRefreshToken(refreshToken)
+	if installID != "" && s.cfg.Devices != nil {
+		stored, err := s.cfg.Store.GetRefreshTokenByHash(ctx, hash)
+		switch {
+		case err == nil:
+			// Only a live token proves ownership of the install.
+			if !stored.Revoked && stored.ExpiresAt.After(s.now()) {
+				if err := s.cfg.Devices.Unregister(ctx, stored.UserID, installID); err != nil {
+					return err
+				}
+			}
+		case !errors.Is(err, repository.ErrNotFound):
+			return err
+		}
+	}
+	return s.cfg.Store.RevokeRefreshToken(ctx, hash)
 }
 
 // Me returns the authenticated user's record.

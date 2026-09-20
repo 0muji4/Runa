@@ -221,6 +221,52 @@ func TestNilPoolReportsErrNoDatabase(t *testing.T) {
 				return err
 			},
 		},
+		{
+			name: "DeviceStore/GetDevice",
+			call: func(t *testing.T) error {
+				_, err := devices.GetDevice(t.Context(), "id")
+				return err
+			},
+		},
+		{
+			name: "DeviceStore/DeleteDevice",
+			call: func(t *testing.T) error {
+				_, err := devices.DeleteDevice(t.Context(), "user", "install")
+				return err
+			},
+		},
+		{
+			name: "DeviceStore/DeleteDevicesByUser",
+			call: func(t *testing.T) error {
+				_, err := devices.DeleteDevicesByUser(t.Context(), "user")
+				return err
+			},
+		},
+		{
+			name: "DeviceStore/SetNextTask",
+			call: func(t *testing.T) error {
+				return devices.SetNextTask(t.Context(), "id", "task", time.Time{})
+			},
+		},
+		{
+			name: "DeviceStore/ClaimReminder",
+			call: func(t *testing.T) error {
+				_, err := devices.ClaimReminder(t.Context(), repository.ClaimReminderParams{})
+				return err
+			},
+		},
+		{
+			name: "DeviceStore/FinishReminder",
+			call: func(t *testing.T) error {
+				return devices.FinishReminder(t.Context(), "id", repository.ReminderSent, "")
+			},
+		},
+		{
+			name: "DeviceStore/MarkTokenInvalid",
+			call: func(t *testing.T) error {
+				return devices.MarkTokenInvalid(t.Context(), "id", time.Time{})
+			},
+		},
 	}
 
 	for _, tt := range tests {

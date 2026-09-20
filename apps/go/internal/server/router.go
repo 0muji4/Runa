@@ -18,19 +18,22 @@ const requestTimeout = 30 * time.Second
 
 // Deps carries the handlers and middleware the router mounts.
 type Deps struct {
-	Health         *handler.Health
-	Auth           *handler.Auth
-	Account        *handler.Account
-	Diary          *handler.Diary
-	Today          *handler.Today
-	Insights       *handler.Insights
-	Gallery        *handler.Gallery
-	Devices        *handler.Devices
-	RequireAuth    func(http.Handler) http.Handler
-	AuthRateLimit  func(http.Handler) http.Handler
-	RequireAdmin   func(http.Handler) http.Handler
-	AllowedOrigins []string
-	Logger         *slog.Logger
+	Health        *handler.Health
+	Auth          *handler.Auth
+	Account       *handler.Account
+	Diary         *handler.Diary
+	Today         *handler.Today
+	Insights      *handler.Insights
+	Gallery       *handler.Gallery
+	Devices       *handler.Devices
+	Push          *handler.Push
+	RequireAuth   func(http.Handler) http.Handler
+	AuthRateLimit func(http.Handler) http.Handler
+	RequireAdmin  func(http.Handler) http.Handler
+	// RequireCallback gates the scheduler's push callback; nil (with Push nil) leaves it unmounted.
+	RequireCallback func(http.Handler) http.Handler
+	AllowedOrigins  []string
+	Logger          *slog.Logger
 }
 
 // New builds the chi router with the standard middleware stack and mounts the /api/v1 routes.
@@ -104,6 +107,10 @@ func New(deps Deps) *chi.Mux {
 				pr.Put("/devices", deps.Devices.Register)
 			}
 		})
+
+		if deps.Push != nil && deps.RequireCallback != nil {
+			api.With(deps.RequireCallback).Post("/hooks/push/reminder", deps.Push.Reminder)
+		}
 
 		if deps.RequireAdmin != nil {
 			api.Group(func(ad chi.Router) {

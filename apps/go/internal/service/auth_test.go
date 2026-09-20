@@ -275,7 +275,7 @@ func TestAuthService_Logout(t *testing.T) {
 
 			// Logout is idempotent: repeating it must stay a no-op, not an error.
 			for i := 0; i < tt.logoutCount; i++ {
-				if err := svc.Logout(ctx, token); err != nil {
+				if err := svc.Logout(ctx, token, ""); err != nil {
 					t.Fatalf("Logout() call %d error = %v, want nil", i+1, err)
 				}
 			}

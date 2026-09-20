@@ -52,6 +52,7 @@ type AccountService struct {
 	diaries    repository.DiaryStore
 	gallery    repository.GalleryStore
 	objects    storage.ObjectStore // may be nil when storage is unconfigured
+	devices    *DeviceService      // may be nil when push is not wired
 	cfg        AccountConfig
 	now        func() time.Time
 	background func(func())
@@ -63,6 +64,12 @@ type AccountOption func(*AccountService)
 // WithAccountBackgroundRunner overrides how the deferred object purge is run.
 func WithAccountBackgroundRunner(run func(func())) AccountOption {
 	return func(s *AccountService) { s.background = run }
+}
+
+// WithAccountDevices makes DeleteAccount drop the user's push registrations
+// (and their scheduled reminders) before the user row goes.
+func WithAccountDevices(devices *DeviceService) AccountOption {
+	return func(s *AccountService) { s.devices = devices }
 }
 
 // NewAccountService constructs the service, defaulting now to time.Now.
@@ -180,6 +187,14 @@ func (s *AccountService) DeleteAccount(ctx context.Context, userID string) error
 	keys, err := s.objectKeysToPurge(ctx, userID)
 	if err != nil {
 		return err
+	}
+
+	// The DB cascade would drop the rows, but the scheduled callbacks must be
+	// cancelled while the rows (and their task names) are still readable.
+	if s.devices != nil {
+		if err := s.devices.UnregisterAll(ctx, userID); err != nil {
+			return err
+		}
 	}
 
 	if err := s.users.DeleteUser(ctx, userID); err != nil {

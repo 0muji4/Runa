@@ -16,6 +16,9 @@ import (
 // notifyTimePattern matches a 24-hour local reminder time "HH:MM".
 var notifyTimePattern = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
+// installIDPattern matches the client-generated install UUID.
+var installIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
 // Devices is the HTTP transport for the device-registration endpoint.
 type Devices struct {
 	svc    *service.DeviceService
@@ -28,23 +31,27 @@ func NewDevices(svc *service.DeviceService, logger *slog.Logger) *Devices {
 }
 
 type registerDeviceRequest struct {
+	InstallID  string `json:"install_id"`
 	PushToken  string `json:"push_token"`
 	Platform   string `json:"platform"`
 	NotifyTime string `json:"notify_time"`
+	TimeZone   string `json:"time_zone"`
 	Enabled    bool   `json:"enabled"`
 }
 
 type deviceResponse struct {
 	ID         string `json:"id"`
+	InstallID  string `json:"install_id"`
 	PushToken  string `json:"push_token"`
 	Platform   string `json:"platform"`
 	NotifyTime string `json:"notify_time"`
+	TimeZone   string `json:"time_zone"`
 	Enabled    bool   `json:"enabled"`
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`
 }
 
-// Register handles PUT /api/v1/devices (idempotent upsert by user + token).
+// Register handles PUT /api/v1/devices (idempotent upsert by user + install).
 func (d *Devices) Register(w http.ResponseWriter, r *http.Request) {
 	userID, ok := d.userID(w, r)
 	if !ok {
@@ -60,9 +67,11 @@ func (d *Devices) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	device, err := d.svc.Register(r.Context(), userID, service.RegisterDeviceInput{
+		InstallID:  req.InstallID,
 		PushToken:  req.PushToken,
 		Platform:   req.Platform,
 		NotifyTime: req.NotifyTime,
+		TimeZone:   req.TimeZone,
 		Enabled:    req.Enabled,
 	})
 	if err != nil {
@@ -97,6 +106,9 @@ func (d *Devices) internal(w http.ResponseWriter, r *http.Request, err error) {
 
 func validateRegisterDevice(req registerDeviceRequest) []FieldError {
 	var details []FieldError
+	if !installIDPattern.MatchString(req.InstallID) {
+		details = append(details, FieldError{Field: "install_id", Message: "must be a UUID"})
+	}
 	if strings.TrimSpace(req.PushToken) == "" {
 		details = append(details, FieldError{Field: "push_token", Message: "is required"})
 	}
@@ -106,15 +118,30 @@ func validateRegisterDevice(req registerDeviceRequest) []FieldError {
 	if !notifyTimePattern.MatchString(req.NotifyTime) {
 		details = append(details, FieldError{Field: "notify_time", Message: "must be a 24-hour time HH:MM"})
 	}
+	if !validTimeZone(req.TimeZone) {
+		details = append(details, FieldError{Field: "time_zone", Message: "must be an IANA time zone name"})
+	}
 	return details
+}
+
+// validTimeZone accepts only named IANA zones: "" and "Local" load fine but
+// mean UTC / the server's zone, which would fire the reminder at the wrong hour.
+func validTimeZone(name string) bool {
+	if name == "" || name == "Local" {
+		return false
+	}
+	_, err := time.LoadLocation(name)
+	return err == nil
 }
 
 func toDeviceResponse(d repository.Device) deviceResponse {
 	return deviceResponse{
 		ID:         d.ID,
+		InstallID:  d.InstallID,
 		PushToken:  d.PushToken,
 		Platform:   d.Platform,
 		NotifyTime: d.NotifyTime,
+		TimeZone:   d.TimeZone,
 		Enabled:    d.Enabled,
 		CreatedAt:  d.CreatedAt.UTC().Format(time.RFC3339Nano),
 		UpdatedAt:  d.UpdatedAt.UTC().Format(time.RFC3339Nano),

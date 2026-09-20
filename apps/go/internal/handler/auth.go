@@ -53,6 +53,8 @@ type refreshRequest struct {
 
 type logoutRequest struct {
 	RefreshToken string `json:"refresh_token"`
+	// InstallID, when present, also unregisters that install's push token.
+	InstallID string `json:"install_id,omitempty"`
 }
 
 type authTokensResponse struct {
@@ -192,7 +194,7 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, CodeValidation, "refresh_token is required", nil, a.logger)
 		return
 	}
-	if err := a.svc.Logout(r.Context(), req.RefreshToken); err != nil {
+	if err := a.svc.Logout(r.Context(), req.RefreshToken, req.InstallID); err != nil {
 		a.internal(w, r, err)
 		return
 	}

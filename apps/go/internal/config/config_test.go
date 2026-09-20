@@ -31,6 +31,18 @@ var allEnvKeys = []string{
 	"GALLERY_VIEW_URL_TTL",
 	"GALLERY_MAX_UPLOAD_BYTES",
 	"GALLERY_ALLOWED_CONTENT_TYPES",
+	"PUSH_ENABLED",
+	"PUSH_CALLBACK_BASE_URL",
+	"PUSH_CALLBACK_TOKEN",
+	"APNS_TEAM_ID",
+	"APNS_KEY_ID",
+	"APNS_PRIVATE_KEY",
+	"APNS_BUNDLE_ID",
+	"APNS_ENVIRONMENT",
+	"GCP_PROJECT_ID",
+	"GCP_SERVICE_ACCOUNT_JSON",
+	"CLOUD_TASKS_LOCATION",
+	"CLOUD_TASKS_QUEUE",
 }
 
 // applyEnv sets every key in allEnvKeys (missing ones to "", i.e. unset) so the shell cannot leak in.
@@ -67,6 +79,12 @@ func defaultConfig() Config {
 		GalleryViewURLTTL:          60 * time.Minute,
 		GalleryMaxUploadBytes:      10 * 1024 * 1024,
 		GalleryAllowedContentTypes: []string{"image/jpeg", "image/png", "image/webp", "image/heic"},
+
+		PushEnabled:        true,
+		APNSBundleID:       "com.runa",
+		APNSEnvironment:    "sandbox",
+		CloudTasksLocation: "asia-northeast1",
+		CloudTasksQueue:    "runa-reminders",
 	}
 }
 
@@ -97,6 +115,19 @@ func TestLoad(t *testing.T) {
 		GalleryViewURLTTL:          2 * time.Hour,
 		GalleryMaxUploadBytes:      20 * 1024 * 1024,
 		GalleryAllowedContentTypes: []string{"image/jpeg", "image/gif"},
+
+		PushEnabled:           false,
+		PushCallbackBaseURL:   "https://api.example",
+		PushCallbackToken:     "callback-token",
+		APNSTeamID:            "TEAM123456",
+		APNSKeyID:             "KEY1234567",
+		APNSPrivateKey:        "cGVt",
+		APNSBundleID:          "com.example.app",
+		APNSEnvironment:       "production",
+		GCPProjectID:          "runa-prod",
+		GCPServiceAccountJSON: "e30=",
+		CloudTasksLocation:    "us-central1",
+		CloudTasksQueue:       "reminders",
 	}
 
 	tests := []struct {
@@ -135,6 +166,18 @@ func TestLoad(t *testing.T) {
 				"GALLERY_VIEW_URL_TTL":          "2h",
 				"GALLERY_MAX_UPLOAD_BYTES":      "20971520",
 				"GALLERY_ALLOWED_CONTENT_TYPES": "image/jpeg, image/gif",
+				"PUSH_ENABLED":                  "false",
+				"PUSH_CALLBACK_BASE_URL":        "https://api.example",
+				"PUSH_CALLBACK_TOKEN":           "callback-token",
+				"APNS_TEAM_ID":                  "TEAM123456",
+				"APNS_KEY_ID":                   "KEY1234567",
+				"APNS_PRIVATE_KEY":              "cGVt",
+				"APNS_BUNDLE_ID":                "com.example.app",
+				"APNS_ENVIRONMENT":              "production",
+				"GCP_PROJECT_ID":                "runa-prod",
+				"GCP_SERVICE_ACCOUNT_JSON":      "e30=",
+				"CLOUD_TASKS_LOCATION":          "us-central1",
+				"CLOUD_TASKS_QUEUE":             "reminders",
 			},
 			want: overridden,
 		},
@@ -142,6 +185,7 @@ func TestLoad(t *testing.T) {
 			name: "型が不正な値はデフォルトにフォールバックする",
 			env: map[string]string{
 				"S3_USE_SSL":               "notabool",
+				"PUSH_ENABLED":             "maybe",
 				"GALLERY_MAX_UPLOAD_BYTES": "not-a-number",
 				"ACCESS_TOKEN_TTL":         "15minutes",
 				"REFRESH_TOKEN_TTL":        "",

@@ -15,10 +15,10 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.di.PLATFORM_NAME
 import com.runa.shared.feature.lock.AndroidBiometricAuthenticator
 import com.runa.shared.feature.lock.BiometricAuthenticator
-import com.runa.shared.feature.notification.AndroidLocalNotificationScheduler
-import com.runa.shared.feature.notification.LocalNotificationScheduler
+import com.runa.shared.feature.push.AndroidPushTokenFetcher
 import com.runa.shared.feature.today.player.AudioPlayer
 import com.runa.shared.feature.today.player.ExoAudioPlayer
 import com.runa.shared.network.NetworkMonitor
@@ -46,8 +46,9 @@ actual fun platformModule(): Module = module {
     single<SqlDriver> { AndroidSqliteDriver(RunaDatabase.Schema, androidContext(), "runa.db") }
     single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
     single<AudioPlayer> { ExoAudioPlayer(androidContext()) }
-    single<LocalNotificationScheduler> { AndroidLocalNotificationScheduler(androidContext()) }
     single<BiometricAuthenticator> { AndroidBiometricAuthenticator(androidContext()) }
+    single(PLATFORM_NAME) { "android" }
+    single(createdAtStart = true) { AndroidPushTokenFetcher(androidContext(), store = get()).also { it.start() } }
 }
 
 /** [NetworkMonitor] over [ConnectivityManager]'s default-network callback. */
@@ -130,12 +131,6 @@ class EncryptedPrefsStore(private val context: Context) : SecureKeyValueStore {
     private companion object {
         const val PREFS_NAME = "runa_secure_prefs"
     }
-}
-
-/** TODO: back with Firebase Cloud Messaging token retrieval. */
-actual class PushTokenProvider {
-    actual suspend fun currentToken(): String? =
-        TODO("PushTokenProvider.currentToken not implemented")
 }
 
 /** TODO: back with Google Play Billing. Placeholder for now. */

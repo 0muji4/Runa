@@ -14,14 +14,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-private class RecordingScheduler : LocalNotificationScheduler {
-    val scheduled = mutableListOf<ReminderTime>()
-    override fun scheduleDailyReminder(time: ReminderTime) {
-        scheduled += time
-    }
-    override fun cancel() {}
-}
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationSettingsViewModelTest {
 
@@ -33,9 +25,8 @@ class NotificationSettingsViewModelTest {
     fun tearDownMain() = Dispatchers.resetMain()
 
     @Test
-    fun togglingAndChangingTimeUpdateStateAndInstructTheRepository() = runTest {
-        val scheduler = RecordingScheduler()
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
+    fun togglingAndChangingTimeUpdateStateAndTheRepository() = runTest {
+        val repo = DefaultNotificationSettingsRepository(MapSettings())
         val vm = NotificationSettingsViewModel(repo)
 
         assertFalse(vm.state.value.enabled)
@@ -44,10 +35,10 @@ class NotificationSettingsViewModelTest {
 
         vm.onToggle(true)
         assertTrue(vm.state.value.enabled)
-        assertEquals(ReminderTime(22, 0), scheduler.scheduled.last())
+        assertTrue(repo.observeReminderEnabled().value)
 
         vm.onSelectTime(ReminderTime(23, 0))
         assertEquals(ReminderTime(23, 0), vm.state.value.time)
-        assertEquals(ReminderTime(23, 0), scheduler.scheduled.last())
+        assertEquals(ReminderTime(23, 0), repo.observeReminderTime().value)
     }
 }

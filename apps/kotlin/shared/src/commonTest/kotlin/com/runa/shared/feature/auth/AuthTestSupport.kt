@@ -1,10 +1,12 @@
 package com.runa.shared.feature.auth
 
+import com.runa.shared.feature.push.InstallIdProvider
 import com.runa.shared.network.HttpClientFactory
 import com.runa.shared.network.KtorApiClient
 import com.runa.shared.network.auth.SecureKeyValueStore
 import com.runa.shared.network.auth.TokenRefresher
 import com.runa.shared.network.auth.TokenStore
+import com.russhwolf.settings.MapSettings
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -40,7 +42,8 @@ class AuthHarness(
     private val authClient = HttpClientFactory.createAuthenticated(MockEngine(handler), tokenStore, refresher)
 
     val apiClient = KtorApiClient(authClient, BASE_URL)
-    val repository = DefaultAuthRepository(apiClient, tokenStore)
+    val installIdProvider = InstallIdProvider(MapSettings())
+    val repository = DefaultAuthRepository(apiClient, tokenStore, installIdProvider)
 }
 
 /** Keys mirror [TokenStore]'s private constants. */

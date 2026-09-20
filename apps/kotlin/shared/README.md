@@ -23,10 +23,9 @@ Android と iOS が共有する Kotlin Multiplatform モジュール。**ロジ�
 
 `commonMain` に `expect`、`androidMain` / `iosMain` に `actual` を置く。現状 `httpClientEngine()` のみ実装済み（Android=OkHttp / iOS=Darwin）、他は TODO。
 
-- `PushTokenProvider` — プッシュトークン取得（TODO スタブ。`PUT /api/v1/devices` の登録口は用意済みだが、実 FCM/APNs 連携は未実装）
 - `BillingClient` — 課金（TODO スタブ）
 - `httpClientEngine(): HttpClientEngine` — Ktor エンジン（実装済み）
-- `platformModule()` — 各 OS の Koin 束縛。`SecureKeyValueStore`（Keychain / EncryptedSharedPreferences）に加え、SQLDelight `SqlDriver`、`NetworkMonitor`（Android=`ConnectivityManager` / iOS=`NWPathMonitor`）、音声再生 `AudioPlayer`（Android=ExoPlayer / iOS=AVPlayer）、そして**通知/ロックスライスで追加した `LocalNotificationScheduler`（Android=AlarmManager＋通知チャンネル / iOS=UNUserNotificationCenter）と `BiometricAuthenticator`（Android=androidx.biometric / iOS=LocalAuthentication）**を提供する。`SqlDriver`/`AudioPlayer`/`LocalNotificationScheduler`/`BiometricAuthenticator` は `expect` 関数ではなく `platformModule` で OS ごとに束ねる（Context/Activity を要するため）。**`BiometricAuthenticator` は当初の `expect class` スタブを廃し、`feature/lock/` の common インターフェイスへ移行した。**
+- `platformModule()` — 各 OS の Koin 束縛。`SecureKeyValueStore`（Keychain / EncryptedSharedPreferences）に加え、SQLDelight `SqlDriver`、`NetworkMonitor`（Android=`ConnectivityManager` / iOS=`NWPathMonitor`）、音声再生 `AudioPlayer`（Android=ExoPlayer / iOS=AVPlayer）、そして**ロックスライスの `BiometricAuthenticator`（Android=androidx.biometric / iOS=LocalAuthentication）**、`platformName`（"android"/"ios"）を提供する。`SqlDriver`/`AudioPlayer`/`BiometricAuthenticator` は `expect` 関数ではなく `platformModule` で OS ごとに束ねる（Context/Activity を要するため）。夜のリマインドはサーバプッシュ: `feature/push/` の `DeviceRegistrar` が `PUT /api/v1/devices` にトークン・時刻・タイムゾーンを登録し、Android は `RunaMessagingService`（FCM）、iOS は AppDelegate（APNs）が `PushTokenStore` にトークンを流す。ローカル通知のスケジュールは持たない。**`BiometricAuthenticator` は当初の `expect class` スタブを廃し、`feature/lock/` の common インターフェイスへ移行した。**
 
 ## ダイアリー（オフラインファースト同期）
 

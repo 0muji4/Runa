@@ -26,6 +26,10 @@ import com.runa.shared.feature.lock.DefaultAppLockRepository
 import com.runa.shared.feature.notification.DefaultNotificationSettingsRepository
 import com.runa.shared.feature.notification.NotificationSettingsRepository
 import com.runa.shared.feature.notification.NotificationSettingsViewModel
+import com.runa.shared.feature.push.DeviceRegistrar
+import com.runa.shared.feature.push.InstallIdProvider
+import com.runa.shared.feature.push.PendingRoute
+import com.runa.shared.feature.push.PushTokenStore
 import com.runa.shared.feature.settings.AccountViewModel
 import com.runa.shared.feature.settings.DefaultLocalDataCleaner
 import com.runa.shared.feature.settings.DefaultSettingsRepository
@@ -64,6 +68,8 @@ import org.koin.mp.KoinPlatform
 internal val BARE_CLIENT = named("bareClient")
 internal val AUTH_CLIENT = named("authClient")
 internal val STORAGE_CLIENT = named("storageClient")
+/** "android" / "ios", bound by each platformModule; sent as RegisterDeviceRequest.platform. */
+internal val PLATFORM_NAME = named("platformName")
 
 /**
  * DI entry point for platforms that need no Context (iOS: `doInitKoin(baseUrl:)`); Android has its own overload.
@@ -99,7 +105,13 @@ internal fun sharedModule(baseUrl: String): Module = module {
     single(STORAGE_CLIENT) { HttpClientFactory.createStorage(httpClientEngine()) }
     single<StorageClient> { KtorStorageClient(client = get(STORAGE_CLIENT)) }
 
-    single<AuthRepository> { DefaultAuthRepository(apiClient = get(), tokenStore = get()) }
+    single { PushTokenStore(settings = get()) }
+    single { InstallIdProvider(settings = get()) }
+    single { PendingRoute() }
+
+    single<AuthRepository> {
+        DefaultAuthRepository(apiClient = get(), tokenStore = get(), installIdProvider = get())
+    }
 
     single { RunaDatabase(driver = get()) }
     single<DiaryRepository> {
@@ -132,10 +144,21 @@ internal fun sharedModule(baseUrl: String): Module = module {
         )
     }
 
-    single<NotificationSettingsRepository> {
-        DefaultNotificationSettingsRepository(settings = get(), scheduler = get())
-    }
+    single<NotificationSettingsRepository> { DefaultNotificationSettingsRepository(settings = get()) }
     single<AppLockRepository> { DefaultAppLockRepository(settings = get()) }
+
+    single(createdAtStart = true) {
+        DeviceRegistrar(
+            authRepository = get(),
+            pushTokenStore = get(),
+            notificationSettings = get(),
+            installIdProvider = get(),
+            networkMonitor = get(),
+            apiClient = get(),
+            settings = get(),
+            platform = get(PLATFORM_NAME),
+        ).also { it.start() }
+    }
 
     // `single` のまま: :androidApp は koinInject() で解決し ViewModelStore に載っていないため、
     // `factory` にすると解決のたびに clear() されないインスタンスが増える。
@@ -237,3 +260,12 @@ fun resolveNotificationSettingsViewModel(): NotificationSettingsViewModel =
 
 /** Resolve the [AppLockViewModel] for the privacy-lock gate (iOS entry point). */
 fun resolveAppLockViewModel(): AppLockViewModel = KoinPlatform.getKoin().get()
+
+/** Resolve the [PushTokenStore]; the AppDelegate feeds the APNs token into it (iOS entry point). */
+fun resolvePushTokenStore(): PushTokenStore = KoinPlatform.getKoin().get()
+
+/** Resolve the [PendingRoute] the notification tap sets and the root view consumes (iOS entry point). */
+fun resolvePendingRoute(): PendingRoute = KoinPlatform.getKoin().get()
+
+/** Resolve the [DeviceRegistrar] to [DeviceRegistrar.refresh] on foreground (iOS entry point). */
+fun resolveDeviceRegistrar(): DeviceRegistrar = KoinPlatform.getKoin().get()

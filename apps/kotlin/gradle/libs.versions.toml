@@ -49,6 +49,9 @@ coil = "2.7.0"
 biometric = "1.1.0"
 androidxCore = "1.13.1"
 
+# --- Push (FCM) — shared androidMain actual; no google-services plugin, options come from BuildConfig ---
+firebaseBom = "33.5.1"
+
 [libraries]
 # --- Ktor ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -87,6 +90,10 @@ androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", versi
 # --- Notification / privacy-lock — shared androidMain actuals ---
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+
+# --- Firebase Cloud Messaging (version from the BOM) ---
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 
 # --- Coil (Compose artwork loading) ---
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

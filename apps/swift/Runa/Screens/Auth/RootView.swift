@@ -5,6 +5,7 @@ import Shared
 /// the onboarding / sign-in flow.
 struct RootView: View {
     @StateObject private var auth = AuthObservable()
+    @StateObject private var pending = PendingRouteObservable()
 
     var body: some View {
         Group {
@@ -19,8 +20,11 @@ struct RootView: View {
                     )
                     // App-wide re-authenticate action consumed by RunaErrorView's auth CTA.
                     .environment(\.runaReauthenticate, { auth.logout() })
+                    .environmentObject(pending)
                 default:
                     AuthFlowView(auth: auth, state: state)
+                        // A tap that outlived the session must not fire after the next sign-in.
+                        .onAppear { pending.consume() }
                 }
             } else {
                 SplashView()

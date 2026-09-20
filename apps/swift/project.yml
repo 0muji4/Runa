@@ -65,9 +65,10 @@ targets:
       # PhotosUI (PhotosPicker) for the gallery image picker. Used from Swift, so
       # it would auto-link, but listed for parity with the other explicit SDKs.
       - sdk: PhotosUI.framework
-      # Notification/lock slice: UserNotifications (IosLocalNotificationScheduler +
-      # the ④ permission request) and LocalAuthentication (IosBiometricAuthenticator)
-      # are referenced from Kotlin/Native, so the static framework must link them.
+      # Notification/lock slice: LocalAuthentication (IosBiometricAuthenticator) is
+      # referenced from Kotlin/Native, so the static framework must link it.
+      # UserNotifications is used from Swift only (AppDelegate + the ④ permission
+      # request) and would auto-link; listed for parity.
       - sdk: UserNotifications.framework
       - sdk: LocalAuthentication.framework
 

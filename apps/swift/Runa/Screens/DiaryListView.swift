@@ -15,6 +15,7 @@ enum DiaryRoute: Hashable {
 /// ダイアリー list; owns the diary tab's `NavigationPath` and its route destinations.
 struct DiaryListView: View {
     @Environment(\.runaTheme) private var runaTheme
+    @EnvironmentObject private var pending: PendingRouteObservable
     @StateObject private var model = DiaryListObservable()
     @State private var path = NavigationPath()
 
@@ -46,6 +47,15 @@ struct DiaryListView: View {
             }
         }
         .tint(runaTheme.accent)
+        // Both hooks: the route may predate this tab (cold-start tap) or arrive while it is visible.
+        .onAppear { openPendingRoute() }
+        .onChange(of: pending.route) { _ in openPendingRoute() }
+    }
+
+    private func openPendingRoute() {
+        guard pending.route == .diaryEditorNew else { return }
+        path.append(DiaryRoute.editorNew)
+        pending.consume()
     }
 
     private var isContent: Bool {

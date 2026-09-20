@@ -37,6 +37,13 @@ android {
         buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"${project.findProperty("RUNA_GOOGLE_SERVER_CLIENT_ID") ?: ""}\"")
         buildConfigField("String", "APPLE_SERVICE_ID", "\"${project.findProperty("RUNA_APPLE_SERVICE_ID") ?: ""}\"")
         buildConfigField("String", "APPLE_REDIRECT_URI", "\"${project.findProperty("RUNA_APPLE_REDIRECT_URI") ?: ""}\"")
+
+        // Firebase Cloud Messaging options (no google-services.json). Empty by default:
+        // RunaFirebase.initialize is then a no-op and no push token is ever registered.
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${project.findProperty("RUNA_FIREBASE_PROJECT_ID") ?: ""}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${project.findProperty("RUNA_FIREBASE_APP_ID") ?: ""}\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${project.findProperty("RUNA_FIREBASE_API_KEY") ?: ""}\"")
+        buildConfigField("String", "FIREBASE_SENDER_ID", "\"${project.findProperty("RUNA_FIREBASE_SENDER_ID") ?: ""}\"")
     }
 
     buildFeatures {

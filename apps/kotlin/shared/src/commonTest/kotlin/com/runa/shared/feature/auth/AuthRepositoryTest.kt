@@ -1,5 +1,6 @@
 package com.runa.shared.feature.auth
 
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.test.runTest
@@ -154,11 +155,15 @@ class AuthRepositoryTest {
 
     @Test
     fun logoutClearsTokensAndBecomesUnauthenticated() = runTest {
+        var logoutBody: String? = null
         val harness = AuthHarness(
             initialTokens = mapOf(KEY_ACCESS to "a", KEY_REFRESH to "r1"),
         ) { request ->
             when (request.url.encodedPath) {
-                "/api/v1/auth/logout" -> jsonOk("", HttpStatusCode.NoContent)
+                "/api/v1/auth/logout" -> {
+                    logoutBody = request.body.toByteArray().decodeToString()
+                    jsonOk("", HttpStatusCode.NoContent)
+                }
                 else -> jsonOk(errorJson("internal_error"), HttpStatusCode.InternalServerError)
             }
         }
@@ -169,5 +174,8 @@ class AuthRepositoryTest {
         assertEquals(AuthState.Unauthenticated, harness.repository.authState.value)
         assertNull(harness.secureStore.get(KEY_ACCESS))
         assertNull(harness.secureStore.get(KEY_REFRESH))
+        val body = logoutBody ?: error("logout not called")
+        assertTrue(body.contains("\"refresh_token\":\"r1\""), body)
+        assertTrue(body.contains("\"install_id\":\"${harness.installIdProvider.get()}\""), body)
     }
 }

@@ -7,10 +7,9 @@ import com.russhwolf.settings.KeychainSettings
 import com.russhwolf.settings.NSUserDefaultsSettings
 import com.russhwolf.settings.Settings
 import com.runa.shared.db.RunaDatabase
+import com.runa.shared.di.PLATFORM_NAME
 import com.runa.shared.feature.lock.BiometricAuthenticator
 import com.runa.shared.feature.lock.IosBiometricAuthenticator
-import com.runa.shared.feature.notification.IosLocalNotificationScheduler
-import com.runa.shared.feature.notification.LocalNotificationScheduler
 import com.runa.shared.feature.today.player.AudioPlayer
 import com.runa.shared.feature.today.player.AvAudioPlayer
 import com.runa.shared.network.NetworkMonitor
@@ -41,8 +40,8 @@ actual fun platformModule(): Module = module {
     single<SqlDriver> { NativeSqliteDriver(RunaDatabase.Schema, "runa.db") }
     single<NetworkMonitor> { IosNetworkMonitor() }
     single<AudioPlayer> { AvAudioPlayer() }
-    single<LocalNotificationScheduler> { IosLocalNotificationScheduler() }
     single<BiometricAuthenticator> { IosBiometricAuthenticator() }
+    single(PLATFORM_NAME) { "ios" }
 }
 
 /** [NetworkMonitor] over `NWPathMonitor`; "satisfied" is published as online. */
@@ -76,12 +75,6 @@ class KeychainSecureStore(
     override fun remove(key: String) {
         settings.remove(key)
     }
-}
-
-/** TODO: back with APNs device-token retrieval. */
-actual class PushTokenProvider {
-    actual suspend fun currentToken(): String? =
-        TODO("PushTokenProvider.currentToken not implemented")
 }
 
 /** TODO: back with StoreKit. Placeholder for now. */

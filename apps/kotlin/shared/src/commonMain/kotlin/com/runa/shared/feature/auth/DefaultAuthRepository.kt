@@ -1,6 +1,7 @@
 package com.runa.shared.feature.auth
 
 import com.runa.shared.core.state.toJaMessage
+import com.runa.shared.feature.push.InstallIdProvider
 import com.runa.shared.network.ApiClient
 import com.runa.shared.network.auth.StoredTokens
 import com.runa.shared.network.auth.TokenStore
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 class DefaultAuthRepository(
     private val apiClient: ApiClient,
     private val tokenStore: TokenStore,
+    private val installIdProvider: InstallIdProvider,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : AuthRepository {
 
@@ -74,7 +76,7 @@ class DefaultAuthRepository(
     override suspend fun logout(): Result<Unit> {
         val current = tokenStore.load()
         val result = try {
-            if (current != null) apiClient.logout(LogoutRequest(current.refreshToken))
+            if (current != null) apiClient.logout(LogoutRequest(current.refreshToken, installIdProvider.get()))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

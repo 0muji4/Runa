@@ -9,10 +9,12 @@ import com.runa.shared.feature.auth.KEY_REFRESH
 import com.runa.shared.feature.auth.MockHandler
 import com.runa.shared.feature.auth.jsonOk
 import com.runa.shared.feature.auth.userJson
+import com.runa.shared.feature.push.InstallIdProvider
 import com.runa.shared.network.HttpClientFactory
 import com.runa.shared.network.KtorApiClient
 import com.runa.shared.network.auth.TokenRefresher
 import com.runa.shared.network.auth.TokenStore
+import com.russhwolf.settings.MapSettings
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpMethod
@@ -38,7 +40,7 @@ private class SettingsFixture(handler: MockHandler) {
     private val refresher = TokenRefresher(bareClient, BASE_URL, tokenStore)
     private val authClient = HttpClientFactory.createAuthenticated(MockEngine(handler), tokenStore, refresher)
     val apiClient = KtorApiClient(authClient, BASE_URL)
-    val authRepository = DefaultAuthRepository(apiClient, tokenStore)
+    val authRepository = DefaultAuthRepository(apiClient, tokenStore, InstallIdProvider(MapSettings()))
     val cleaner = RecordingCleaner()
     val repository = DefaultSettingsRepository(apiClient, authRepository, cleaner)
 }

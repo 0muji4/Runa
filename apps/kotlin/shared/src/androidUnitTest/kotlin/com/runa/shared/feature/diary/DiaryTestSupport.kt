@@ -8,6 +8,7 @@ import com.runa.shared.network.NetworkMonitor
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
 import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.DeviceDto
 import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
@@ -22,6 +23,7 @@ import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
+import com.runa.shared.network.dto.RegisterDeviceRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.SongsArchiveResponse
 import com.runa.shared.network.dto.TodayResponse
@@ -177,6 +179,7 @@ class FakeDiaryApi(private val server: FakeDiaryServer) : ApiClient {
     override suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse = unused()
     override suspend fun getGallery(id: String): GalleryImageDto = unused()
     override suspend fun deleteGallery(id: String) = unused()
+    override suspend fun registerDevice(req: RegisterDeviceRequest): DeviceDto = unused()
 
     private fun unused(): Nothing = error("endpoint not used by the diary sync engine")
 }

@@ -11,6 +11,7 @@ import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
 import com.runa.shared.network.dto.CreateDiaryRequest
 import com.runa.shared.network.dto.CreateGalleryRequest
+import com.runa.shared.network.dto.DeviceDto
 import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
@@ -25,6 +26,7 @@ import com.runa.shared.network.dto.HealthzResponse
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
+import com.runa.shared.network.dto.RegisterDeviceRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.SongsArchiveResponse
 import com.runa.shared.network.dto.TodayResponse
@@ -175,6 +177,7 @@ class FakeGalleryApi(private val server: FakeGalleryServer) : ApiClient {
     override suspend fun getToday(date: String?): TodayResponse = unused()
     override suspend fun getSongs(until: String, limit: Int?, cursor: String?): SongsArchiveResponse = unused()
     override suspend fun markSongPlayed(songId: String, playedAt: String?) = unused()
+    override suspend fun registerDevice(req: RegisterDeviceRequest): DeviceDto = unused()
 
     private fun unused(): Nothing = error("endpoint not used by the gallery engine")
 }

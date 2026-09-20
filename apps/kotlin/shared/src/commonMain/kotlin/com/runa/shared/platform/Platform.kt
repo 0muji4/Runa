@@ -9,10 +9,5 @@ expect fun httpClientEngine(): HttpClientEngine
 /** Platform-specific Koin bindings merged into the graph by `initKoin` (this is how an Android Context gets in). */
 expect fun platformModule(): Module
 
-/** Provider for the current push notification token (FCM / APNs). */
-expect class PushTokenProvider {
-    suspend fun currentToken(): String?
-}
-
 /** In-app billing entry point. Placeholder until monetization lands. */
 expect class BillingClient

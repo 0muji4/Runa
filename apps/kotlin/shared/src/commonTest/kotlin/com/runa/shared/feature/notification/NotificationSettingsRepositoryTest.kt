@@ -3,85 +3,62 @@ package com.runa.shared.feature.notification
 import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-
-private class FakeLocalNotificationScheduler : LocalNotificationScheduler {
-    val scheduled = mutableListOf<ReminderTime>()
-    var cancelCount = 0
-    override fun scheduleDailyReminder(time: ReminderTime) {
-        scheduled += time
-    }
-    override fun cancel() {
-        cancelCount++
-    }
-}
 
 class NotificationSettingsRepositoryTest {
 
     @Test
     fun defaultsToDisabledAt2200() {
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), FakeLocalNotificationScheduler())
+        val repo = DefaultNotificationSettingsRepository(MapSettings())
         assertEquals(false, repo.observeReminderEnabled().value)
         assertEquals(ReminderTime(22, 0), repo.observeReminderTime().value)
     }
 
     @Test
-    fun enablingSchedulesAtTheCurrentTime() {
-        val scheduler = FakeLocalNotificationScheduler()
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
+    fun togglingEmitsImmediately() {
+        val repo = DefaultNotificationSettingsRepository(MapSettings())
 
         repo.setReminderEnabled(true)
+        assertEquals(true, repo.observeReminderEnabled().value)
 
-        assertEquals(ReminderTime(22, 0), scheduler.scheduled.last())
-    }
-
-    @Test
-    fun disablingCancels() {
-        val scheduler = FakeLocalNotificationScheduler()
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
-
-        repo.setReminderEnabled(true)
         repo.setReminderEnabled(false)
-
         assertEquals(false, repo.observeReminderEnabled().value)
-        assertTrue(scheduler.cancelCount >= 1)
     }
 
     @Test
-    fun changingTimeReschedulesWhenEnabled() {
-        val scheduler = FakeLocalNotificationScheduler()
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
+    fun changingTimeEmitsImmediately() {
+        val repo = DefaultNotificationSettingsRepository(MapSettings())
 
-        repo.setReminderEnabled(true)
         repo.setReminderTime(ReminderTime(23, 0))
 
         assertEquals(ReminderTime(23, 0), repo.observeReminderTime().value)
-        assertEquals(ReminderTime(23, 0), scheduler.scheduled.last())
-    }
-
-    @Test
-    fun changingTimeWhileDisabledDoesNotSchedule() {
-        val scheduler = FakeLocalNotificationScheduler()
-        val repo = DefaultNotificationSettingsRepository(MapSettings(), scheduler)
-
-        repo.setReminderTime(ReminderTime(21, 0))
-
-        assertEquals(ReminderTime(21, 0), repo.observeReminderTime().value)
-        assertTrue(scheduler.scheduled.isEmpty())
     }
 
     @Test
     fun persistsAndIsRestoredByAFreshRepository() {
         val settings = MapSettings()
 
-        DefaultNotificationSettingsRepository(settings, FakeLocalNotificationScheduler()).apply {
+        DefaultNotificationSettingsRepository(settings).apply {
             setReminderEnabled(true)
             setReminderTime(ReminderTime(21, 0))
         }
 
         // A new repository over the SAME settings models a process restart.
-        val restored = DefaultNotificationSettingsRepository(settings, FakeLocalNotificationScheduler())
+        val restored = DefaultNotificationSettingsRepository(settings)
         assertEquals(true, restored.observeReminderEnabled().value)
         assertEquals(ReminderTime(21, 0), restored.observeReminderTime().value)
+    }
+
+    @Test
+    fun persistedKeysStayStable() {
+        val settings = MapSettings().apply {
+            putBoolean("notif.reminder.enabled", true)
+            putInt("notif.reminder.hour", 21)
+            putInt("notif.reminder.minute", 30)
+        }
+
+        val repo = DefaultNotificationSettingsRepository(settings)
+
+        assertEquals(true, repo.observeReminderEnabled().value)
+        assertEquals(ReminderTime(21, 30), repo.observeReminderTime().value)
     }
 }

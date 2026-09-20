@@ -14,6 +14,7 @@ import com.runa.shared.network.dto.GoogleLoginRequest
 import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.RefreshRequest
+import com.runa.shared.network.dto.RegisterDeviceRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.UpdateDiaryRequest
 import com.runa.shared.network.dto.UpdateMeRequest
@@ -167,4 +168,5 @@ private class FakeCalendarApi : ApiClient {
     override suspend fun listGallery(limit: Int?, cursor: String?) = error("unused")
     override suspend fun getGallery(id: String) = error("unused")
     override suspend fun deleteGallery(id: String) = error("unused")
+    override suspend fun registerDevice(req: RegisterDeviceRequest) = error("unused")
 }

@@ -97,14 +97,14 @@ Each tab is an empty shell today. A feature slice adds, per feature:
   `ui/screens/*Screen.kt` with the real UI; add routes/args in
   `navigation/RunaApp.kt` if the slice needs sub-screens.
 
-The remaining platform `expect` frames (`PushTokenProvider`, `BillingClient`) are
-declared but their actuals are `TODO` stubs — fill them in when a slice first needs
-them. Secure storage is implemented by the auth slice; the SQLDelight driver +
-audio player are bound in `platformModule()` by the today slice; and the
-notification/lock slice adds the `LocalNotificationScheduler` + `BiometricAuthenticator`
-platform bindings (see below). `BiometricAuthenticator` moved from an `expect class`
-stub to a `feature/lock/` common interface bound in `platformModule()` (it needs the
-current Activity on Android).
+The remaining platform `expect` frame (`BillingClient`) is declared but its actual
+is a `TODO` stub — fill it in when a slice first needs it. Secure storage is
+implemented by the auth slice; the SQLDelight driver + audio player are bound in
+`platformModule()` by the today slice; the notification/lock slice adds the
+`BiometricAuthenticator` platform binding and the push-token feed (see below).
+`BiometricAuthenticator` moved from an `expect class` stub to a `feature/lock/`
+common interface bound in `platformModule()` (it needs the current Activity on
+Android).
 
 ## Auth slice
 
@@ -176,21 +176,29 @@ calculator** — the reason this slice matters.
 ## Notification / privacy-lock slice (OS-native, slice 8)
 
 The nightly reminder and biometric lock are OS-feature-heavy: `shared` holds the
-settings + state, and each platform's actual does the real scheduling / auth.
+settings + state, and each platform's actual does the token feed / auth. The
+reminder itself is a **server push** (`PUT /api/v1/devices` registers the token +
+time + zone; the server sends only when the day has no diary entry) — there is no
+local scheduling.
 
 - **Reminder settings** live in `feature/notification/`: `NotificationSettingsRepository`
   (persist `reminderEnabled` / `reminderTime` via multiplatform-settings, observe as
-  `StateFlow`, and drive the `LocalNotificationScheduler`), `NotificationSettingsViewModel`,
-  and the shared poetic copy (`ReminderNotificationText`). Time is a pre-formatted
-  `ReminderTime` (`label` = "HH:MM") so the UI needs no kotlinx-datetime.
-- **Android reminder actual** (`shared/androidMain/.../feature/notification/`):
-  `AndroidLocalNotificationScheduler` arms `AlarmManager.setAndAllowWhileIdle`
-  (inexact, so **no `SCHEDULE_EXACT_ALARM`**); `ReminderReceiver` posts the
-  notification (`NotificationManagerCompat` + a channel, `androidx.core`) and re-arms
-  the next day; `BootReceiver` re-arms after reboot. Both receivers + the
-  `POST_NOTIFICATIONS` / `RECEIVE_BOOT_COMPLETED` permissions are declared in the
-  **shared androidMain `AndroidManifest.xml`** (merged into the app); the small icon
-  is `shared/androidMain/res/drawable/ic_reminder_moon.xml`. The runtime
+  `StateFlow`), `NotificationSettingsViewModel`, and the fallback copy
+  (`ReminderNotificationText`). Time is a pre-formatted `ReminderTime`
+  (`label` = "HH:MM") so the UI needs no kotlinx-datetime.
+- **Push registration** lives in `feature/push/`: `PushTokenStore` (latest FCM/APNs
+  token), `InstallIdProvider` (one UUID per install), `DeviceRegistrar` (an eager
+  Koin single that re-PUTs `/devices` whenever user, token, settings or zone change,
+  and daily) and `PendingRoute` (sticky notification-tap destination consumed after
+  the lock + auth gates).
+- **Android push actual** (`shared/androidMain/.../feature/push/`): `RunaFirebase`
+  initialises Firebase from `BuildConfig` (`RUNA_FIREBASE_PROJECT_ID` / `_APP_ID` /
+  `_API_KEY` / `_SENDER_ID` Gradle properties; no google-services plugin),
+  `AndroidPushTokenFetcher` seeds the token, and `RunaMessagingService` turns the
+  data-only `diary_reminder` message into the notification (channel + `androidx.core`,
+  small icon `shared/androidMain/res/drawable/ic_reminder_moon.xml`, tap opens
+  `runa://diary/editor`). The service + `POST_NOTIFICATIONS` are declared in the
+  **shared androidMain `AndroidManifest.xml`** (merged into the app). The runtime
   `POST_NOTIFICATIONS` request (API 33+) happens in onboarding ④
   (`NotificationPermissionScreen`) and when enabling in 通知設定 (21).
 - **Privacy lock** lives in `feature/lock/`: `AppLockRepository` (persist
@@ -203,8 +211,8 @@ settings + state, and each platform's actual does the real scheduling / auth.
   **`FragmentActivity`**, BiometricPrompt's requirement) registers from its
   lifecycle. `MainActivity` also wraps the app in `AppLockGate` and drives
   foreground/background from `onResume`/`onPause`.
-- **Deps added** (`androidMain` of `:shared`): `androidx.biometric`, `androidx.core`;
-  (`:androidApp`): `androidx.fragment`.
+- **Deps added** (`androidMain` of `:shared`): `androidx.biometric`, `androidx.core`,
+  `firebase-messaging` (via `firebase-bom`); (`:androidApp`): `androidx.fragment`.
 - **Tests**: `commonTest` covers persistence + schedule instructions
   (`NotificationSettingsRepositoryTest`, `AppLockRepositoryTest`) and the state
   machine with a fake authenticator (`AppLockViewModelTest`,

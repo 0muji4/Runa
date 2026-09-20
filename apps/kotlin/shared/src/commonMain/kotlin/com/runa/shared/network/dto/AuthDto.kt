@@ -34,9 +34,11 @@ data class RefreshRequest(
     @SerialName("refresh_token") val refreshToken: String,
 )
 
+/** [installId] lets the server drop this install's push registration with the session. */
 @Serializable
 data class LogoutRequest(
     @SerialName("refresh_token") val refreshToken: String,
+    @SerialName("install_id") val installId: String? = null,
 )
 
 /** Token bundle returned by every successful auth call; [user] is omitted on refresh. */

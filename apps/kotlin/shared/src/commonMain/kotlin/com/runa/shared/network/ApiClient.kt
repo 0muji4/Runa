@@ -4,6 +4,7 @@ import com.runa.shared.network.dto.ApiError
 import com.runa.shared.network.dto.AppleLoginRequest
 import com.runa.shared.network.dto.AuthTokens
 import com.runa.shared.network.dto.CreateDiaryRequest
+import com.runa.shared.network.dto.DeviceDto
 import com.runa.shared.network.dto.DiaryCalendarResponse
 import com.runa.shared.network.dto.DiaryEntryDto
 import com.runa.shared.network.dto.DiaryListResponse
@@ -19,6 +20,7 @@ import com.runa.shared.network.dto.LoginRequest
 import com.runa.shared.network.dto.LogoutRequest
 import com.runa.shared.network.dto.PlayedRequest
 import com.runa.shared.network.dto.RefreshRequest
+import com.runa.shared.network.dto.RegisterDeviceRequest
 import com.runa.shared.network.dto.SignupRequest
 import com.runa.shared.network.dto.ExportDto
 import com.runa.shared.network.dto.SongsArchiveResponse
@@ -32,6 +34,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
@@ -84,6 +87,9 @@ interface ApiClient {
     suspend fun listGallery(limit: Int?, cursor: String?): GalleryListResponse
     suspend fun getGallery(id: String): GalleryImageDto
     suspend fun deleteGallery(id: String)
+
+    /** PUT /devices — upsert this install's push token + reminder preference. */
+    suspend fun registerDevice(req: RegisterDeviceRequest): DeviceDto
 }
 
 /**
@@ -246,6 +252,13 @@ class KtorApiClient(
         }
         if (!response.status.isSuccess()) response.throwApiError()
     }
+
+    override suspend fun registerDevice(req: RegisterDeviceRequest): DeviceDto =
+        httpClient.put(baseUrl) {
+            url { appendPathSegments("api", "v1", "devices") }
+            contentType(ContentType.Application.Json)
+            setBody(req)
+        }.decodeOrThrow()
 
     private suspend inline fun <reified B> postJson(segments: List<String>, body: B): HttpResponse =
         httpClient.post(baseUrl) {

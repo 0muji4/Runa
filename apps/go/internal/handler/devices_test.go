@@ -16,7 +16,7 @@ import (
 
 func newDevicesRouter() http.Handler {
 	logger := discardLogger()
-	h := NewDevices(service.NewDeviceService(memdevices.New(), nil), logger)
+	h := NewDevices(service.NewDeviceService(memdevices.New(), nil, nil), logger)
 
 	onUnauthorized := func(w http.ResponseWriter, _ *http.Request, _ error) {
 		writeError(w, http.StatusUnauthorized, CodeUnauthorized, "authentication required", nil, logger)
@@ -59,23 +59,31 @@ func TestDevices_Register(t *testing.T) {
 		{
 			name:        "有効な登録は200",
 			bearer:      "test",
-			body:        `{"push_token":"tok","platform":"ios","notify_time":"22:00","enabled":true}`,
+			body:        `{"install_id":"11111111-1111-4111-8111-000000000001","push_token":"tok","platform":"ios","notify_time":"22:00","time_zone":"Asia/Tokyo","enabled":true}`,
 			wantStatus:  http.StatusOK,
 			wantCode:    "",
 			wantDetails: -1,
 		},
 		{
-			name:        "全フィールド不正で検証エラー3件",
+			name:        "全フィールド不正で検証エラー5件",
 			bearer:      "test",
-			body:        `{"push_token":"  ","platform":"web","notify_time":"nope","enabled":false}`,
+			body:        `{"install_id":"not-a-uuid","push_token":"  ","platform":"web","notify_time":"nope","time_zone":"Mars/Olympus","enabled":false}`,
 			wantStatus:  http.StatusBadRequest,
 			wantCode:    CodeValidation,
-			wantDetails: 3,
+			wantDetails: 5,
+		},
+		{
+			name:        "time_zoneのLocalは拒否",
+			bearer:      "test",
+			body:        `{"install_id":"11111111-1111-4111-8111-000000000001","push_token":"tok","platform":"ios","notify_time":"22:00","time_zone":"Local","enabled":true}`,
+			wantStatus:  http.StatusBadRequest,
+			wantCode:    CodeValidation,
+			wantDetails: 1,
 		},
 		{
 			name:        "未知のフィールドは400",
 			bearer:      "test",
-			body:        `{"push_token":"tok","platform":"ios","notify_time":"22:00","enabled":true,"extra":1}`,
+			body:        `{"install_id":"11111111-1111-4111-8111-000000000001","push_token":"tok","platform":"ios","notify_time":"22:00","time_zone":"Asia/Tokyo","enabled":true,"extra":1}`,
 			wantStatus:  http.StatusBadRequest,
 			wantCode:    CodeValidation,
 			wantDetails: -1,
@@ -83,7 +91,7 @@ func TestDevices_Register(t *testing.T) {
 		{
 			name:        "未認証は401",
 			bearer:      "",
-			body:        `{"push_token":"tok","platform":"ios","notify_time":"22:00","enabled":true}`,
+			body:        `{"install_id":"11111111-1111-4111-8111-000000000001","push_token":"tok","platform":"ios","notify_time":"22:00","time_zone":"Asia/Tokyo","enabled":true}`,
 			wantStatus:  http.StatusUnauthorized,
 			wantCode:    CodeUnauthorized,
 			wantDetails: -1,

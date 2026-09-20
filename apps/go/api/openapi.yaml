@@ -6,7 +6,7 @@
 openapi: 3.0.3
 info:
   title: Runa Backend API
-  version: 0.8.0
+  version: 0.9.0
   description: |
     HTTP API for the Runa (moon-themed) app. Served under the /api/v1 base path.
     Clients are injected host+port only and append /api/v1/... themselves.
@@ -16,7 +16,9 @@ info:
     access token. Access tokens are short-lived HS256 JWTs; refresh tokens are
     long-lived opaque strings, stored server-side only as a hash and rotated on
     every /auth/refresh. The /api/v1/admin/* seed endpoints use a separate shared
-    admin token (X-Admin-Token), not a user session.
+    admin token (X-Admin-Token), not a user session. The /api/v1/hooks/* routes
+    are callbacks from the server's own scheduler (Cloud Tasks) and use a third
+    shared token (X-Push-Callback-Token).
 
     Diary sync: entries are offline-first. The client generates client_id (a UUID)
     so an offline create can be POSTed idempotently on reconnect without
@@ -210,7 +212,13 @@ paths:
     post:
       operationId: authLogout
       summary: Revoke a refresh token
-      description: Idempotent — revoking an unknown token still returns 204.
+      description: |
+        Idempotent — revoking an unknown token still returns 204. With
+        `install_id`, the device registered under that install (see PUT
+        /devices) is removed too, so a signed-out phone stops receiving
+        reminders. The removal happens only when the refresh token still
+        identifies its user; this endpoint is unauthenticated and the token is
+        the sole proof of ownership.
       requestBody:
         required: true
         content:
@@ -894,12 +902,19 @@ paths:
       operationId: registerDevice
       summary: Register a push token + reminder preference (protected)
       description: |
-        Registers the caller's device push token (FCM/APNs) plus their nightly
-        reminder preference, for a FUTURE server-initiated notification path. This
-        slice's nightly reminder is a LOCAL, on-device notification, so nothing
-        here sends a push yet — this endpoint is the registration "口" only.
-        Idempotent (upsert) by (user, push_token): a repeated PUT for the same
-        token updates the row in place.
+        Registers one app install: its push token (FCM on Android, APNs on
+        iOS), the nightly-reminder time in the device's IANA zone, and whether
+        the reminder is on. The server schedules the next reminder callback
+        from this row; the reminder is sent only if the user has no diary
+        entry for that local day.
+
+        Idempotent (upsert) by (user, install_id): a repeated PUT for the same
+        install updates the row in place, so a rotated push token replaces the
+        old one. A push token belongs to one install — registering a token
+        that another (user, install) holds moves it here and deletes the
+        previous row. A registration also clears any provider-side token
+        rejection recorded earlier. Clients re-PUT whenever the token, the
+        settings, the zone or the signed-in user change, and at least daily.
       security:
         - bearerAuth: []
       requestBody:
@@ -920,6 +935,44 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /api/v1/hooks/push/reminder:
+    post:
+      operationId: pushReminderCallback
+      summary: Scheduled reminder callback (scheduler only)
+      description: |
+        Called by the server's own scheduler (Cloud Tasks) at the device's
+        chosen time; not a client API. The body is the task the server
+        enqueued when the device registered. The server re-checks the current
+        device row (a task scheduled under old settings is ignored), takes a
+        one-per-local-date claim, skips the reminder when the user already
+        wrote that day, otherwise sends it and schedules the next day's task.
+
+        Every handled case answers 200 with its outcome so the scheduler
+        does not retry; 503 is returned only when a provider or database
+        hiccup makes a retry worthwhile (the scheduler's retry policy bounds
+        how long).
+      security:
+        - callbackAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReminderTask"
+      responses:
+        "200":
+          description: The callback was handled; see outcome.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderOutcome"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          $ref: "#/components/responses/CallbackForbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -934,6 +987,13 @@ components:
       description: |
         Shared admin token for the curated seed endpoints. Set server-side via
         ADMIN_API_TOKEN; when unset the admin endpoints are disabled (403).
+    callbackAuth:
+      type: apiKey
+      in: header
+      name: X-Push-Callback-Token
+      description: |
+        Shared token the scheduler attaches to every reminder callback. Set
+        server-side via PUSH_CALLBACK_TOKEN; when unset the hook is disabled (403).
 
   responses:
     ValidationError:
@@ -1003,11 +1063,22 @@ components:
             error:
               code: forbidden
               message: admin access forbidden
+    CallbackForbidden:
+      description: The callback token was missing or wrong, or no PUSH_CALLBACK_TOKEN is configured.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: forbidden
+              message: callback access forbidden
     ServiceUnavailable:
       description: |
         A backing dependency is unavailable. For gallery endpoints this means
         object storage is not configured/reachable (no S3_* env), so presigned
-        URLs cannot be issued.
+        URLs cannot be issued. For the reminder callback it means the push
+        provider or the database did not answer and the scheduler should retry.
       content:
         application/json:
           schema:
@@ -1120,6 +1191,10 @@ components:
       properties:
         refresh_token:
           type: string
+        install_id:
+          type: string
+          format: uuid
+          description: This install's id (see RegisterDeviceRequest); its device registration is removed.
 
     AuthTokens:
       type: object
@@ -1680,21 +1755,32 @@ components:
     RegisterDeviceRequest:
       type: object
       required:
+        - install_id
         - push_token
         - platform
         - notify_time
+        - time_zone
         - enabled
       properties:
+        install_id:
+          type: string
+          format: uuid
+          description: |
+            Generated once per app install and kept across push-token rotation;
+            identifies the device row together with the user.
         push_token:
           type: string
-          description: The device's FCM/APNs push token.
+          description: The device's FCM (Android) or APNs (iOS) push token.
         platform:
           type: string
           enum: [ios, android]
         notify_time:
           type: string
           pattern: '^([01]\d|2[0-3]):[0-5]\d$'
-          description: The user's local nightly-reminder time, 24-hour "HH:MM".
+          description: The nightly-reminder time in the device's zone, 24-hour "HH:MM".
+        time_zone:
+          type: string
+          description: IANA zone name (e.g. Asia/Tokyo) notify_time is in; "" and "Local" are rejected.
         enabled:
           type: boolean
           description: Whether the nightly reminder is on.
@@ -1703,14 +1789,19 @@ components:
       type: object
       required:
         - id
+        - install_id
         - push_token
         - platform
         - notify_time
+        - time_zone
         - enabled
         - created_at
         - updated_at
       properties:
         id:
+          type: string
+          format: uuid
+        install_id:
           type: string
           format: uuid
         push_token:
@@ -1720,7 +1811,9 @@ components:
           enum: [ios, android]
         notify_time:
           type: string
-          description: The user's local nightly-reminder time, 24-hour "HH:MM".
+          description: The nightly-reminder time in the device's zone, 24-hour "HH:MM".
+        time_zone:
+          type: string
         enabled:
           type: boolean
         created_at:
@@ -1729,3 +1822,45 @@ components:
         updated_at:
           type: string
           format: date-time
+          description: Last client registration; the server's own delivery bookkeeping does not move it.
+
+    ReminderTask:
+      type: object
+      description: |
+        The scheduled callback body. The server compares notify_time and
+        time_zone against the current device row so a task scheduled under
+        settings that changed since is ignored.
+      required:
+        - device_id
+        - local_date
+        - notify_time
+        - time_zone
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        local_date:
+          type: string
+          format: date
+          description: The local calendar day the reminder is for ("YYYY-MM-DD").
+        notify_time:
+          type: string
+        time_zone:
+          type: string
+
+    ReminderOutcome:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          enum: [sent, skipped_written, stale, expired, already_claimed, invalid_token, disabled, failed]
+          description: |
+            sent: the reminder went out. skipped_written: the user already
+            wrote that day. stale: the device is gone, off, or registered with
+            other settings since. expired: the callback arrived too late to be
+            worth delivering. already_claimed: that day's attempt was already
+            handled (a retry). invalid_token: the provider rejected the token.
+            disabled: push is switched off server-side or no sender exists for
+            the platform. failed: the provider refused for a non-retryable reason.

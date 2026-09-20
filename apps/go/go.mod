@@ -15,6 +15,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/minio v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
 	golang.org/x/crypto v0.54.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (

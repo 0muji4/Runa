@@ -33,11 +33,20 @@ func (s *Store) UpsertDevice(_ context.Context, p repository.UpsertDeviceParams)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if existing, ok := s.findByToken(p.UserID, p.PushToken); ok {
-		// Update in place, keeping id/created_at.
+	// Mirror the DB: the token moves to this (user, install), evicting any other holder.
+	for id, d := range s.devices {
+		if d.PushToken == p.PushToken && !(d.UserID == p.UserID && d.InstallID == p.InstallID) {
+			delete(s.devices, id)
+		}
+	}
+
+	if existing, ok := s.findByInstall(p.UserID, p.InstallID); ok {
+		existing.PushToken = p.PushToken
 		existing.Platform = p.Platform
 		existing.NotifyTime = p.NotifyTime
+		existing.TimeZone = p.TimeZone
 		existing.Enabled = p.Enabled
+		existing.TokenInvalidAt = nil
 		existing.UpdatedAt = s.tick()
 		s.devices[existing.ID] = existing
 		return existing, nil
@@ -47,9 +56,11 @@ func (s *Store) UpsertDevice(_ context.Context, p repository.UpsertDeviceParams)
 	d := repository.Device{
 		ID:         newID(),
 		UserID:     p.UserID,
+		InstallID:  p.InstallID,
 		PushToken:  p.PushToken,
 		Platform:   p.Platform,
 		NotifyTime: p.NotifyTime,
+		TimeZone:   p.TimeZone,
 		Enabled:    p.Enabled,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -58,10 +69,122 @@ func (s *Store) UpsertDevice(_ context.Context, p repository.UpsertDeviceParams)
 	return d, nil
 }
 
-// findByToken locates a device by (userID, pushToken); caller holds the lock.
-func (s *Store) findByToken(userID, pushToken string) (repository.Device, bool) {
+func (s *Store) GetDevice(_ context.Context, id string) (repository.Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.devices[id]
+	if !ok {
+		return repository.Device{}, repository.ErrNotFound
+	}
+	return d, nil
+}
+
+func (s *Store) DeleteDevice(_ context.Context, userID, installID string) (repository.Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.findByInstall(userID, installID)
+	if !ok {
+		return repository.Device{}, repository.ErrNotFound
+	}
+	delete(s.devices, d.ID)
+	return d, nil
+}
+
+func (s *Store) DeleteDevicesByUser(_ context.Context, userID string) ([]repository.Device, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]repository.Device, 0)
+	for id, d := range s.devices {
+		if d.UserID == userID {
+			out = append(out, d)
+			delete(s.devices, id)
+		}
+	}
+	return out, nil
+}
+
+func (s *Store) SetNextTask(_ context.Context, id, taskName string, fireAt time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.devices[id]
+	if !ok {
+		return nil
+	}
+	d.NextTaskName = &taskName
+	d.NextFireAt = &fireAt
+	s.devices[id] = d
+	return nil
+}
+
+func (s *Store) ClaimReminder(_ context.Context, p repository.ClaimReminderParams) (repository.ClaimOutcome, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.devices[p.DeviceID]
+	if !ok {
+		return repository.ClaimDone, nil
+	}
+	sameDate := d.ReminderDate != nil && *d.ReminderDate == p.LocalDate
+	status := ""
+	if d.ReminderStatus != nil {
+		status = *d.ReminderStatus
+	}
+	staleBefore := p.Now.Add(-p.StalePendingAfter)
+	livePending := status == repository.ReminderPending && d.ReminderClaimedAt != nil && !d.ReminderClaimedAt.Before(staleBefore)
+	claimable := !sameDate ||
+		(status == repository.ReminderFailed && d.ReminderAttempts < p.MaxAttempts) ||
+		(status == repository.ReminderPending && !livePending)
+	if !claimable {
+		if sameDate && livePending {
+			return repository.ClaimHeld, nil
+		}
+		return repository.ClaimDone, nil
+	}
+	if sameDate {
+		d.ReminderAttempts++
+	} else {
+		d.ReminderAttempts = 1
+	}
+	date, pending, claimedAt := p.LocalDate, repository.ReminderPending, p.Now
+	d.ReminderDate = &date
+	d.ReminderStatus = &pending
+	d.ReminderClaimedAt = &claimedAt
+	d.ReminderError = nil
+	s.devices[p.DeviceID] = d
+	return repository.ClaimWon, nil
+}
+
+func (s *Store) FinishReminder(_ context.Context, id, status, errMsg string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.devices[id]
+	if !ok || d.ReminderStatus == nil || *d.ReminderStatus != repository.ReminderPending {
+		return nil
+	}
+	d.ReminderStatus = &status
+	d.ReminderError = nil
+	if errMsg != "" {
+		d.ReminderError = &errMsg
+	}
+	s.devices[id] = d
+	return nil
+}
+
+func (s *Store) MarkTokenInvalid(_ context.Context, id string, at time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.devices[id]
+	if !ok {
+		return nil
+	}
+	d.TokenInvalidAt = &at
+	s.devices[id] = d
+	return nil
+}
+
+// findByInstall locates a device by (userID, installID); caller holds the lock.
+func (s *Store) findByInstall(userID, installID string) (repository.Device, bool) {
 	for _, d := range s.devices {
-		if d.UserID == userID && d.PushToken == pushToken {
+		if d.UserID == userID && d.InstallID == installID {
 			return d, true
 		}
 	}

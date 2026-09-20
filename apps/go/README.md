@@ -57,14 +57,16 @@ append `/api/v1/...` themselves.
 | POST   | `/api/v1/gallery`       | `201 GalleryImage` — register metadata after upload (idempotent by `object_key`) |
 | GET    | `/api/v1/gallery/{id}`  | `200 GalleryImage` (`404` if not the caller's)       |
 | DELETE | `/api/v1/gallery/{id}`  | `204` — soft delete + async object removal (idempotent) |
-| PUT    | `/api/v1/devices`       | `200 Device` — register a push token + reminder pref (idempotent by `user, push_token`) |
+| PUT    | `/api/v1/devices`       | `200 Device` — register a push token + reminder pref (idempotent by `user, install_id`) |
+| POST   | `/api/v1/hooks/push/reminder` | `200 ReminderOutcome` — scheduler callback (**Cloud Tasks only**, `X-Push-Callback-Token`) |
 | POST   | `/api/v1/admin/quotes`  | `201 Quote` — upsert a day's quote (**admin**, `X-Admin-Token`) |
 | POST   | `/api/v1/admin/songs`   | `201 Song` — upsert a day's song (**admin**, `X-Admin-Token`) |
 
 All `/api/v1/diary*`, `/api/v1/today`, `/api/v1/songs*`, `/api/v1/gallery*` and
 `/api/v1/devices` routes **require `Authorization: Bearer`** and only ever touch
 the caller's own data. The `/api/v1/admin/*` seed routes use a separate shared **admin token**, not
-a user session. The full contract lives in
+a user session; `/api/v1/hooks/*` are callbacks from the server's own scheduler
+and use a third shared **callback token**. The full contract lives in
 [`api/openapi.yaml`](api/openapi.yaml) and grows with each new endpoint.
 
 ### Auth design
@@ -225,22 +227,52 @@ curl -X POST http://localhost:8080/api/v1/admin/songs \
   -d '{"date":"2026-07-11","title":"夜想曲","artist":"月詠","artwork_url":"https://…","audio_url":"https://…"}'
 ```
 
-### Devices design (push-token registration — future server push)
+### Devices + push design (nightly reminder only when nothing was written)
 
-The eighth slice's nightly reminder is a **local, on-device** notification
-scheduled in the client (`AlarmManager` on Android, `UNCalendarNotificationTrigger`
-on iOS), so it needs no backend. `PUT /api/v1/devices` is the optional, minimal
-registration **口** for a FUTURE server-initiated notification path (FCM/APNs):
-the client registers its `push_token`, `platform` (`ios`|`android`), the user's
-local `notify_time` (`HH:MM`) and `enabled` flag, so a later server-side sender
-knows where / when / whether to push. Nothing here sends a push yet. The write is
-an idempotent upsert keyed by `(user_id, push_token)` — a re-registration of the
-same token updates the row in place. The endpoint is Bearer-protected and
-user-scoped; `devices.user_id` has `ON DELETE CASCADE`, so account deletion purges
-a user's devices automatically. `notify_time` is validated against `HH:MM`
-(24-hour) and `platform` against the enum. This slice does not wire the shared
-client → `/devices` call (there is no real push token yet); that lands with the
-FCM/APNs integration.
+The nightly reminder is a **server push**: at the device's chosen time the
+server checks whether the user has a diary entry for that local day and sends
+「月が出ました / 今日を、そっと綴りませんか。」only if not. iOS is reached through
+APNs directly (token-based auth over HTTP/2), Android through FCM HTTP v1 as a
+data-only message the app renders itself. The local, on-device reminder of
+earlier slices is gone; the server is the only path.
+
+- **Registration.** `PUT /api/v1/devices` upserts one app install keyed by
+  `(user_id, install_id)`; `install_id` is a client-generated UUID that survives
+  push-token rotation. `push_token` is globally unique: registering a token that
+  another `(user, install)` holds deletes that row, so a phone that changes
+  hands never receives the previous user's reminders. `time_zone` (IANA) is
+  required — `""` and `"Local"` are rejected because they silently mean UTC /
+  the server's zone. A registration also clears `token_invalid_at`.
+- **Scheduling.** Every registration (and every delivery) computes the next
+  occurrence of `notify_time` in `time_zone` and enqueues one Cloud Tasks HTTP
+  task named `r-{device_id}-{local_date}-{hash(notify_time,time_zone)}` that
+  calls back `POST /api/v1/hooks/push/reminder` at that instant. The name is
+  the idempotency key (409 = already scheduled); the settings hash keeps a
+  changed time from reusing a name Cloud Tasks still remembers. The chain is
+  self-perpetuating, and the client's daily re-registration heals it if it
+  breaks. Cancelling is best-effort: a callback whose row is gone, disabled,
+  or registered with other settings answers `stale` and does nothing.
+- **Delivery.** The callback claims `(device, local_date)` with one
+  conditional `UPDATE` on the `devices.reminder_*` columns (one attempt chain
+  per day; `failed` retries up to 3 times, a `pending` older than 5 minutes is
+  reclaimed), counts the user's entries for that local day
+  (`DiaryStore.CountByLocalDate`), and sends or `skipped_written`s. Provider
+  TTL / `collapse_key` are set so an offline phone does not get a stale night's
+  reminder at 3 a.m. and a redelivery replaces the tray entry. A callback that
+  arrives more than an hour after the chosen time answers `expired`. Every
+  handled case is a `200`; only a provider / database hiccup answers `503` so
+  Cloud Tasks retries within its queue policy.
+- **Token hygiene.** A provider rejection (`Unregistered`, `BadDeviceToken`,
+  `UNREGISTERED`) sets `token_invalid_at` instead of deleting the row, so an
+  APNs environment mismatch does not wipe every iOS user's preference. Sign-out
+  (`POST /auth/logout` with `install_id`) and account deletion remove the
+  device and cancel its task; a forced sign-out cannot, so devices not
+  re-registered for 45 days are ignored.
+- **Off switches.** `PUSH_ENABLED=false` stops scheduling and turns callbacks
+  into no-ops. A platform whose credentials are missing is simply absent from
+  the sender map (its devices answer `disabled`); a missing scheduler config
+  registers preferences but schedules nothing. See `docs/dd/nightly-reminder-server-push.md`
+  and `docs/runbook/push-notification-setup.md`.
 
 ## Configuration
 
@@ -270,6 +302,18 @@ All configuration is read from environment variables (see `.env.example`).
 | `GALLERY_VIEW_URL_TTL` | `60m`                                                        | Presigned GET (view) URL lifetime (Go duration). |
 | `GALLERY_MAX_UPLOAD_BYTES` | `10485760`                                              | Max upload size in bytes (10 MiB). |
 | `GALLERY_ALLOWED_CONTENT_TYPES` | `image/jpeg,image/png,image/webp,image/heic`       | Comma-separated image MIME allowlist. |
+| `PUSH_ENABLED`         | `true`                                                        | Kill switch: `false` schedules nothing and makes callbacks no-ops. |
+| `PUSH_CALLBACK_BASE_URL` | (empty)                                                     | This server's public origin the scheduler calls back into (e.g. `https://runa-backend-dev-xxxx.onrender.com`). **Empty disables scheduling.** |
+| `PUSH_CALLBACK_TOKEN`  | (empty)                                                       | Shared secret for `/hooks/push/reminder` (`X-Push-Callback-Token`). **Empty disables the hook (403).** |
+| `APNS_TEAM_ID`         | (empty)                                                       | Apple Developer Team ID. |
+| `APNS_KEY_ID`          | (empty)                                                       | APNs Auth Key ID (the `XXXXXXXXXX` in `AuthKey_XXXXXXXXXX.p8`). |
+| `APNS_PRIVATE_KEY`     | (empty)                                                       | The `.p8` file, base64-encoded. **Empty disables iOS delivery.** |
+| `APNS_BUNDLE_ID`       | `com.runa`                                                    | `apns-topic`. |
+| `APNS_ENVIRONMENT`     | `sandbox`                                                     | `sandbox` for Xcode-installed builds, `production` for TestFlight / App Store. |
+| `GCP_PROJECT_ID`       | (empty)                                                       | Firebase / Cloud Tasks project id. |
+| `GCP_SERVICE_ACCOUNT_JSON` | (empty)                                                   | Service-account key JSON, base64-encoded; used for FCM and Cloud Tasks. **Empty disables Android delivery and scheduling.** |
+| `CLOUD_TASKS_LOCATION` | `asia-northeast1`                                             | Region of the Cloud Tasks queue. |
+| `CLOUD_TASKS_QUEUE`    | `runa-reminders`                                              | Cloud Tasks queue name. |
 
 Getting the provider audiences:
 
@@ -297,6 +341,8 @@ internal/handler           HTTP transport: request/response <-> service. No logi
 internal/service           Application/business logic. Health service lives here.
 internal/repository        Data access. Owns the pgx pool; repositories are stubs.
 internal/storage           Object-storage seam (ObjectStore) + MinIO/S3 impl.
+internal/push              Push seam (Sender) + apns / fcm impls, mempush fake.
+internal/schedule          Scheduled-callback seam (Scheduler) + cloudtasks impl, memschedule fake.
 migrations                 golang-migrate SQL files (applied at startup).
 api/openapi.yaml           The growing API contract.
 ```
@@ -360,7 +406,16 @@ validation, and per-user scoping (`internal/server/gallery_flow_test.go`); the
 two-endpoint presign is unit-tested offline in `internal/storage`. Devices tests
 cover the handler (validation of `platform`/`notify_time`, unknown-field and `401`
 cases) and a full `PUT /devices` flow with a real Bearer token (create → idempotent
-re-`PUT` update → per-user scoping, `internal/server/devices_flow_test.go`). CI has
+re-`PUT` update → token takeover by another user, `internal/server/devices_flow_test.go`).
+Push tests drive the whole reminder chain through the router with a fake
+scheduler, fake senders and a fake clock (`internal/server/push_flow_test.go`):
+registration schedules tonight's task; the callback sends once, then answers
+`already_claimed`; a same-day entry skips; a task scheduled under old settings
+is `stale`; a late callback `expired`; a rejected token is recorded until
+re-registration; a transient provider failure is `503` and the retry sends;
+logout / account deletion unregister. The APNs, FCM and Cloud Tasks clients are
+unit-tested against `httptest` fakes (HTTP/2 for APNs), and `nextFireAt` has
+DST-boundary cases. The claim/retry contract is in the store suite. CI has
 no Postgres, so the tests use the in-memory `internal/repository/memauth`,
 `memdiary`, `memtoday`, `memgallery` and `memdevices` stores; the pgx-backed
 repositories and the real MinIO presign path are exercised by running the server

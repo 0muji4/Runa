@@ -16,27 +16,55 @@ import (
 	"github.com/0muji4/Runa/apps/go/internal/auth"
 	"github.com/0muji4/Runa/apps/go/internal/handler"
 	"github.com/0muji4/Runa/apps/go/internal/itunes"
+	"github.com/0muji4/Runa/apps/go/internal/push"
+	"github.com/0muji4/Runa/apps/go/internal/push/mempush"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memauth"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdevices"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memdiary"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memgallery"
 	"github.com/0muji4/Runa/apps/go/internal/repository/memtoday"
+	"github.com/0muji4/Runa/apps/go/internal/schedule/memschedule"
 	"github.com/0muji4/Runa/apps/go/internal/server"
 	"github.com/0muji4/Runa/apps/go/internal/service"
 	"github.com/0muji4/Runa/apps/go/internal/storage/memobject"
 )
 
-const adminToken = "seed-secret"
+const (
+	adminToken    = "seed-secret"
+	callbackToken = "callback-secret"
+)
 
 type testEnv struct {
-	r       http.Handler
-	objects *memobject.Store
-	users   *memauth.Store
-	diaries *memdiary.Store
-	gallery *memgallery.Store
-	today   *memtoday.Store
-	devices *memdevices.Store
-	apple   *appleFake
+	r         http.Handler
+	objects   *memobject.Store
+	users     *memauth.Store
+	diaries   *memdiary.Store
+	gallery   *memgallery.Store
+	today     *memtoday.Store
+	devices   *memdevices.Store
+	apple     *appleFake
+	ios       *mempush.Sender
+	android   *mempush.Sender
+	scheduler *memschedule.Scheduler
+	clock     *fakeClock
+}
+
+// fakeClock is the push service's notion of now; tests move it to the reminder time.
+type fakeClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *fakeClock) Set(t time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = t
 }
 
 // appleFake stands in for the iTunes Search API; down makes every request fail with 503.
@@ -112,11 +140,21 @@ func newRouter(t *testing.T) *testEnv {
 	objects := memobject.New()
 	apple := newAppleFake(t)
 
+	ios, android := mempush.New(), mempush.New()
+	scheduler := memschedule.New()
+	clock := &fakeClock{now: time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC)} // 21:00 JST
+	pushSvc := service.NewPushService(devices, diaries,
+		map[string]push.Sender{push.PlatformIOS: ios, push.PlatformAndroid: android},
+		scheduler, service.DefaultPushConfig(), clock.Now, service.WithPushLogger(logger))
+	ph := handler.NewPush(pushSvc, logger)
+	deviceSvc := service.NewDeviceService(devices, pushSvc, nil)
+
 	authSvc := service.NewAuthService(service.AuthConfig{
 		Store:          users,
 		Issuer:         issuer,
 		PasswordParams: auth.DefaultArgon2Params(),
 		RefreshTTL:     time.Hour,
+		Devices:        deviceSvc,
 	})
 	ah := handler.NewAuth(authSvc, logger)
 
@@ -137,36 +175,42 @@ func newRouter(t *testing.T) *testEnv {
 
 	accountSvc := service.NewAccountService(users, diaries, gallery, objects, service.AccountConfig{
 		ExportURLTTL: time.Hour,
-	}, nil, service.WithAccountBackgroundRunner(func(f func()) { f() }))
+	}, nil, service.WithAccountBackgroundRunner(func(f func()) { f() }), service.WithAccountDevices(deviceSvc))
 	acc := handler.NewAccount(accountSvc, logger)
 
-	dvh := handler.NewDevices(service.NewDeviceService(devices, nil), logger)
+	dvh := handler.NewDevices(deviceSvc, logger)
 
 	r := server.New(server.Deps{
-		Health:         handler.NewHealth(service.NewHealth(), logger),
-		Auth:           ah,
-		Account:        acc,
-		Diary:          dh,
-		Today:          th,
-		Insights:       ih,
-		Gallery:        gh,
-		Devices:        dvh,
-		RequireAuth:    auth.RequireAuth(issuer, ah.Unauthorized),
-		AuthRateLimit:  auth.NewRateLimiter(100, time.Minute).Middleware(ah.RateLimited),
-		RequireAdmin:   auth.RequireAdmin(adminToken, th.Forbidden),
-		AllowedOrigins: []string{"*"},
-		Logger:         logger,
+		Health:          handler.NewHealth(service.NewHealth(), logger),
+		Auth:            ah,
+		Account:         acc,
+		Diary:           dh,
+		Today:           th,
+		Insights:        ih,
+		Gallery:         gh,
+		Devices:         dvh,
+		Push:            ph,
+		RequireAuth:     auth.RequireAuth(issuer, ah.Unauthorized),
+		AuthRateLimit:   auth.NewRateLimiter(100, time.Minute).Middleware(ah.RateLimited),
+		RequireAdmin:    auth.RequireAdmin(adminToken, th.Forbidden),
+		RequireCallback: auth.RequireCallbackToken(callbackToken, ph.Forbidden),
+		AllowedOrigins:  []string{"*"},
+		Logger:          logger,
 	})
 
 	return &testEnv{
-		r:       r,
-		objects: objects,
-		users:   users,
-		diaries: diaries,
-		gallery: gallery,
-		today:   todayStore,
-		devices: devices,
-		apple:   apple,
+		r:         r,
+		objects:   objects,
+		users:     users,
+		diaries:   diaries,
+		gallery:   gallery,
+		today:     todayStore,
+		devices:   devices,
+		apple:     apple,
+		ios:       ios,
+		android:   android,
+		scheduler: scheduler,
+		clock:     clock,
 	}
 }
 
@@ -183,6 +227,19 @@ func do(t *testing.T, r http.Handler, method, path, bearer, body string) *http.R
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return finish(t, req, []byte(body), rec)
+}
+
+// doCallback posts a scheduler callback body with the shared callback token.
+func doCallback(t *testing.T, r http.Handler, token string, body []byte) *http.Response {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/hooks/push/reminder", bytes.NewReader(body))
+	if token != "" {
+		req.Header.Set("X-Push-Callback-Token", token)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	return finish(t, req, body, rec)
 }
 
 func doAdmin(t *testing.T, r http.Handler, method, path, token, body string) *http.Response {
@@ -381,9 +438,11 @@ type songsResp struct {
 
 type deviceResp struct {
 	ID         string `json:"id"`
+	InstallID  string `json:"install_id"`
 	PushToken  string `json:"push_token"`
 	Platform   string `json:"platform"`
 	NotifyTime string `json:"notify_time"`
+	TimeZone   string `json:"time_zone"`
 	Enabled    bool   `json:"enabled"`
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`

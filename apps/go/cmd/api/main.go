@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // reminders convert users' IANA zones even on a zoneinfo-less image
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -64,6 +65,18 @@ func main() {
 	healthHandler := handler.NewHealth(service.NewHealth(), logger)
 
 	authRepo := repository.NewAuthRepository(pool)
+	diaryRepo := repository.NewDiaryRepository(pool)
+
+	// Push before auth/account: sign-out and account deletion unregister devices.
+	deviceRepo := repository.NewDeviceRepository(pool)
+	pushConfig := service.DefaultPushConfig()
+	pushConfig.Enabled = cfg.PushEnabled
+	pushService := service.NewPushService(deviceRepo, diaryRepo, newPushSenders(cfg, logger), newScheduler(cfg, logger),
+		pushConfig, nil, service.WithPushLogger(logger))
+	pushHandler := handler.NewPush(pushService, logger)
+	deviceService := service.NewDeviceService(deviceRepo, pushService, nil)
+	deviceHandler := handler.NewDevices(deviceService, logger)
+
 	issuer := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL)
 	authService := service.NewAuthService(service.AuthConfig{
 		Store:          authRepo,
@@ -72,10 +85,10 @@ func main() {
 		Google:         auth.NewOIDCVerifier(auth.GoogleIssuers, cfg.GoogleClientIDs, auth.NewRemoteJWKS(auth.GoogleJWKSURL)),
 		PasswordParams: auth.DefaultArgon2Params(),
 		RefreshTTL:     cfg.RefreshTokenTTL,
+		Devices:        deviceService,
 	})
 	authHandler := handler.NewAuth(authService, logger)
 
-	diaryRepo := repository.NewDiaryRepository(pool)
 	diaryService := service.NewDiaryService(diaryRepo, nil)
 	diaryHandler := handler.NewDiary(diaryService, logger)
 
@@ -99,27 +112,25 @@ func main() {
 
 	accountService := service.NewAccountService(authRepo, diaryRepo, galleryRepo, objectStore, service.AccountConfig{
 		ExportURLTTL: cfg.GalleryViewURLTTL,
-	}, nil)
+	}, nil, service.WithAccountDevices(deviceService))
 	accountHandler := handler.NewAccount(accountService, logger)
 
-	deviceRepo := repository.NewDeviceRepository(pool)
-	deviceService := service.NewDeviceService(deviceRepo, nil)
-	deviceHandler := handler.NewDevices(deviceService, logger)
-
 	router := server.New(server.Deps{
-		Health:         healthHandler,
-		Auth:           authHandler,
-		Account:        accountHandler,
-		Diary:          diaryHandler,
-		Today:          todayHandler,
-		Insights:       insightsHandler,
-		Gallery:        galleryHandler,
-		Devices:        deviceHandler,
-		RequireAuth:    auth.RequireAuth(issuer, authHandler.Unauthorized),
-		AuthRateLimit:  auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
-		RequireAdmin:   auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),
-		AllowedOrigins: cfg.CORSAllowedOrigins,
-		Logger:         logger,
+		Health:          healthHandler,
+		Auth:            authHandler,
+		Account:         accountHandler,
+		Diary:           diaryHandler,
+		Today:           todayHandler,
+		Insights:        insightsHandler,
+		Gallery:         galleryHandler,
+		Devices:         deviceHandler,
+		Push:            pushHandler,
+		RequireAuth:     auth.RequireAuth(issuer, authHandler.Unauthorized),
+		AuthRateLimit:   auth.NewRateLimiter(authRateLimitMax, authRateLimitWindow).Middleware(authHandler.RateLimited),
+		RequireAdmin:    auth.RequireAdmin(cfg.AdminAPIToken, todayHandler.Forbidden),
+		RequireCallback: auth.RequireCallbackToken(cfg.PushCallbackToken, pushHandler.Forbidden),
+		AllowedOrigins:  cfg.CORSAllowedOrigins,
+		Logger:          logger,
 	})
 
 	srv := &http.Server{

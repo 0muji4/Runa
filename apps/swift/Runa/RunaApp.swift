@@ -3,6 +3,8 @@ import Shared
 
 @main
 struct RunaApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     // App-lifetime lock gate driven by the scene phase (see LockGateView); wraps the auth gate.
     @StateObject private var lock = AppLockObservable()
 
@@ -24,6 +26,9 @@ struct RunaApp: App {
                 LockGateView(lock: lock) {
                     RootView()
                 }
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active { resolveDeviceRegistrar().refresh() }
             }
         }
     }
